@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/editor/editor.dart';
+import 'package:fl_clash/manager/emoji_manager.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/state.dart';
@@ -622,6 +623,16 @@ class _CodeEditorState extends ConsumerState<_CodeEditor> {
   void initState() {
     super.initState();
     widget.findController.addListener(_handleFindChanged);
+    EmojiManager.emojiStyleNotifier.addListener(_handleEmojiStyleChanged);
+  }
+
+  /// The editor's monospace style carries the emoji font as a fallback, so a
+  /// change of emoji style has to rebuild the style here rather than wait for
+  /// something else to rebuild the page.
+  void _handleEmojiStyleChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
@@ -644,6 +655,7 @@ class _CodeEditorState extends ConsumerState<_CodeEditor> {
   @override
   void dispose() {
     widget.findController.removeListener(_handleFindChanged);
+    EmojiManager.emojiStyleNotifier.removeListener(_handleEmojiStyleChanged);
     super.dispose();
   }
 
@@ -682,7 +694,7 @@ class _CodeEditorState extends ConsumerState<_CodeEditor> {
       fontSize: fontSize.value,
       fontFamily: FontFamily.jetBrainsMono.value,
       fontFamilyFallback: [
-        FontFamily.twEmoji.value,
+        EmojiManager.currentFamily ?? FontFamily.twEmoji.value,
         ?appFont.fontFamily,
         ...?appFont.fontFamilyFallback,
       ],
