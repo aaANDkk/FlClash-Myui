@@ -4,43 +4,71 @@ import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/ui/ui.dart';
 import 'package:material_ui/material_ui.dart';
 
+/// A small pill a title carries. Every badge a title shows is drawn this way, so
+/// an expiry date, a "permanent" label and a source label read as one family.
+class TitleChip extends StatelessWidget {
+  const TitleChip({
+    super.key,
+    required this.label,
+    required this.color,
+    this.tooltip,
+  });
+
+  static const _padding = EdgeInsets.symmetric(horizontal: 8, vertical: 2);
+
+  static double widthOf(BuildContext context, String label) =>
+      chipLabelWidth(context, label) + _padding.horizontal;
+
+  final String label;
+  final Color color;
+  final String? tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    final pill = DecoratedBox(
+      decoration: ShapeDecoration(
+        color: color.opacity15,
+        shape: AppShape.full,
+      ),
+      child: Padding(
+        padding: _padding,
+        child: Text(
+          label,
+          maxLines: 1,
+          style: AppTextStyle.caption1
+              .of(context, emphasized: true)
+              .copyWith(color: color),
+        ),
+      ),
+    );
+    final tooltip = this.tooltip;
+    if (tooltip == null) {
+      return pill;
+    }
+    return Tooltip(message: tooltip, child: pill);
+  }
+}
+
 class ExpireChip extends StatelessWidget {
   final DateTime expire;
 
   const ExpireChip({super.key, required this.expire});
 
-  static const _padding = EdgeInsets.symmetric(horizontal: 8, vertical: 2);
-
   static double widthOf(BuildContext context, DateTime expire) =>
-      chipLabelWidth(context, expire.show) + _padding.horizontal;
+      TitleChip.widthOf(context, expire.show);
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = context.colorScheme;
-    final color = expire.isBeforeNow ? colorScheme.error : colorScheme.primary;
-    return Tooltip(
-      message: context.appLocalizations.expireTime,
-      child: DecoratedBox(
-        decoration: ShapeDecoration(
-          color: color.opacity15,
-          shape: AppShape.full,
-        ),
-        child: Padding(
-          padding: _padding,
-          child: Text(
-            expire.show,
-            maxLines: 1,
-            style: AppTextStyle.caption1
-                .of(context, emphasized: true)
-                .copyWith(color: color),
-          ),
-        ),
-      ),
+    return TitleChip(
+      label: expire.show,
+      color: expire.isBeforeNow ? colorScheme.error : colorScheme.primary,
+      tooltip: context.appLocalizations.expireTime,
     );
   }
 }
 
-/// A title followed by an optional count chip and an expiry chip. The expiry
+/// A title followed by an optional label chip and an expiry chip. The expiry
 /// chip gives way before it would squeeze the title below half the row.
 class ChipTitle extends StatelessWidget {
   final String title;
@@ -66,7 +94,7 @@ class ChipTitle extends StatelessWidget {
         )
         .width;
     final chipsWidth =
-        (chip == null ? 0 : TonalChip.widthOf(context, chip) + _gap) +
+        (chip == null ? 0 : TitleChip.widthOf(context, chip) + _gap) +
         ExpireChip.widthOf(context, expire) +
         _gap;
     return maxWidth - chipsWidth >= min(titleWidth, maxWidth / 2);
@@ -97,11 +125,7 @@ class ChipTitle extends StatelessWidget {
       children: [
         Flexible(child: text),
         if (chip != null)
-          TonalChip(
-            label: chip,
-            color: context.raisedSurfaceLevel.colorOf(colorScheme),
-            foregroundColor: colorScheme.onSurfaceVariant,
-          ),
+          TitleChip(label: chip, color: colorScheme.primary),
         if (showExpire && expire != null) ExpireChip(expire: expire),
       ],
     );
