@@ -60,17 +60,18 @@ android {
     buildTypes {
         debug {
             isMinifyEnabled = false
-            applicationIdSuffix = ".dev"
+            applicationIdSuffix = ".debug"
         }
 
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            // The install this fork ships as, and the one whose data survives an
+            // in-place update. The native namespace stays com.follow.clash, so the
+            // Kotlin components and method channels keep their names.
+            applicationIdSuffix = ".dev"
             if (hasReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
-            } else {
-                signingConfig = signingConfigs.getByName("debug")
-                applicationIdSuffix = ".dev"
             }
 
             proguardFiles(
@@ -83,6 +84,21 @@ android {
     sourceSets {
         // Unit tests live under android/tests/ instead of each module's src/test.
         getByName("test").java.setSrcDirs(listOf("../tests/app"))
+    }
+}
+
+// A release APK must carry the project's own signing key. Falling back to the
+// per-machine debug key changed the certificate on every machine and could not
+// be installed over an existing release.
+tasks.configureEach {
+    if (name.startsWith("assembleRelease") || name.startsWith("bundleRelease")) {
+        doFirst {
+            check(hasReleaseSigning) {
+                "Release signing is not configured. Put the keystore at " +
+                    "android/app/keystore.jks and set keyAlias, storePassword and " +
+                    "keyPassword in android/local.properties."
+            }
+        }
     }
 }
 
