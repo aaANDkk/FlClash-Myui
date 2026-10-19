@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="-32 -32 576 576" width="576" height="576" role="img" aria-labelledby="petal-soft-kr-title"><title id="petal-soft-kr-title">韩国 · 四瓣花旗帜图标</title><desc>四瓣花装饰版旗帜，透明背景，纯矢量。柔和质感版。太极与四组卦象同比例缩放，为花瓣凹口留出空间。</desc><defs><path id="petal-soft-kr-shape" d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z"/><clipPath id="petal-soft-kr-clip" clipPathUnits="userSpaceOnUse"><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z"/></clipPath><linearGradient id="petal-soft-kr-shade" x1="0" y1="0" x2="0.16" y2="1"><stop offset="0%" stop-color="#ffffff" stop-opacity=".075"/><stop offset="48%" stop-color="#ffffff" stop-opacity="0"/><stop offset="100%" stop-color="#151a2b" stop-opacity=".038"/></linearGradient></defs><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z" fill="none" stroke="currentColor" stroke-width="54" stroke-opacity="0.25" stroke-linejoin="round"/><g clip-path="url(#petal-soft-kr-clip)"><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z" fill="#fff"/><g transform="translate(16, 16) scale(0.9375)">
+  <path fill="#fff" fill-rule="evenodd" d="M0 0h512v512H0Z"/>
+  <g transform="translate(256 256) scale(.91) translate(-256 -256)"><g fill-rule="evenodd" transform="translate(256 256) rotate(-45) scale(9.375)">
+    <g id="petal-soft-kr-source-kr-b">
+      <path id="petal-soft-kr-source-kr-a" fill="#000001" d="M-6-26H6v2H-6Zm0 3H6v2H-6Zm0 3H6v2H-6Z"/>
+      <use href="#petal-soft-kr-source-kr-a" xlink:href="#petal-soft-kr-source-kr-a" width="100%" height="100%" y="44"/>
+    </g>
+    <path stroke="#fff" d="M0 17v10"/>
+    <path fill="#cd2e3a" d="M0-12a12 12 0 0 1 0 24Z"/>
+    <path fill="#0047a0" d="M0-12a12 12 0 0 0 0 24A6 6 0 0 0 0 0Z"/>
+    <circle cy="-6" r="6" fill="#cd2e3a"/>
+  </g>
+  <g fill-rule="evenodd" transform="translate(256 256) rotate(-135) scale(9.375)">
+    <use href="#petal-soft-kr-source-kr-b" xlink:href="#petal-soft-kr-source-kr-b" width="100%" height="100%"/>
+    <path stroke="#fff" d="M0-23.5v3M0 17v3.5m0 3v3"/>
+  </g>
+</g></g><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z" fill="url(#petal-soft-kr-shade)"/></g></svg>

@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="-32 -32 576 576" width="576" height="576" role="img" aria-labelledby="petal-soft-my-title"><title id="petal-soft-my-title">马来西亚 · 四瓣花旗帜图标</title><desc>四瓣花装饰版旗帜，透明背景，纯矢量。柔和质感版。</desc><defs><path id="petal-soft-my-shape" d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z"/><clipPath id="petal-soft-my-clip" clipPathUnits="userSpaceOnUse"><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z"/></clipPath><linearGradient id="petal-soft-my-shade" x1="0" y1="0" x2="0.16" y2="1"><stop offset="0%" stop-color="#ffffff" stop-opacity=".075"/><stop offset="48%" stop-color="#ffffff" stop-opacity="0"/><stop offset="100%" stop-color="#151a2b" stop-opacity=".038"/></linearGradient></defs><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z" fill="none" stroke="currentColor" stroke-width="54" stroke-opacity="0.25" stroke-linejoin="round"/><g clip-path="url(#petal-soft-my-clip)"><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z" fill="#fff"/><g transform="translate(16, 16) scale(0.9375)">
+  <path fill="#C00" d="M0 0h512v36.6H0z"/>
+  <path fill="#fff" d="M0 36.6h512V73H0z"/>
+  <path fill="#C00" d="M0 73.1h512v36.6H0z"/>
+  <path fill="#fff" d="M0 109.7h512v36.6H0z"/>
+  <path fill="#C00" d="M0 146.3h512v36.6H0z"/>
+  <path fill="#fff" d="M0 182.9h512v36.5H0z"/>
+  <path fill="#C00" d="M0 219.4h512V256H0z"/>
+  <path fill="#fff" d="M0 256h512v36.6H0z"/>
+  <path fill="#C00" d="M0 292.6h512V329H0z"/>
+  <path fill="#fff" d="M0 329.1h512v36.6H0z"/>
+  <path fill="#C00" d="M0 365.7h512v36.6H0z"/>
+  <path fill="#fff" d="M0 402.3h512v36.6H0z"/>
+  <path fill="#C00" d="M0 438.9h512v36.5H0z"/>
+  <path fill="#fff" d="M0 475.4h512V512H0z"/>
+  <path fill="#006" d="M0 0h256v292.6H0z"/>
+  <path fill="#FC0" d="m166 93 4.8 32.5 18.4-27.2-10 31.3 28.5-16.6-22.5 24 32.8-2.6-30.7 11.9L218 158l-32.8-2.5 22.5 24-28.4-16.7 9.8 31.5-18.4-27.3-4.8 32.5-4.7-32.5-18.4 27.2 9.9-31.4-28.4 16.7 22.4-24-32.8 2.5 30.7-11.8-30.6-11.9 32.8 2.6-22.5-24 28.4 16.6-10-31.4 18.5 27.3 4.8-32.6Zm-26.7 1.3a57 57 0 0 0-73 24.9 57 57 0 0 0 45.5 83.8 57 57 0 0 0 27.5-4.7 64 64 0 1 1 0-104"/>
+</g><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z" fill="url(#petal-soft-my-shade)"/></g></svg>

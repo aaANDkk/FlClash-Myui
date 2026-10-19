@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="-32 -32 576 576" width="576" height="576" role="img" aria-labelledby="petal-soft-pk-title"><title id="petal-soft-pk-title">巴基斯坦 · 四瓣花旗帜图标</title><desc>四瓣花装饰版旗帜，透明背景，纯矢量。柔和质感版。</desc><defs><path id="petal-soft-pk-shape" d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z"/><clipPath id="petal-soft-pk-clip" clipPathUnits="userSpaceOnUse"><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z"/></clipPath><linearGradient id="petal-soft-pk-shade" x1="0" y1="0" x2="0.16" y2="1"><stop offset="0%" stop-color="#ffffff" stop-opacity=".075"/><stop offset="48%" stop-color="#ffffff" stop-opacity="0"/><stop offset="100%" stop-color="#151a2b" stop-opacity=".038"/></linearGradient>
+<clipPath id="petal-soft-pk-source-pk-a">
+      <path fill-opacity=".7" d="M0 0h512v512H0z"/>
+    </clipPath></defs><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z" fill="none" stroke="currentColor" stroke-width="54" stroke-opacity="0.25" stroke-linejoin="round"/><g clip-path="url(#petal-soft-pk-clip)"><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z" fill="#fff"/><g transform="translate(16, 16) scale(0.9375)">
+  
+  <g fill-rule="evenodd" stroke-width="1pt" clip-path="url(#petal-soft-pk-source-pk-a)">
+    <path fill="#0c590b" d="M-95 0h768v512H-95z"/>
+    <path fill="#fff" d="M-95 0H97.5v512H-95z"/>
+    <g fill="#fff">
+      <path d="m403.7 225.4-31.2-6.6-16.4 27.3-3.4-31.6-31-7.2 29-13-2.7-31.7 21.4 23.6 29.3-12.4-15.9 27.6 21 24z"/>
+      <path d="M415.4 306a121 121 0 0 1-161.3 59.4 122 122 0 0 1-59.5-162.1A119 119 0 0 1 266 139a156 156 0 0 0-11.8 10.9A112.3 112.3 0 0 0 415.5 306z"/>
+    </g>
+  </g>
+</g><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z" fill="url(#petal-soft-pk-shade)"/></g></svg>

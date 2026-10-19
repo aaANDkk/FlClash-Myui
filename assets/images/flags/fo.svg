@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="-32 -32 576 576" width="576" height="576" role="img" aria-labelledby="petal-soft-fo-title"><title id="petal-soft-fo-title">法罗群岛 · 四瓣花旗帜图标</title><desc>四瓣花装饰版旗帜，透明背景，纯矢量。柔和质感版。</desc><defs><path id="petal-soft-fo-shape" d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z"/><clipPath id="petal-soft-fo-clip" clipPathUnits="userSpaceOnUse"><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z"/></clipPath><linearGradient id="petal-soft-fo-shade" x1="0" y1="0" x2="0.16" y2="1"><stop offset="0%" stop-color="#ffffff" stop-opacity=".075"/><stop offset="48%" stop-color="#ffffff" stop-opacity="0"/><stop offset="100%" stop-color="#151a2b" stop-opacity=".038"/></linearGradient>
+<clipPath id="petal-soft-fo-source-fo-a">
+      <path fill-opacity=".7" d="M0 0h512v512H0z"/>
+    </clipPath></defs><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z" fill="none" stroke="currentColor" stroke-width="54" stroke-opacity="0.25" stroke-linejoin="round"/><g clip-path="url(#petal-soft-fo-clip)"><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z" fill="#fff"/><g transform="translate(16, 16) scale(0.9375)">
+  
+  <g fill-rule="evenodd" stroke-width="0" clip-path="url(#petal-soft-fo-source-fo-a)">
+    <path fill="#fff" d="M-78 0h708.2v512H-78z"/>
+    <path fill="#003897" d="M-75.9 199.1h198.3V0h113.3v199.1h396.6V313H235.7v199H122.4V312.9H-76z"/>
+    <path fill="#d72828" d="M-75.9 227.6h226.6V0h56.7v227.6h424.9v56.9h-425V512h-56.6V284.4H-75.9z"/>
+  </g>
+</g><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z" fill="url(#petal-soft-fo-shade)"/></g></svg>

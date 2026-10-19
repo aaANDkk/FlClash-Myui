@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="-32 -32 576 576" width="576" height="576" role="img" aria-labelledby="petal-soft-na-title"><title id="petal-soft-na-title">纳米比亚 · 四瓣花旗帜图标</title><desc>四瓣花装饰版旗帜，透明背景，纯矢量。柔和质感版。</desc><defs><path id="petal-soft-na-shape" d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z"/><clipPath id="petal-soft-na-clip" clipPathUnits="userSpaceOnUse"><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z"/></clipPath><linearGradient id="petal-soft-na-shade" x1="0" y1="0" x2="0.16" y2="1"><stop offset="0%" stop-color="#ffffff" stop-opacity=".075"/><stop offset="48%" stop-color="#ffffff" stop-opacity="0"/><stop offset="100%" stop-color="#151a2b" stop-opacity=".038"/></linearGradient>
+<clipPath id="petal-soft-na-source-na-a">
+      <path fill-opacity=".7" d="M0 0h512v512H0z"/>
+    </clipPath></defs><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z" fill="none" stroke="currentColor" stroke-width="54" stroke-opacity="0.25" stroke-linejoin="round"/><g clip-path="url(#petal-soft-na-clip)"><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z" fill="#fff"/><g transform="translate(16, 16) scale(0.9375)">
+  
+  <g fill-rule="evenodd" clip-path="url(#petal-soft-na-source-na-a)">
+    <path fill="#fff" d="M0 0h512v512H0z"/>
+    <path fill="#3662a2" d="m-108.2.2.8 368.6L466.6 0z"/>
+    <path fill="#38a100" d="m630.7 511.5-1.4-383.2-579 383.5z"/>
+    <path fill="#c70000" d="m-107.9 396.6.5 115.4 125.3-.2 611.7-410.1L629 1.4 505.2.2z"/>
+    <path fill="#ffe700" d="m154 183.4-23.1-14-13.4 23.6-13-23.8L81 183l.6-27.1-27 .2 14-23.2L45 119.5l23.8-13L55 83l27 .6-.1-27.1 23.2 14 13.4-23.6 13 23.7L155.2 57l-.6 27 27-.1-14 23.2 23.6 13.3-23.8 13.1 13.7 23.4-27-.5z"/>
+    <path fill="#3662a2" d="M167.8 120c0 27.2-22.3 49.3-49.8 49.3s-49.7-22.1-49.7-49.4 22.3-49.3 49.8-49.3 49.7 22 49.7 49.3z"/>
+    <path fill="#ffe700" d="M157 120a39 39 0 1 1-77.9 0 39 39 0 0 1 77.9 0"/>
+  </g>
+</g><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z" fill="url(#petal-soft-na-shade)"/></g></svg>

@@ -1,0 +1,26 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="-32 -32 576 576" width="576" height="576" role="img" aria-labelledby="petal-soft-in-title"><title id="petal-soft-in-title">印度 · 四瓣花旗帜图标</title><desc>四瓣花装饰版旗帜，透明背景，纯矢量。柔和质感版。</desc><defs><path id="petal-soft-in-shape" d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z"/><clipPath id="petal-soft-in-clip" clipPathUnits="userSpaceOnUse"><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z"/></clipPath><linearGradient id="petal-soft-in-shade" x1="0" y1="0" x2="0.16" y2="1"><stop offset="0%" stop-color="#ffffff" stop-opacity=".075"/><stop offset="48%" stop-color="#ffffff" stop-opacity="0"/><stop offset="100%" stop-color="#151a2b" stop-opacity=".038"/></linearGradient></defs><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z" fill="none" stroke="currentColor" stroke-width="54" stroke-opacity="0.25" stroke-linejoin="round"/><g clip-path="url(#petal-soft-in-clip)"><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z" fill="#fff"/><g transform="translate(16, 16) scale(0.9375)">
+  <path fill="#f93" d="M0 0h512v170.7H0z"/>
+  <path fill="#fff" d="M0 170.7h512v170.6H0z"/>
+  <path fill="#128807" d="M0 341.3h512V512H0z"/>
+  <g transform="translate(256 256)scale(3.41333)">
+    <circle r="20" fill="#008"/>
+    <circle r="17.5" fill="#fff"/>
+    <circle r="3.5" fill="#008"/>
+    <g id="petal-soft-in-source-in-d">
+      <g id="petal-soft-in-source-in-c">
+        <g id="petal-soft-in-source-in-b">
+          <g id="petal-soft-in-source-in-a" fill="#008">
+            <circle r=".9" transform="rotate(7.5 -8.8 133.5)"/>
+            <path d="M0 17.5.6 7 0 2l-.6 5z"/>
+          </g>
+          <use href="#petal-soft-in-source-in-a" xlink:href="#petal-soft-in-source-in-a" width="100%" height="100%" transform="rotate(15)"/>
+        </g>
+        <use href="#petal-soft-in-source-in-b" xlink:href="#petal-soft-in-source-in-b" width="100%" height="100%" transform="rotate(30)"/>
+      </g>
+      <use href="#petal-soft-in-source-in-c" xlink:href="#petal-soft-in-source-in-c" width="100%" height="100%" transform="rotate(60)"/>
+    </g>
+    <use href="#petal-soft-in-source-in-d" xlink:href="#petal-soft-in-source-in-d" width="100%" height="100%" transform="rotate(120)"/>
+    <use href="#petal-soft-in-source-in-d" xlink:href="#petal-soft-in-source-in-d" width="100%" height="100%" transform="rotate(-120)"/>
+  </g>
+</g><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z" fill="url(#petal-soft-in-shade)"/></g></svg>

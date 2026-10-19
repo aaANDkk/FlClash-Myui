@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="-32 -32 576 576" width="576" height="576" role="img" aria-labelledby="petal-soft-st-title"><title id="petal-soft-st-title">圣多美和普林西比 · 四瓣花旗帜图标</title><desc>四瓣花装饰版旗帜，透明背景，纯矢量。柔和质感版。</desc><defs><path id="petal-soft-st-shape" d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z"/><clipPath id="petal-soft-st-clip" clipPathUnits="userSpaceOnUse"><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z"/></clipPath><linearGradient id="petal-soft-st-shade" x1="0" y1="0" x2="0.16" y2="1"><stop offset="0%" stop-color="#ffffff" stop-opacity=".075"/><stop offset="48%" stop-color="#ffffff" stop-opacity="0"/><stop offset="100%" stop-color="#151a2b" stop-opacity=".038"/></linearGradient></defs><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z" fill="none" stroke="currentColor" stroke-width="54" stroke-opacity="0.25" stroke-linejoin="round"/><g clip-path="url(#petal-soft-st-clip)"><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z" fill="#fff"/><g transform="translate(16, 16) scale(0.9375)">
+  <path fill="#12ad2b" d="M0 0h512v512H0z"/>
+  <path fill="#ffce00" d="M0 146.3h512v219.4H0z"/>
+  <path fill="#d21034" d="M0 0v512l192-256"/>
+  <g id="petal-soft-st-source-st-c" transform="translate(276.9 261.5)scale(.33167)">
+    <g id="petal-soft-st-source-st-b">
+      <path id="petal-soft-st-source-st-a" fill="#000001" d="M0-200V0h100" transform="rotate(18 0 -200)"/>
+      <use href="#petal-soft-st-source-st-a" xlink:href="#petal-soft-st-source-st-a" width="100%" height="100%" transform="scale(-1 1)"/>
+    </g>
+    <use href="#petal-soft-st-source-st-b" xlink:href="#petal-soft-st-source-st-b" width="100%" height="100%" transform="rotate(72)"/>
+    <use href="#petal-soft-st-source-st-b" xlink:href="#petal-soft-st-source-st-b" width="100%" height="100%" transform="rotate(144)"/>
+    <use href="#petal-soft-st-source-st-b" xlink:href="#petal-soft-st-source-st-b" width="100%" height="100%" transform="rotate(-144)"/>
+    <use href="#petal-soft-st-source-st-b" xlink:href="#petal-soft-st-source-st-b" width="100%" height="100%" transform="rotate(-72)"/>
+  </g>
+  <use href="#petal-soft-st-source-st-c" xlink:href="#petal-soft-st-source-st-c" width="100%" height="100%" x="700" transform="translate(-550.9)"/>
+</g><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z" fill="url(#petal-soft-st-shade)"/></g></svg>

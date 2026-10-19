@@ -1,0 +1,26 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="-32 -32 576 576" width="576" height="576" role="img" aria-labelledby="petal-soft-ve-title"><title id="petal-soft-ve-title">委内瑞拉 · 四瓣花旗帜图标</title><desc>四瓣花装饰版旗帜，透明背景，纯矢量。柔和质感版。</desc><defs><path id="petal-soft-ve-shape" d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z"/><clipPath id="petal-soft-ve-clip" clipPathUnits="userSpaceOnUse"><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z"/></clipPath><linearGradient id="petal-soft-ve-shade" x1="0" y1="0" x2="0.16" y2="1"><stop offset="0%" stop-color="#ffffff" stop-opacity=".075"/><stop offset="48%" stop-color="#ffffff" stop-opacity="0"/><stop offset="100%" stop-color="#151a2b" stop-opacity=".038"/></linearGradient>
+<g id="petal-soft-ve-source-ve-d" transform="translate(0 -36)">
+      <g id="petal-soft-ve-source-ve-c">
+        <g id="petal-soft-ve-source-ve-b">
+          <path id="petal-soft-ve-source-ve-a" fill="#fff" d="M0-5-1.5-.2l2.8.9z"/>
+          <use xlink:href="#petal-soft-ve-source-ve-a" width="180" height="120" transform="scale(-1 1)"/>
+        </g>
+        <use xlink:href="#petal-soft-ve-source-ve-b" width="180" height="120" transform="rotate(72)"/>
+      </g>
+      <use xlink:href="#petal-soft-ve-source-ve-b" width="180" height="120" transform="rotate(-72)"/>
+      <use xlink:href="#petal-soft-ve-source-ve-c" width="180" height="120" transform="rotate(144)"/>
+    </g></defs><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z" fill="none" stroke="currentColor" stroke-width="54" stroke-opacity="0.25" stroke-linejoin="round"/><g clip-path="url(#petal-soft-ve-clip)"><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z" fill="#fff"/><g transform="translate(16, 16) scale(0.9375)">
+  
+  <path fill="#cf142b" d="M0 0h512v512H0z"/>
+  <path fill="#00247d" d="M0 0h512v341.3H0z"/>
+  <path fill="#fc0" d="M0 0h512v170.7H0z"/>
+  <g id="petal-soft-ve-source-ve-f" transform="translate(256.3 358.4)scale(4.265)">
+    <g id="petal-soft-ve-source-ve-e">
+      <use href="#petal-soft-ve-source-ve-d" xlink:href="#petal-soft-ve-source-ve-d" width="180" height="120" transform="rotate(10)"/>
+      <use href="#petal-soft-ve-source-ve-d" xlink:href="#petal-soft-ve-source-ve-d" width="180" height="120" transform="rotate(30)"/>
+    </g>
+    <use href="#petal-soft-ve-source-ve-e" xlink:href="#petal-soft-ve-source-ve-e" width="180" height="120" transform="rotate(40)"/>
+  </g>
+  <use href="#petal-soft-ve-source-ve-f" xlink:href="#petal-soft-ve-source-ve-f" width="180" height="120" transform="rotate(-80 256.3 358.4)"/>
+</g><path d="M 256 54.8111 A 142.3218 142.3218 0 0 1 457.1889 256 A 142.3218 142.3218 0 0 1 256 457.1889 A 142.3218 142.3218 0 0 1 54.8111 256 A 142.3218 142.3218 0 0 1 256 54.8111 Z" fill="url(#petal-soft-ve-shade)"/></g></svg>
