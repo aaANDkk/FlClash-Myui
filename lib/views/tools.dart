@@ -61,11 +61,6 @@ class _ToolViewState extends ConsumerState<ToolsView> {
         const _CustomResourcesItem(),
         const _GeneralItem(),
       ],
-      footer: [
-        if (system.isAndroid) appLocalizations.accessControlDesc,
-        appLocalizations.advancedConfigDesc,
-        appLocalizations.customProfileResourcesDesc,
-      ].join('\n'),
     );
   }
 

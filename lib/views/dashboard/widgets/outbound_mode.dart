@@ -21,72 +21,17 @@ void _changeMode(WidgetRef ref, Mode mode) {
   ref.read(setupActionProvider.notifier).changeMode(mode);
 }
 
-class OutboundModeCard extends ConsumerWidget {
+class OutboundModeCard extends StatelessWidget {
   const OutboundModeCard({super.key});
 
-  static const _outer = 26.0;
-
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final mode = ref.watch(
-      patchClashConfigProvider.select((state) => state.mode),
-    );
-    final tone = DashboardColors.of(context).tone;
-    final style = AppTextStyle.footnote.of(context, emphasized: true);
-    return DashboardCard(
-      semanticLabel: context.appLocalizations.outboundMode,
-      child: Column(
-        children: [
-          DashboardCardHeader(
-            glyph: AppGlyphs.split,
-            title: context.appLocalizations.outboundMode,
-          ),
-          const SizedBox(height: 12),
-          DashboardConnectedGroup(
-            children: [
-              for (final (index, item) in Mode.values.indexed)
-                Expanded(
-                  child: DashboardConnectedButton(
-                    selected: item == mode,
-                    first: index == 0,
-                    last: index == Mode.values.length - 1,
-                    outer: _outer,
-                    inner: 12,
-                    background: tone,
-                    semanticLabel: item.label,
-                    onTap: () => _changeMode(ref, item),
-                    builder: (foreground) => SizedBox(
-                      height: 52,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        spacing: 2,
-                        children: [
-                          GlyphIcon(
-                            _glyphOf(item),
-                            size: 18,
-                            color: foreground,
-                          ),
-                          Text(
-                            item.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: style.copyWith(color: foreground),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
+  Widget build(BuildContext context) {
+    return const OutboundModeBar();
   }
 }
 
-/// The desktop control row's mode switch; its buttons sit as far in from the
-/// card's ends as from its edges so their corners stay concentric.
+/// Outbound mode switch bar that puts "出站模式" and the mode buttons
+/// in the same horizontal row for both portrait and landscape layouts.
 class OutboundModeBar extends ConsumerWidget {
   const OutboundModeBar({super.key});
 
@@ -95,11 +40,13 @@ class OutboundModeBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final density = DashboardDensityScope.of(context);
+    final scale = DashboardDensityScope.scaleOf(context);
     final mode = ref.watch(
       patchClashConfigProvider.select((state) => state.mode),
     );
     final appLocalizations = context.appLocalizations;
     final outer = dashboardCardRadius(density) - _inset;
+    final buttonHeight = (density.isCompact ? 40.0 : 44.0) * scale;
     final style = AppTextStyle.subheadline.of(context, emphasized: true);
     return DashboardCard(
       semanticLabel: appLocalizations.outboundMode,
@@ -109,24 +56,24 @@ class OutboundModeBar extends ConsumerWidget {
         _inset,
         _inset,
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) => Row(
-          spacing: 16,
+      child: SizedBox(
+        height: buttonHeight,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             GlyphIcon(
               AppGlyphs.split,
               size: 18,
               color: context.colorScheme.onSurfaceVariant,
             ),
-            ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: constraints.maxWidth / 4),
-              child: Text(
-                appLocalizations.outboundMode,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: DashboardText.cardTitle(context),
-              ),
+            const SizedBox(width: 6),
+            Text(
+              appLocalizations.outboundMode,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: DashboardText.cardTitle(context).copyWith(fontSize: 14),
             ),
+            const SizedBox(width: 10),
             Expanded(
               child: DashboardConnectedGroup(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -142,24 +89,31 @@ class OutboundModeBar extends ConsumerWidget {
                         background: DashboardColors.of(context).tone,
                         semanticLabel: item.label,
                         onTap: () => _changeMode(ref, item),
-                        builder: (foreground) => Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          spacing: 6,
-                          children: [
-                            GlyphIcon(
-                              _glyphOf(item),
-                              size: 18,
-                              color: foreground,
-                            ),
-                            Flexible(
-                              child: Text(
-                                item.label,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: style.copyWith(color: foreground),
+                        builder: (foreground) => SizedBox(
+                          height: buttonHeight,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              GlyphIcon(
+                                _glyphOf(item),
+                                size: 16,
+                                color: foreground,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  item.label,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: style.copyWith(
+                                    color: foreground,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
