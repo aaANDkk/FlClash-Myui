@@ -258,6 +258,11 @@ class MessageLookup extends MessageLookupByLibrary {
     "allReferencedProxyProviders": MessageLookupByLibrary.simpleMessage(
       "全部被引用的代理集",
     ),
+    "customFont": MessageLookupByLibrary.simpleMessage("自定义字体"),
+    "nodeCount": MessageLookupByLibrary.simpleMessage("节点数"),
+    "ruleCount": MessageLookupByLibrary.simpleMessage("规则项"),
+    "providerCount": MessageLookupByLibrary.simpleMessage("提供者"),
+    "emojiStyle": MessageLookupByLibrary.simpleMessage("Emoji字体"),
     "allowBypass": MessageLookupByLibrary.simpleMessage("允许应用绕过VPN"),
     "allowLan": MessageLookupByLibrary.simpleMessage("局域网代理"),
     "allowedIps": MessageLookupByLibrary.simpleMessage("允许的 IP"),
@@ -1430,6 +1435,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "vpnEnableDesc": MessageLookupByLibrary.simpleMessage(
       "VPN 通过 VpnService 自动路由系统所有流量。",
     ),
+    "secondaryDevelopmentBuild": MessageLookupByLibrary.simpleMessage("二次开发构建"),
+    "wakelock": MessageLookupByLibrary.simpleMessage("亮屏锁"),
     "webDAVConfiguration": MessageLookupByLibrary.simpleMessage("WebDAV配置"),
     "whitelistMode": MessageLookupByLibrary.simpleMessage("白名单模式"),
     "writeToSystem": MessageLookupByLibrary.simpleMessage("写入系统"),

@@ -58,6 +58,7 @@ dependencies:
   device_info_plus: ^13.3.0
   connectivity_plus: 7.2.0
   screen_retriever: ^0.2.2
+  wakelock_plus: ^1.4.0
   flutter_riverpod: ^3.4.3
   riverpod_annotation: ^4.0.7
   riverpod: ^3.4.3
@@ -99,6 +100,7 @@ flutter:
     - assets/fonts/
     - assets/images/
     - assets/images/avatar/
+    - assets/images/flags/
     - assets/images/services/
     - core/Clash.Meta/component/ca/ca-certificates.crt
     - path: assets/images/tray/unix/
@@ -116,6 +118,9 @@ flutter:
     - family: Twemoji
       fonts:
         - asset: assets/fonts/Twemoji.Mozilla.ttf
+    - family: OpenMoji
+      fonts:
+        - asset: assets/fonts/Openmoji.ttf
 flutter_intl:
   enabled: true
   class_name: AppLocalizations

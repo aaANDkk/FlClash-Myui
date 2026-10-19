@@ -136,6 +136,8 @@
   "bind": "Привязать",
   "connectivity": "Подключение: ",
   "webDAVConfiguration": "Настройка WebDAV",
+  "wakelock": "Не выключать экран",
+  "secondaryDevelopmentBuild": "Вторичная сборка разработки",
   "address": "Адрес",
   "addressHelp": "Адрес сервера WebDAV",
   "addressTip": "Введите корректный адрес WebDAV",
@@ -939,5 +941,10 @@
   "customImportDroppedSubRules": "{count, plural, one{Пользовательские профили не поддерживают подправила, поэтому отброшено {label} правило SUB-RULE} few{Пользовательские профили не поддерживают подправила, поэтому отброшено {label} правила SUB-RULE} many{Пользовательские профили не поддерживают подправила, поэтому отброшено {label} правил SUB-RULE} other{Пользовательские профили не поддерживают подправила, поэтому отброшено {label} правила SUB-RULE}}",
   "autoInclude": "Автоматическое включение",
   "allReferencedProxies": "Все используемые прокси",
-  "allReferencedProxyProviders": "Все используемые провайдеры прокси"
+  "allReferencedProxyProviders": "Все используемые провайдеры прокси",
+  "emojiStyle": "Шрифт эмодзи",
+  "customFont": "Пользовательский шрифт",
+  "nodeCount": "Узлы",
+  "ruleCount": "Правила",
+  "providerCount": "Провайдеры"
 }

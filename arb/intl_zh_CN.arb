@@ -136,6 +136,8 @@
   "bind": "绑定",
   "connectivity": "连通性：",
   "webDAVConfiguration": "WebDAV配置",
+  "wakelock": "亮屏锁",
+  "secondaryDevelopmentBuild": "二次开发构建",
   "address": "地址",
   "addressHelp": "WebDAV服务器地址",
   "addressTip": "请输入有效的WebDAV地址",
@@ -939,5 +941,10 @@
   "customImportDroppedSubRules": "{count, plural, other{自定义配置不支持子规则，已丢弃 {label} 条 SUB-RULE 规则}}",
   "autoInclude": "自动包含",
   "allReferencedProxies": "全部被引用的代理",
-  "allReferencedProxyProviders": "全部被引用的代理集"
+  "allReferencedProxyProviders": "全部被引用的代理集",
+  "emojiStyle": "Emoji字体",
+  "customFont": "自定义字体",
+  "nodeCount": "节点数",
+  "ruleCount": "规则项",
+  "providerCount": "提供者"
 }

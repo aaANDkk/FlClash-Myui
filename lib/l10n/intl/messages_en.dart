@@ -304,6 +304,11 @@ class MessageLookup extends MessageLookupByLibrary {
     "allReferencedProxyProviders": MessageLookupByLibrary.simpleMessage(
       "All referenced proxy providers",
     ),
+    "customFont": MessageLookupByLibrary.simpleMessage("Custom font"),
+    "nodeCount": MessageLookupByLibrary.simpleMessage("Proxies"),
+    "ruleCount": MessageLookupByLibrary.simpleMessage("Rules"),
+    "providerCount": MessageLookupByLibrary.simpleMessage("Providers"),
+    "emojiStyle": MessageLookupByLibrary.simpleMessage("Emoji font"),
     "allowBypass": MessageLookupByLibrary.simpleMessage(
       "Allow apps to bypass VPN",
     ),
@@ -1257,7 +1262,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "outbound": MessageLookupByLibrary.simpleMessage("Outbound"),
     "outboundExit": MessageLookupByLibrary.simpleMessage("Exit"),
     "outboundIp": MessageLookupByLibrary.simpleMessage("Outbound IP"),
-    "outboundMode": MessageLookupByLibrary.simpleMessage("Outbound mode"),
+    "outboundMode": MessageLookupByLibrary.simpleMessage("Outbound"),
     "overrideDestination": MessageLookupByLibrary.simpleMessage(
       "Override destination",
     ),
@@ -1840,6 +1845,10 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "whitelistMode": MessageLookupByLibrary.simpleMessage("Whitelist mode"),
     "writeToSystem": MessageLookupByLibrary.simpleMessage("Write to system"),
+    "secondaryDevelopmentBuild": MessageLookupByLibrary.simpleMessage(
+      "Secondary development build",
+    ),
+    "wakelock": MessageLookupByLibrary.simpleMessage("Keep screen on"),
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "Write to system also sets the system clock; Android ignores it.",
     ),

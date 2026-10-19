@@ -136,6 +136,8 @@
   "bind": "Vincular",
   "connectivity": "Conectividad: ",
   "webDAVConfiguration": "Configuración de WebDAV",
+  "wakelock": "Mantener pantalla encendida",
+  "secondaryDevelopmentBuild": "Compilación de desarrollo secundario",
   "address": "Dirección",
   "addressHelp": "Dirección del servidor WebDAV",
   "addressTip": "Introduce una dirección WebDAV válida",
@@ -939,5 +941,10 @@
   "customImportDroppedSubRules": "{count, plural, =1{Se descartó 1 regla SUB-RULE, porque los perfiles personalizados no admiten subreglas} other{Se descartaron {label} reglas SUB-RULE, porque los perfiles personalizados no admiten subreglas}}",
   "autoInclude": "Incluir automáticamente",
   "allReferencedProxies": "Todos los proxies referenciados",
-  "allReferencedProxyProviders": "Todos los proveedores de proxies referenciados"
+  "allReferencedProxyProviders": "Todos los proveedores de proxies referenciados",
+  "emojiStyle": "Fuente de emojis",
+  "customFont": "Fuente personalizada",
+  "nodeCount": "Nodos",
+  "ruleCount": "Reglas",
+  "providerCount": "Proveedores"
 }

@@ -130,10 +130,10 @@ class AppLocalizations {
     );
   }
 
-  /// `Outbound mode`
+  /// `Outbound`
   String get outboundMode {
     return Intl.message(
-      'Outbound mode',
+      'Outbound',
       name: 'outboundMode',
       desc: '',
       args: [],
@@ -1728,6 +1728,21 @@ class AppLocalizations {
   /// `Disabled`
   String get disabled {
     return Intl.message('Disabled', name: 'disabled', desc: '', args: []);
+  }
+
+  /// `Keep screen on`
+  String get wakelock {
+    return Intl.message('Keep screen on', name: 'wakelock', desc: '', args: []);
+  }
+
+  /// `Secondary development build`
+  String get secondaryDevelopmentBuild {
+    return Intl.message(
+      'Secondary development build',
+      name: 'secondaryDevelopmentBuild',
+      desc: '',
+      args: [],
+    );
   }
 
   /// `UWP loopback exemption`
@@ -7832,6 +7847,56 @@ class AppLocalizations {
     return Intl.message(
       'All referenced proxy providers',
       name: 'allReferencedProxyProviders',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Emoji font`
+  String get emojiStyle {
+    return Intl.message(
+      'Emoji font',
+      name: 'emojiStyle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Custom font`
+  String get customFont {
+    return Intl.message(
+      'Custom font',
+      name: 'customFont',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Proxies`
+  String get nodeCount {
+    return Intl.message(
+      'Proxies',
+      name: 'nodeCount',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Rules`
+  String get ruleCount {
+    return Intl.message(
+      'Rules',
+      name: 'ruleCount',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Providers`
+  String get providerCount {
+    return Intl.message(
+      'Providers',
+      name: 'providerCount',
       desc: '',
       args: [],
     );

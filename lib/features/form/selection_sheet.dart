@@ -24,12 +24,14 @@ class SelectionSheet<T> extends ConsumerStatefulWidget {
   final Widget Function(T item, Widget title)? titleBuilder;
   final T? Function(WidgetRef ref) selectedOf;
   final ValueChanged<T> onSelected;
+  final ValueChanged<T>? onLongPressed;
   final String? emptyLabel;
   final NullStatus? loadingStatus;
 
   /// A picked item collapses out instead of the sheet closing, which it does
   /// once the last item is picked.
   final bool removeOnSelect;
+  final List<IconButtonData> iconActions;
 
   const SelectionSheet({
     super.key,
@@ -39,9 +41,11 @@ class SelectionSheet<T> extends ConsumerStatefulWidget {
     this.titleBuilder,
     required this.selectedOf,
     required this.onSelected,
+    this.onLongPressed,
     this.emptyLabel,
     this.loadingStatus,
     this.removeOnSelect = false,
+    this.iconActions = const [],
   });
 
   @override
@@ -249,6 +253,9 @@ class _SelectionSheetState<T> extends ConsumerState<SelectionSheet<T>>
       position: position,
       child: DecorationListItem(
         onPressed: () => _handleSelected(item),
+        onLongPress: widget.onLongPressed == null
+            ? null
+            : () => widget.onLongPressed!(item),
         subtitle: subtitle != null ? TooltipLabel(subtitle) : null,
         title: widget.titleBuilder?.call(item, title) ?? title,
         isSelected: isSelected,
@@ -288,6 +295,7 @@ class _SelectionSheetState<T> extends ConsumerState<SelectionSheet<T>>
         _countOf(widget.sections) >= sheetSearchMinItemCount;
     return CommonScaffold(
       title: widget.title,
+      iconActions: widget.iconActions,
       searchState: searchable
           ? AppBarSearchState(onSearch: _handleSearch)
           : null,

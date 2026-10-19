@@ -12,7 +12,7 @@
   "resources": "Resources",
   "trafficUsage": "Traffic usage",
   "networkSpeed": "Network speed",
-  "outboundMode": "Outbound mode",
+  "outboundMode": "Outbound",
   "serviceStatus": "Service status",
   "serviceRestricted": "Access restricted",
   "serviceAvailable": "Available",
@@ -136,6 +136,8 @@
   "bind": "Bind",
   "connectivity": "Connectivity: ",
   "webDAVConfiguration": "WebDAV configuration",
+  "wakelock": "Keep screen on",
+  "secondaryDevelopmentBuild": "Secondary development build",
   "address": "Address",
   "addressHelp": "WebDAV server address",
   "addressTip": "Please enter a valid WebDAV address",
@@ -939,5 +941,10 @@
   "customImportDroppedSubRules": "{count, plural, =1{1 SUB-RULE rule was dropped, since custom profiles do not support sub-rules} other{{label} SUB-RULE rules were dropped, since custom profiles do not support sub-rules}}",
   "autoInclude": "Auto-include",
   "allReferencedProxies": "All referenced proxies",
-  "allReferencedProxyProviders": "All referenced proxy providers"
+  "allReferencedProxyProviders": "All referenced proxy providers",
+  "emojiStyle": "Emoji font",
+  "customFont": "Custom font",
+  "nodeCount": "Proxies",
+  "ruleCount": "Rules",
+  "providerCount": "Providers"
 }
