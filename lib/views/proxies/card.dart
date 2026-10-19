@@ -38,6 +38,7 @@ class ProxyCard extends ConsumerWidget {
   final GroupType groupType;
   final ProxyCardType type;
   final String? testUrl;
+  final bool isTabMode;
 
   const ProxyCard({
     super.key,
@@ -46,6 +47,7 @@ class ProxyCard extends ConsumerWidget {
     required this.proxy,
     required this.groupType,
     required this.type,
+    this.isTabMode = false,
   });
 
   Measure get measure => globalState.measure;
@@ -74,50 +76,55 @@ class ProxyCard extends ConsumerWidget {
     }
   }
 
+  /// A proxy that is itself a group shows the icon configured for that group, as
+  /// bettbox does.
+  String? _configuredIconOf(WidgetRef ref) {
+    final icon = ref.watch(groupsProvider).getGroup(proxy.name)?.icon;
+    if (icon == null || icon.isEmpty) {
+      return null;
+    }
+    return icon;
+  }
+
+  Widget _buildNameRow(BuildContext context, WidgetRef ref) {
+    final name = _buildProxyNameText(context);
+    final iconStyle = ref.watch(
+      proxiesStyleSettingProvider.select((state) => state.iconStyle),
+    );
+    final icon = iconStyle == ProxiesIconStyle.hidden
+        ? null
+        : _configuredIconOf(ref);
+    if (icon == null) {
+      return name;
+    }
+    final size = measure.textHeight(AppTextStyle.subheadline);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox.square(
+          dimension: size,
+          child: FittedBox(
+            fit: BoxFit.contain,
+            child: IconTheme.merge(
+              data: IconThemeData(size: size),
+              child: CommonTargetIcon(
+                src: icon,
+                fallback: GroupMonogram(proxy.name),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Flexible(child: name),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final measure = globalState.measure;
     final isLoose = type == ProxyCardType.loose;
-    final delayText = _DelayText(
-      proxy: proxy,
-      testUrl: testUrl,
-      alignment: isLoose ? Alignment.centerLeft : Alignment.centerRight,
-    );
-    final proxyNameText = _buildProxyNameText(context);
-    final typeStyle = AppTextStyle.footnote
-        .of(context)
-        .copyWith(
-          overflow: TextOverflow.ellipsis,
-          color: context.colorScheme.onSurface.opacity80,
-        );
-    final details = isLoose
-        ? Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                height: measure.textHeight(AppTextStyle.footnote),
-                child: _ProxyDesc(proxy: proxy, style: typeStyle),
-              ),
-              const SizedBox(height: 6),
-              delayText,
-            ],
-          )
-        : SizedBox(
-            height: measure.textHeight(AppTextStyle.footnote),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Flexible(
-                  flex: 1,
-                  child: TooltipText(
-                    text: Text(proxy.type, maxLines: 1, style: typeStyle),
-                  ),
-                ),
-                delayText,
-              ],
-            ),
-          );
     return Consumer(
       builder: (context, ref, _) {
         final inUse = ref.watch(
@@ -130,6 +137,48 @@ class ProxyCard extends ConsumerWidget {
             ref.watch(
               proxyNameProvider(groupName).select((name) => name == proxy.name),
             );
+        final colorScheme = context.colorScheme;
+        final delayText = _DelayText(
+          proxy: proxy,
+          testUrl: testUrl,
+          alignment: isLoose ? Alignment.centerLeft : Alignment.centerRight,
+        );
+        final typeStyle = AppTextStyle.footnote
+            .of(context)
+            .copyWith(
+              overflow: TextOverflow.ellipsis,
+              color: colorScheme.onSurface.opacity80,
+            );
+        final details = isLoose
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    height: measure.textHeight(AppTextStyle.footnote),
+                    child: _ProxyDesc(proxy: proxy, style: typeStyle),
+                  ),
+                  const SizedBox(height: 6),
+                  delayText,
+                ],
+              )
+            : SizedBox(
+                height: measure.textHeight(AppTextStyle.footnote),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      flex: 1,
+                      child: TooltipText(
+                        text: Text(proxy.type, maxLines: 1, style: typeStyle),
+                      ),
+                    ),
+                    delayText,
+                  ],
+                ),
+              );
+        final showTint = !isTabMode && inUse;
+        final showCheckmark = isTabMode && inUse;
         return CommonCard(
           radius: AppCorner.lg,
           enterActionsOnRight: true,
@@ -143,27 +192,34 @@ class ProxyCard extends ConsumerWidget {
             );
           },
           isSelected: inUse,
-          child: Container(
-            alignment: Alignment.centerLeft,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 4,
-                  children: [
-                    Expanded(child: proxyNameText),
-                    if (pinned)
-                      SelectionBadge.preferred(inUse: inUse)
-                    else if (inUse)
-                      const SelectionBadge(),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                details,
-              ],
+          // The chip tint the profile cards use in list mode, not a filled primary:
+          // the card keeps its own text colours. Tab mode uses checkmark badge.
+          child: DecoratedBox(
+            decoration: ShapeDecoration(
+              color: showTint ? colorScheme.primary.opacity15 : Colors.transparent,
+              shape: AppShape.all(AppCorner.lg),
+            ),
+            child: Container(
+              alignment: Alignment.centerLeft,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: 4,
+                    children: [
+                      Expanded(child: _buildNameRow(context, ref)),
+                      if (showCheckmark) const SelectionBadge(size: 20),
+                      if (pinned && !showCheckmark)
+                        SelectionBadge.preferred(inUse: inUse),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  details,
+                ],
+              ),
             ),
           ),
         );

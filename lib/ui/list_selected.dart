@@ -9,6 +9,7 @@ class DecorationListItem extends StatefulWidget {
   final double? horizontalTitleGap;
   final EdgeInsetsGeometry? contentPadding;
   final VoidCallback? onPressed;
+  final VoidCallback? onLongPress;
   final double? minVerticalPadding;
   final bool invalid;
 
@@ -21,6 +22,7 @@ class DecorationListItem extends StatefulWidget {
     this.subtitle,
     this.isSelected,
     this.onPressed,
+    this.onLongPress,
     this.horizontalTitleGap,
     this.minVerticalPadding,
     this.invalid = false,
@@ -71,6 +73,7 @@ class _DecorationListItemState extends State<DecorationListItem> {
         statesController: _states,
         inert: sorting,
         onPressed: proxyDecorator ? null : widget.onPressed,
+        onLongPress: proxyDecorator ? null : widget.onLongPress,
         child: LayoutBuilder(
           builder: (_, constraints) {
             final tile = ListTile(
