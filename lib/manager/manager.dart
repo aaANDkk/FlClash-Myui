@@ -2,6 +2,8 @@ export 'android_manager.dart';
 export 'app_manager.dart';
 export 'connectivity_manager.dart';
 export 'core_manager.dart';
+export 'emoji_manager.dart';
+export 'font_manager.dart';
 export 'locale_manager.dart';
 export 'proxy_manager.dart';
 export 'status_manager.dart';

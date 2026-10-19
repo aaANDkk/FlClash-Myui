@@ -7,8 +7,13 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 class Picker {
-  Future<PlatformFile?> pickerFile() async {
-    return FilePicker.pickFile(initialDirectory: await appPath.downloadDirPath);
+  Future<PlatformFile?> pickerFile({List<String>? allowedExtensions}) async {
+    final hasExt = allowedExtensions != null && allowedExtensions.isNotEmpty;
+    return FilePicker.pickFile(
+      type: hasExt ? FileType.custom : FileType.any,
+      allowedExtensions: hasExt ? allowedExtensions : null,
+      initialDirectory: await appPath.downloadDirPath,
+    );
   }
 
   Future<Uri?> saveFile(String fileName, Uint8List bytes) async {

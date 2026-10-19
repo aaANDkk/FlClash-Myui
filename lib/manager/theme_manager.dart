@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/manager/manager.dart';
 import 'package:fl_clash/providers/action.dart';
 import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/providers/config.dart';
@@ -53,9 +54,27 @@ ThemeData watchAppTheme(WidgetRef ref, Brightness brightness) {
     ?getLocaleForString(locale),
     ...WidgetsBinding.instance.platformDispatcher.locales,
   ];
+  final customFont = FontManager.customFontFamily;
+  final configuredFont = themeSetting.fontFamily;
+  // A family an older build wrote for a custom font is dead once that font is
+  // registered under a fresh name: an unknown family makes every style fall
+  // through to its fallback list, which is where wide spaces and missing digits
+  // came from.
+  final systemFont = configuredFont == null ||
+          configuredFont.isEmpty ||
+          configuredFont.startsWith('CustomUserFont_')
+      ? null
+      : configuredFont;
+  final effectiveFontFamily = (customFont != null && customFont.isNotEmpty)
+      ? customFont
+      : systemFont;
+  final currentEmojiStyle = EmojiManager.currentStyle;
+
   final inputs = (
     platform: defaultTargetPlatform,
     themeSetting: themeSetting,
+    customFont: customFont,
+    emojiStyle: currentEmojiStyle.name,
     colorScheme: colorScheme,
     plainDark: plainDark,
     locales: locales.join(','),
@@ -71,11 +90,12 @@ ThemeData watchAppTheme(WidgetRef ref, Brightness brightness) {
     pageTransitionsTheme: _pageTransitionsTheme,
     actionIconTheme: _actionIconTheme,
     colorScheme: colorScheme,
-    fontFamily: themeSetting.fontFamily,
+    fontFamily: effectiveFontFamily,
     fontFamilyFallback: appFontFamilyFallback(
       platform: defaultTargetPlatform,
       locales: locales,
-      fontFamily: themeSetting.fontFamily,
+      fontFamily: effectiveFontFamily,
+      emojiFamily: currentEmojiStyle.family,
     ),
     extensions: [
       if (brightness == Brightness.dark)

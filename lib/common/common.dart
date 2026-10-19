@@ -13,6 +13,7 @@ export 'exception.dart';
 export 'feature.dart';
 export 'file.dart';
 export 'fixed.dart';
+export 'flags.dart';
 export 'function.dart';
 export 'future.dart';
 export 'http.dart';
