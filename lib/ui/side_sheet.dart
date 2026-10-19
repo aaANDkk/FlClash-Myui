@@ -394,7 +394,7 @@ class ModalSideSheetRoute<T> extends PopupRoute<T>
           end: barrierColor,
         ).chain(CurveTween(curve: barrierCurve)),
       );
-      return AnimatedModalBarrier(
+      final barrier = AnimatedModalBarrier(
         color: color,
         dismissible: barrierDismissible,
         semanticsLabel: barrierLabel,
@@ -402,6 +402,7 @@ class ModalSideSheetRoute<T> extends PopupRoute<T>
         clipDetailsNotifier: _clipDetailsNotifier,
         semanticsOnTapHint: barrierOnTapHint,
       );
+      return barrier;
     } else {
       return ModalBarrier(
         dismissible: barrierDismissible,

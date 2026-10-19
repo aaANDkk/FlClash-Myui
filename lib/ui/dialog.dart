@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:fl_clash/ui/barrier.dart';
 import 'package:fl_clash/ui/color.dart';
 import 'package:fl_clash/ui/context.dart';
 import 'package:fl_clash/ui/input.dart';
@@ -122,7 +123,7 @@ mixin AlertMotionRouteMixin<T> on PopupRoute<T> {
         onDismiss: onBarrierDismiss,
       );
     }
-    return AnimatedModalBarrier(
+    final barrier = AnimatedModalBarrier(
       color: _spring.drive(
         ColorTween(begin: barrierColor.withValues(alpha: 0), end: barrierColor),
       ),
@@ -130,6 +131,21 @@ mixin AlertMotionRouteMixin<T> on PopupRoute<T> {
       semanticsLabel: barrierLabel,
       barrierSemanticsDismissible: semanticsDismissible,
       onDismiss: onBarrierDismiss,
+    );
+    // Liquid glass already refracts what is behind it, and a blurred barrier on
+    // top of it is what made dialogs heavy on phones.
+    final navigatorContext = navigator?.context;
+    if (navigatorContext != null && LiquidGlassScope.of(navigatorContext)) {
+      return barrier;
+    }
+    return RepaintBoundary(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          FadeTransition(opacity: _spring, child: const BarrierBlur()),
+          barrier,
+        ],
+      ),
     );
   }
 
