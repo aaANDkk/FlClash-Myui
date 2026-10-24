@@ -91,13 +91,14 @@ class Migration {
 
   /// One-off setting changes for upgrades, apart from [currentVersion], which
   /// backups carry and an older app refuses when it is newer than its own.
-  static const upgradeVersion = 4;
+  static const upgradeVersion = 5;
 
   static const Map<int, Config Function(Config config)> _upgrades = {
     1: _resetThemeColors,
     2: _keepGlassLook,
     3: _followSystemColors,
     4: _turnOffSidebarBlur,
+    5: _useBettRulesGeoUrls,
   };
 
   Future<Config> run() async {
@@ -240,6 +241,41 @@ Config _turnOffSidebarBlur(Config config) =>
 
 bool _isV0(Map<String, Object?>? configMap) =>
     configMap?['proxiesStyle'] != null;
+
+/// The geo downloads the app shipped before the switch to bett-rules. A stored
+/// config keeps the URLs it was saved with, so these are rewritten rather than
+/// left behind; a URL the user edited to something else is kept.
+const _legacyGeoXUrl = {
+  GeoResource.MMDB:
+      'https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.metadb',
+  GeoResource.ASN:
+      'https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/GeoLite2-ASN.mmdb',
+  GeoResource.GEOIP:
+      'https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.dat',
+  GeoResource.GEOSITE:
+      'https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geosite.dat',
+};
+
+Config _useBettRulesGeoUrls(Config config) {
+  final current = config.patchClashConfig.geoXUrl;
+  var changed = false;
+  final geoXUrl = <GeoResource, String>{};
+  for (final entry in current.entries) {
+    final replacement = defaultGeoXUrl[entry.key];
+    if (replacement != null && entry.value == _legacyGeoXUrl[entry.key]) {
+      geoXUrl[entry.key] = replacement;
+      changed = true;
+    } else {
+      geoXUrl[entry.key] = entry.value;
+    }
+  }
+  if (!changed) {
+    return config;
+  }
+  return config.copyWith(
+    patchClashConfig: config.patchClashConfig.copyWith(geoXUrl: geoXUrl),
+  );
+}
 
 String? _getStoredDavPassword(Map<String, Object?>? configMap) {
   final dav = configMap?['davProps'] ?? configMap?['dav'];

@@ -50,18 +50,18 @@ class IntranetIpCard extends ConsumerWidget {
         : density.isCompact
         ? (style: AppTextStyle.title2, top: 8.0)
         : (style: AppTextStyle.title2, top: 10.0);
-    final _LanRowMetrics row = density.isCompact
+    final _LanRowMetrics row = mobile
         ? (
-            padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-            titleStart: 12,
-            radius: 16,
-            icon: 32,
+            padding: const EdgeInsets.fromLTRB(10, 10, 12, 10),
+            titleStart: 14,
+            radius: 20,
+            icon: 38,
           )
         : (
             padding: const EdgeInsets.fromLTRB(10, 10, 12, 10),
             titleStart: 14,
             radius: 20,
-            icon: 38,
+            icon: 36,
           );
     final style = DashboardText.figure(
       context,

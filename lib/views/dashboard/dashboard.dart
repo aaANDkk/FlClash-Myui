@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:fl_clash/common/common.dart';
@@ -37,6 +38,14 @@ class _DashboardViewState extends ConsumerState<DashboardView> {
   var _editing = false;
   final _cardKeys = <DashboardWidget, GlobalKey>{};
 
+  @override
+  void initState() {
+    super.initState();
+    if (system.isDesktop) {
+      unawaited(ref.read(wakelockProvider.notifier).restore());
+    }
+  }
+
   void _setEditing(bool editing) {
     setState(() => _editing = editing);
   }
@@ -72,6 +81,13 @@ class _DashboardViewState extends ConsumerState<DashboardView> {
             )
           : null,
       iconActions: [
+        if (desktopPlatforms.contains(platform) && !editing)
+          IconButtonData(
+            glyph: AppGlyphs.sun,
+            tooltip: appLocalizations.wakelock,
+            isSelected: ref.watch(wakelockProvider),
+            onPressed: () => ref.read(wakelockProvider.notifier).toggle(),
+          ),
         if (editable && !editing)
           IconButtonData(
             glyph: AppGlyphs.edit,

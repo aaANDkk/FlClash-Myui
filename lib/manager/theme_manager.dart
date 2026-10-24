@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/manager/manager.dart';
 import 'package:fl_clash/providers/action.dart';
 import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/providers/config.dart';
@@ -40,18 +41,42 @@ final _appThemes = <Brightness, ({Object inputs, ThemeData theme})>{};
 
 ThemeData watchAppTheme(WidgetRef ref, Brightness brightness) {
   final locale = ref.watch(appSettingProvider.select((state) => state.locale));
-  final fontFamily = ref.watch(
-    themeSettingProvider.select((state) => state.fontFamily),
+  final themeSetting = ref.watch(
+    themeSettingProvider.select(
+      (state) => (fontFamily: state.fontFamily, pureBlack: state.pureBlack),
+    ),
   );
   final colorScheme = ref.watch(genColorSchemeProvider(brightness));
+  final plainDark = brightness == Brightness.dark && themeSetting.pureBlack
+      ? ref.watch(genColorSchemeProvider(brightness, pureBlack: false))
+      : null;
   final locales = [
     ?getLocaleForString(locale),
     ...WidgetsBinding.instance.platformDispatcher.locales,
   ];
+  final customFont = FontManager.customFontFamily;
+  final configuredFont = themeSetting.fontFamily;
+  // A family an older build wrote for a custom font is dead once that font is
+  // registered under a fresh name: an unknown family makes every style fall
+  // through to its fallback list, which is where wide spaces and missing digits
+  // came from.
+  final systemFont = configuredFont == null ||
+          configuredFont.isEmpty ||
+          configuredFont.startsWith('CustomUserFont_')
+      ? null
+      : configuredFont;
+  final effectiveFontFamily = (customFont != null && customFont.isNotEmpty)
+      ? customFont
+      : systemFont;
+  final currentEmojiStyle = EmojiManager.currentStyle;
+
   final inputs = (
     platform: defaultTargetPlatform,
-    fontFamily: fontFamily,
+    themeSetting: themeSetting,
+    customFont: customFont,
+    emojiStyle: currentEmojiStyle.name,
     colorScheme: colorScheme,
+    plainDark: plainDark,
     locales: locales.join(','),
   );
   if (_appThemes[brightness] case (
@@ -65,15 +90,20 @@ ThemeData watchAppTheme(WidgetRef ref, Brightness brightness) {
     pageTransitionsTheme: _pageTransitionsTheme,
     actionIconTheme: _actionIconTheme,
     colorScheme: colorScheme,
-    fontFamily: fontFamily,
+    fontFamily: effectiveFontFamily,
     fontFamilyFallback: appFontFamilyFallback(
       platform: defaultTargetPlatform,
       locales: locales,
-      fontFamily: fontFamily,
+      fontFamily: effectiveFontFamily,
+      emojiFamily: currentEmojiStyle.family,
     ),
     extensions: [
       if (brightness == Brightness.dark)
-        ElevatedColorScheme(colorScheme.elevated),
+        ElevatedColorScheme(
+          // Plain dark is pure black a level up, with the seed's tint that a
+          // lift from black would lose.
+          plainDark ?? colorScheme.elevated,
+        ),
     ],
   ).withAppShapes.withAppSurfaces.withAppTypography;
   _appThemes[brightness] = (inputs: inputs, theme: theme);
@@ -102,9 +132,9 @@ class ThemeManager extends ConsumerWidget {
             systemNavigationBarIconBrightness: iconBrightness,
             systemNavigationBarColor: Colors.transparent,
             systemNavigationBarDividerColor: Colors.transparent,
-            // Pages scroll under the navigation bar. Android scrims only a
-            // three-button bar for it; the gesture handle stays clear.
-            systemNavigationBarContrastEnforced: true,
+            // Pages scroll under the navigation bar. Keep contrast enforcement
+            // disabled so Android does not draw a translucent scrim in landscape.
+            systemNavigationBarContrastEnforced: false,
           ),
           sized: false,
           child: child,

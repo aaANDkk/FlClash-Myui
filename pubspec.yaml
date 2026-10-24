@@ -58,6 +58,7 @@ dependencies:
   device_info_plus: ^13.3.0
   connectivity_plus: 7.2.0
   screen_retriever: ^0.2.2
+  wakelock_plus: ^1.4.0
   flutter_riverpod: ^3.4.3
   riverpod_annotation: ^4.0.7
   riverpod: ^3.4.3
@@ -111,12 +112,22 @@ flutter:
   shaders:
     - shaders/liquid_glass.frag
   fonts:
+    - family: MapleMono
+      fonts:
+        - asset: assets/fonts/MapleMono-Regular.ttf
+        - asset: assets/fonts/MapleMono-Bold.ttf
+          weight: 700
     - family: JetBrainsMono
       fonts:
-        - asset: assets/fonts/JetBrainsMono-Regular.ttf
+        - asset: assets/fonts/MapleMono-Regular.ttf
+        - asset: assets/fonts/MapleMono-Bold.ttf
+          weight: 700
     - family: Twemoji
       fonts:
         - asset: assets/fonts/Twemoji.Mozilla.ttf
+    - family: OpenMoji
+      fonts:
+        - asset: assets/fonts/Openmoji.ttf
 flutter_intl:
   enabled: true
   class_name: AppLocalizations

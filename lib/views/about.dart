@@ -14,13 +14,25 @@ class Contributor {
   final String avatar;
   final String name;
 
-  const Contributor({required this.avatar, required this.name});
+  /// Says this is the fork's own build rather than an icon credit.
+  final bool secondaryDevelopment;
+
+  const Contributor({
+    required this.avatar,
+    required this.name,
+    this.secondaryDevelopment = false,
+  });
 }
 
 class AboutView extends ConsumerWidget {
   const AboutView({super.key});
 
   static const _contributors = [
+    Contributor(
+      avatar: 'assets/images/avatar/aaANDkk.jpg',
+      name: 'aaANDkk',
+      secondaryDevelopment: true,
+    ),
     Contributor(avatar: 'assets/images/avatar/june2.jpg', name: 'June2'),
     Contributor(avatar: 'assets/images/avatar/arue.jpg', name: 'Arue'),
   ];
@@ -117,7 +129,11 @@ class AboutView extends ConsumerWidget {
                     foregroundImage: AssetImage(contributor.avatar),
                   ),
                   title: Text(contributor.name),
-                  subtitle: Text(appLocalizations.appIconDesign),
+                  subtitle: Text(
+                    contributor.secondaryDevelopment
+                        ? appLocalizations.secondaryDevelopmentBuild
+                        : appLocalizations.appIconDesign,
+                  ),
                 ),
             ],
           ),

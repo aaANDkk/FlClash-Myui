@@ -618,7 +618,9 @@ class _RenderContainerTransition extends RenderBox
       } else {
         _closedTransformLayer.layer = null;
       }
-      context.paintChild(_open!, offset + rect.topLeft);
+      // The page rises with the container on the vertical axis only: following
+      // the rect's left edge too made the page slide diagonally out of its row.
+      context.paintChild(_open!, offset + Offset(0, rect.top));
     }
 
     final oldLayer = _clipLayer.layer;
@@ -655,7 +657,7 @@ class _RenderContainerTransition extends RenderBox
       }
       return;
     }
-    transform.translateByDouble(rect.left, rect.top, 0, 1);
+    transform.translateByDouble(0, rect.top, 0, 1);
   }
 
   @override
@@ -681,7 +683,7 @@ class _RenderContainerTransition extends RenderBox
     if (_route._fade == 0) {
       return false;
     }
-    final origin = _rect?.topLeft ?? Offset.zero;
+    final origin = Offset(0, _rect?.top ?? 0);
     return result.addWithPaintOffset(
       offset: origin,
       position: position,

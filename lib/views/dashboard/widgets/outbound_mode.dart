@@ -111,13 +111,13 @@ class OutboundModeBar extends ConsumerWidget {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) => Row(
-          spacing: 16,
           children: [
             GlyphIcon(
               AppGlyphs.split,
               size: 18,
               color: context.colorScheme.onSurfaceVariant,
             ),
+            const SizedBox(width: 8),
             ConstrainedBox(
               constraints: BoxConstraints(maxWidth: constraints.maxWidth / 4),
               child: Text(
@@ -127,6 +127,7 @@ class OutboundModeBar extends ConsumerWidget {
                 style: DashboardText.cardTitle(context),
               ),
             ),
+            const SizedBox(width: 16),
             Expanded(
               child: DashboardConnectedGroup(
                 crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -11,13 +11,14 @@ import 'package:fl_clash/ui/typography.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
-const _compactWidth = 48.0;
-const _expandedWidth = 220.0;
+const _compactWidth = 62.4;
+const _expandedMinWidth = 137.4;
+const _expandedMaxWidth = 240.0;
 const _itemSize = 40.0;
 const _itemGap = 4.0;
 const _toggleGap = 8.0;
 const _verticalInset = 4.0;
-const _maxSideInset = 12.0;
+const _maxSideInset = 16.0;
 const _iconSize = 24.0;
 const _labelGap = 12.0;
 const _indicatorWidth = 3.0;
@@ -268,18 +269,57 @@ class _SidebarPane extends StatelessWidget {
   final ValueChanged<int> onSelected;
   final VoidCallback onToggle;
 
+  /// The pane the sidebar widens into: the longest label plus the insets its row
+  /// needs, so a short set of labels does not open into a wide empty strip and a
+  /// long one is not clipped.
+  double _expandedWidthOf(
+    BuildContext context, {
+    required double sideInset,
+    required double iconInset,
+  }) {
+    final labelStyle = AppTextStyle.subheadline.of(context);
+    final textScaler = MediaQuery.textScalerOf(context);
+    final direction = Directionality.of(context);
+    var maxTextWidth = 0.0;
+    for (final destination in destinations) {
+      final painter = TextPainter(
+        text: TextSpan(text: destination.label, style: labelStyle),
+        textDirection: direction,
+        maxLines: 1,
+        textScaler: textScaler,
+      )..layout();
+      maxTextWidth = math.max(maxTextWidth, painter.width);
+      painter.dispose();
+    }
+    final total =
+        sideInset * 2 + iconInset + _iconSize + _labelGap * 2 + maxTextWidth;
+    final width = math.max(
+      _expandedMinWidth,
+      math.min(_expandedMaxWidth, total),
+    );
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    return (width * dpr).ceil() / dpr;
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = _SidebarColors(context.colorScheme);
     final fontSize = AppTextStyle.subheadline.size;
     final labelOpacity = ((progress - 0.4) / 0.6).clamp(0.0, 1.0);
-    final compactWidth = math.max(_compactWidth, windowControls.width);
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final compactWidth =
+        (math.max(_compactWidth, windowControls.width) * dpr).ceil() / dpr;
     final sideInset = math.min(_maxSideInset, (compactWidth - _itemSize) / 2);
     final itemWidth = compactWidth - sideInset * 2;
     final iconInset = (itemWidth - _iconSize) / 2;
     final itemHeight =
         _itemSize + MediaQuery.textScalerOf(context).scale(fontSize) - fontSize;
-    final rowWidth = _expandedWidth - sideInset * 2;
+    final expandedWidth = _expandedWidthOf(
+      context,
+      sideInset: sideInset,
+      iconInset: iconInset,
+    );
+    final rowWidth = expandedWidth - sideInset * 2;
     final labelStyle = AppTextStyle.subheadline
         .of(context)
         .copyWith(color: colors.label);
@@ -291,7 +331,7 @@ class _SidebarPane extends StatelessWidget {
         ? ''
         : label;
     return SizedBox(
-      width: lerpDouble(compactWidth, _expandedWidth, progress),
+      width: lerpDouble(compactWidth, expandedWidth, progress),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

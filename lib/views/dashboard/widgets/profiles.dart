@@ -205,7 +205,7 @@ class ProfilesCard extends ConsumerWidget {
             if (usage != null)
               _UsageMeter(usage: usage, figure: figure, gap: mobile ? 8 : 6)
             else
-              _ConfigStats(figure: figure),
+              const _ConfigStats(),
           ],
         ],
       ),
@@ -241,9 +241,7 @@ class _SyncButton extends ConsumerWidget {
 }
 
 class _ConfigStats extends ConsumerStatefulWidget {
-  const _ConfigStats({required this.figure});
-
-  final AppTextStyle figure;
+  const _ConfigStats();
 
   @override
   ConsumerState<_ConfigStats> createState() => _ConfigStatsState();
@@ -254,48 +252,106 @@ class _ConfigStatsState extends ConsumerState<_ConfigStats>
   @override
   Widget build(BuildContext context) {
     watchConfigCounts();
+    final density = DashboardDensityScope.of(context);
     final providers = ref.watch(providersProvider);
     final appLocalizations = context.appLocalizations;
+    final colorScheme = context.colorScheme;
     final stats = switch (configCounts) {
       final counts? => profileStatsOf(counts, providers),
       null => null,
     };
-    final figure = DashboardText.figure(
-      context,
-      widget.figure,
-    ).copyWith(letterSpacing: 0);
-    final label = DashboardText.label(context);
-    Widget item(int? value, String name) => Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final desktop = density.isDesktop;
+    final titleStyle = DashboardText.rowTitle(context);
+    // The LAN proxy row's title uses this same style, so its line height is what
+    // puts the two cards' bottom rows on the same lines.
+    final titleLeading = AppTextStyle.subheadline.leading;
+    final figureStyle = desktop
+        ? titleStyle.copyWith(color: colorScheme.onSurface, letterSpacing: 0)
+        : AppTextStyle.title2
+            .of(context, emphasized: true)
+            .copyWith(
+              color: colorScheme.onSurface,
+              letterSpacing: 0,
+              height: 1.0,
+            );
+    final labelStyle = desktop
+        ? DashboardText.label(context)
+        : AppTextStyle.caption1
+            .of(context)
+            .copyWith(color: colorScheme.onSurfaceVariant, height: 1.0);
+
+    Widget valueText(int? value) {
+      if (value != null) {
+        return Text(dashboardCount(value), maxLines: 1, style: figureStyle);
+      }
+      if (configCountsFailed) {
+        return Text('—', maxLines: 1, style: figureStyle);
+      }
+      return SkeletonText(width: 28, style: figureStyle);
+    }
+
+    Widget box(int? value, String name) {
+      // Desktop keeps the LAN proxy row's block, insets and line heights, so the
+      // two cards' bottom rows sit on the same lines; the text inside is centred
+      // in the block.
+      final content = desktop
+          ? DashboardBlock(
+              radius: 20,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 10,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    height: titleLeading,
+                    child: Center(child: valueText(value)),
+                  ),
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: labelStyle,
+                  ),
+                ],
+              ),
+            )
+          : Container(
+              height: 58,
+              decoration: ShapeDecoration(
+                color: DashboardColors.of(context).tone,
+                shape: AppShape.all(20),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  valueText(value),
+                  Transform.translate(
+                    offset: const Offset(0, -2),
+                    child: Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: labelStyle,
+                    ),
+                  ),
+                ],
+              ),
+            );
+      return Expanded(child: content);
+    }
+
+    return Row(
+      spacing: 8,
       children: [
-        if (value != null)
-          Text(dashboardCount(value), maxLines: 1, style: figure)
-        else if (configCountsFailed)
-          Text('—', maxLines: 1, style: figure)
-        else
-          SkeletonText(width: widget.figure.size * 1.5, style: figure),
-        Text(name, maxLines: 1, style: label),
+        box(stats?.providers, appLocalizations.providerCount),
+        box(stats?.proxies, appLocalizations.nodeCount),
+        box(stats?.rules, appLocalizations.ruleCount),
       ],
-    );
-    return LayoutBuilder(
-      // The minimum width lets spaceBetween spread the row inside FittedBox.
-      builder: (context, constraints) => FittedBox(
-        fit: BoxFit.scaleDown,
-        alignment: AlignmentDirectional.centerStart,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minWidth: constraints.maxWidth),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            spacing: 16,
-            children: [
-              item(stats?.groups, appLocalizations.proxyGroup),
-              item(stats?.proxies, appLocalizations.proxies),
-              item(stats?.rules, appLocalizations.rules),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

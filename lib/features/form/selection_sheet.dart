@@ -24,12 +24,15 @@ class SelectionSheet<T> extends ConsumerStatefulWidget {
   final Widget Function(T item, Widget title)? titleBuilder;
   final T? Function(WidgetRef ref) selectedOf;
   final ValueChanged<T> onSelected;
+  final ValueChanged<T>? onLongPressed;
+  final List<CommonPopupMenuItem>? Function(T item)? menuBuilder;
   final String? emptyLabel;
   final NullStatus? loadingStatus;
 
   /// A picked item collapses out instead of the sheet closing, which it does
   /// once the last item is picked.
   final bool removeOnSelect;
+  final List<IconButtonData> iconActions;
 
   const SelectionSheet({
     super.key,
@@ -39,9 +42,12 @@ class SelectionSheet<T> extends ConsumerStatefulWidget {
     this.titleBuilder,
     required this.selectedOf,
     required this.onSelected,
+    this.onLongPressed,
+    this.menuBuilder,
     this.emptyLabel,
     this.loadingStatus,
     this.removeOnSelect = false,
+    this.iconActions = const [],
   });
 
   @override
@@ -249,25 +255,33 @@ class _SelectionSheetState<T> extends ConsumerState<SelectionSheet<T>>
         overflow: TextOverflow.ellipsis,
       ),
     );
+    final menuItems = widget.menuBuilder?.call(item);
+    final hasMenu = menuItems != null && menuItems.isNotEmpty;
     final row = ItemPositionProvider(
       key: isRevealTarget ? _selectedKey : null,
       position: position,
       child: DecorationListItem(
         onPressed: () => _handleSelected(item),
+        onLongPress: hasMenu || widget.onLongPressed == null
+            ? null
+            : () => widget.onLongPressed!(item),
         subtitle: subtitle != null ? TooltipLabel(subtitle) : null,
         title: widget.titleBuilder?.call(item, title) ?? title,
         isSelected: isSelected,
         trailing: isSelected ? const SelectionCheck() : null,
       ),
     );
+    final itemWidget = hasMenu
+        ? ContextMenuRegion(menuItems: menuItems, child: row)
+        : row;
     if (!widget.removeOnSelect) {
-      return row;
+      return itemWidget;
     }
     return EntryTransition(
       key: ValueKey(item),
       animation: _transitions.animationOf(item),
       leaving: _transitions.isLeaving(item),
-      child: row,
+      child: itemWidget,
     );
   }
 
@@ -294,6 +308,7 @@ class _SelectionSheetState<T> extends ConsumerState<SelectionSheet<T>>
         _countOf(widget.sections) >= sheetSearchMinItemCount;
     return CommonScaffold(
       title: widget.title,
+      iconActions: widget.iconActions,
       searchState: searchable
           ? AppBarSearchState(onSearch: _handleSearch)
           : null,

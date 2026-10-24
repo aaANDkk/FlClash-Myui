@@ -147,7 +147,7 @@ class SnapSheetRoute<T> extends PopupRoute<T> with SheetCoverRouteMixin<T> {
         onDismiss: onDismiss,
       );
     }
-    return AnimatedModalBarrier(
+    final barrier = AnimatedModalBarrier(
       color: animation!.drive(
         ColorTween(begin: color.withValues(alpha: 0), end: color),
       ),
@@ -156,6 +156,9 @@ class SnapSheetRoute<T> extends PopupRoute<T> with SheetCoverRouteMixin<T> {
       barrierSemanticsDismissible: semanticsDismissible,
       onDismiss: onDismiss,
     );
+    // Sheets keep the plain barrier: upstream draws no blur behind them, and a
+    // full-window blur on top of the sheet is what made them stutter on Windows.
+    return barrier;
   }
 
   @override

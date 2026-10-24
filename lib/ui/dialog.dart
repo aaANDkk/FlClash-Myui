@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:fl_clash/ui/barrier.dart';
 import 'package:fl_clash/ui/color.dart';
 import 'package:fl_clash/ui/context.dart';
 import 'package:fl_clash/ui/input.dart';
@@ -113,21 +114,38 @@ mixin AlertMotionRouteMixin<T> on PopupRoute<T> {
 
   @override
   Widget buildModalBarrier() {
-    final barrier = ModalBarrier(
+    final barrierColor = this.barrierColor;
+    if (offstage || barrierColor == null) {
+      return ModalBarrier(
+        dismissible: barrierDismissible,
+        semanticsLabel: barrierLabel,
+        barrierSemanticsDismissible: semanticsDismissible,
+        onDismiss: onBarrierDismiss,
+      );
+    }
+    final barrier = AnimatedModalBarrier(
+      color: _spring.drive(
+        ColorTween(begin: barrierColor.withValues(alpha: 0), end: barrierColor),
+      ),
       dismissible: barrierDismissible,
       semanticsLabel: barrierLabel,
       barrierSemanticsDismissible: semanticsDismissible,
       onDismiss: onBarrierDismiss,
     );
-    final barrierColor = this.barrierColor;
-    if (offstage || barrierColor == null) {
+    // Liquid glass already refracts what is behind it, and a blurred barrier on
+    // top of it is what made dialogs heavy on phones.
+    final navigatorContext = navigator?.context;
+    if (navigatorContext != null && LiquidGlassScope.of(navigatorContext)) {
       return barrier;
     }
-    return LiquidGlassVeil(
-      color: _spring.drive(
-        ColorTween(begin: barrierColor.withValues(alpha: 0), end: barrierColor),
+    return RepaintBoundary(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          FadeTransition(opacity: _spring, child: const BarrierBlur()),
+          barrier,
+        ],
       ),
-      child: barrier,
     );
   }
 
@@ -301,15 +319,12 @@ class _RenderAlertGlass extends RenderProxyBox {
       _pane.clear();
     } else {
       final rect = _surfaceRectIn(this).shift(offset);
-      // One capture serves the entry's scale and a press.
       _pane.paint(
         context,
         rect,
         shape: LiquidGlassCorners.circular(AppCorner.alert),
         style: _style,
         shadows: _shadows,
-        hold: rect.inflate(_pressGrowth + _pressPull),
-        steadyFrost: true,
         rim: _rim,
       );
       _rim.paintLine(context.canvas, rect, AppCorner.alert);

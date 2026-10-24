@@ -14,6 +14,7 @@ import 'common/app_data.dart';
 import 'common/common.dart';
 import 'common/preferences_store.dart';
 import 'common/window.dart';
+import 'manager/manager.dart';
 
 void main(List<String> args) {
   runZonedGuarded(
@@ -39,6 +40,8 @@ void main(List<String> args) {
         await RustLib.init();
         final version = await system.init();
         final container = await bootstrap.init(version);
+        await FontManager.init(enabled: true);
+        await EmojiManager.init();
         await FlClashHttpOverrides.trustCoreRoots();
         HttpOverrides.global = FlClashHttpOverrides(container);
         request.attach(container.read);

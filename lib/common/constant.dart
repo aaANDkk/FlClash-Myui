@@ -120,6 +120,7 @@ const configKey = 'config';
 const systemDnsRecordKey = 'system_dns_record';
 const bootRecordKey = 'boot_record';
 const appliedConfigMd5Key = 'applied_config_md5';
+const wakelockEnabledKey = 'wakelock_enabled';
 const defaultSystemDnsFallback = '223.5.5.5';
 const repository = 'chen08209/FlClash';
 const maxMobileWidth = 600;

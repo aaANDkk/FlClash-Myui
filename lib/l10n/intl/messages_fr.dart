@@ -329,6 +329,11 @@ class MessageLookup extends MessageLookupByLibrary {
     "allReferencedProxyProviders": MessageLookupByLibrary.simpleMessage(
       "Tous les fournisseurs de proxys référencés",
     ),
+    "customFont": MessageLookupByLibrary.simpleMessage("Police personnalisée"),
+    "nodeCount": MessageLookupByLibrary.simpleMessage("Nœuds"),
+    "ruleCount": MessageLookupByLibrary.simpleMessage("Règles"),
+    "providerCount": MessageLookupByLibrary.simpleMessage("Fournisseurs"),
+    "emojiStyle": MessageLookupByLibrary.simpleMessage("Police d'emojis"),
     "allowBypass": MessageLookupByLibrary.simpleMessage(
       "Autoriser les apps à contourner le VPN",
     ),
@@ -1105,6 +1110,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "ipFlagVpn": MessageLookupByLibrary.simpleMessage("VPN"),
     "ipFlags": MessageLookupByLibrary.simpleMessage("Indicateurs"),
     "ipOrganization": MessageLookupByLibrary.simpleMessage("Organisation"),
+    "proxyNode": MessageLookupByLibrary.simpleMessage("Nœud proxy"),
     "ipQualityFailed": MessageLookupByLibrary.simpleMessage(
       "Impossible de déterminer le type de l’IP",
     ),
@@ -2045,6 +2051,10 @@ class MessageLookup extends MessageLookupByLibrary {
     "writeToSystem": MessageLookupByLibrary.simpleMessage(
       "Écrire dans le système",
     ),
+    "secondaryDevelopmentBuild": MessageLookupByLibrary.simpleMessage(
+      "Version de développement secondaire",
+    ),
+    "wakelock": MessageLookupByLibrary.simpleMessage("Maintenir l'écran allumé"),
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "Écrire dans le système règle aussi l’horloge système ; Android l’ignore.",
     ),

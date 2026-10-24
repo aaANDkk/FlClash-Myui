@@ -68,11 +68,16 @@ List<String> appFontFamilyFallback({
   required TargetPlatform platform,
   required Iterable<Locale> locales,
   String? fontFamily,
+  String? emojiFamily,
 }) {
   final base = Typography.material2021(platform: platform).black.bodyMedium!;
   return [
+    // A style with no family of its own takes the first entry here as its text
+    // font, so nothing is listed ahead of the platform family, and the emoji
+    // family only joins a list that already pins a text font.
     if (fontFamily != null) ?base.fontFamily,
     ...?base.fontFamilyFallback,
     ...?_hanFamilies[platform]?[_hanVariantOf(locales)],
+    if (fontFamily != null && emojiFamily != null) emojiFamily,
   ];
 }

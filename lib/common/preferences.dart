@@ -187,6 +187,18 @@ class Preferences {
     await sharedPreferencesIns?.setString(bootRecordKey, json.encode(record));
   }
 
+  Future<SharedPreferences?> get sharedPreferences => _store.value;
+
+  Future<bool> getWakelockEnabled() async {
+    final sharedPreferencesIns = await _store.value;
+    return sharedPreferencesIns?.getBool(wakelockEnabledKey) ?? false;
+  }
+
+  Future<void> setWakelockEnabled(bool value) async {
+    final sharedPreferencesIns = await _store.value;
+    await sharedPreferencesIns?.setBool(wakelockEnabledKey, value);
+  }
+
   Future<void> clearPreferences() async {
     final sharedPreferencesIns = await _store.value;
     await sharedPreferencesIns?.clear();

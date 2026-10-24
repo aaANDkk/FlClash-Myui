@@ -758,7 +758,6 @@ class CommonScaffoldState extends State<CommonScaffold>
     final isMobileView = ViewScope.isMobileOf(context);
     final pushed =
         form.pop == null &&
-        widget.titleWidget == null &&
         isMobileView &&
         ModalRoute.of(context)?.impliesAppBarDismissal == true;
     final compactTitle = isCompact || pushed;

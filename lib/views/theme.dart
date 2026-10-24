@@ -1,11 +1,15 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/manager/emoji_manager.dart';
+import 'package:fl_clash/manager/font_manager.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/state.dart';
+import 'package:fl_clash/state.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/font_family.dart';
 import 'package:fl_clash/views/theme_preview.dart';
@@ -811,52 +815,115 @@ class _SidebarBlurItem extends StatelessWidget {
 class _FontFamilyItem extends ConsumerWidget {
   const _FontFamilyItem();
 
+  Future<void> _handleExportFont(BuildContext context, CustomFont font) async {
+    final appLocalizations = context.appLocalizations;
+    final res = await globalState.safeRun<bool>(() async {
+      final file = File(font.path);
+      if (!await file.exists()) {
+        return false;
+      }
+      final value = await picker.saveFile(
+        font.name,
+        await file.readAsBytes(),
+      );
+      if (value == null) return false;
+      return true;
+    }, title: appLocalizations.tip);
+    if (res == true && context.mounted) {
+      context.showNotifier(
+        appLocalizations.exportSuccess,
+        level: MessageLevel.success,
+      );
+    }
+  }
+
+  Future<void> _handleDeleteFont(BuildContext context, CustomFont font) async {
+    final appLocalizations = context.appLocalizations;
+    final result = await dialogs.showMessage(
+      title: appLocalizations.tip,
+      message: TextSpan(text: appLocalizations.deleteTip(font.name)),
+      destructive: true,
+      confirmText: appLocalizations.delete,
+    );
+    if (result != true || !context.mounted) {
+      return;
+    }
+    await FontManager.delete(font);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final appLocalizations = context.appLocalizations;
     final colorScheme = context.colorScheme;
-    final fontFamily = ref.watch(
-      themeSettingProvider.select((state) => state.fontFamily),
-    );
-    final preview = Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-      child: Row(
-        spacing: 12,
-        children: [
-          Text(
-            'Aa',
-            style: AppTextStyle.headline
-                .of(context)
-                .copyWith(fontFamily: fontFamily),
+    // The card names the picked font and previews it, so a registered family
+    // name such as CustomUserFont_… never reaches the UI.
+    final preview = ValueListenableBuilder<String?>(
+      valueListenable: FontManager.fontFamilyNotifier,
+      builder: (context, fontFamily, _) {
+        final customFontName = FontManager.selectedName;
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+          child: Row(
+            spacing: 12,
+            children: [
+              Text(
+                'Aa',
+                style: AppTextStyle.headline
+                    .of(context)
+                    .copyWith(fontFamily: fontFamily),
+              ),
+              Expanded(
+                child: Text(
+                  customFontName ?? appLocalizations.defaultText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyle.subheadline
+                      .of(context)
+                      .copyWith(
+                        fontFamily: fontFamily,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ),
+              GlyphIcon(
+                AppGlyphs.chevronForward,
+                size: 20,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ],
           ),
-          Expanded(
-            child: Text(
-              fontFamily ?? appLocalizations.defaultText,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyle.subheadline
-                  .of(context)
-                  .copyWith(
-                    fontFamily: fontFamily,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-            ),
-          ),
-          GlyphIcon(
-            AppGlyphs.chevronForward,
-            size: 20,
-            color: colorScheme.onSurfaceVariant,
-          ),
-        ],
-      ),
+        );
+      },
     );
     final cardColor = context.raisedSurfaceLevel.colorOf(colorScheme);
-    Widget card(VoidCallback onTap) => Material(
-      color: cardColor,
-      shape: AppShape.lg,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(customBorder: AppShape.lg, onTap: onTap, child: preview),
-    );
+    Widget card(VoidCallback onTap) {
+      final selectedFont = FontManager.selectedFont;
+      final menuItems = selectedFont == null
+          ? null
+          : [
+              CommonPopupMenuItem(
+                glyph: AppGlyphs.export,
+                label: appLocalizations.exportFile,
+                onPressed: () => _handleExportFont(context, selectedFont),
+              ),
+              CommonPopupMenuItem(
+                danger: true,
+                glyph: AppGlyphs.delete,
+                label: appLocalizations.delete,
+                onPressed: () => _handleDeleteFont(context, selectedFont),
+              ),
+            ];
+      final cardWidget = Material(
+        color: cardColor,
+        shape: AppShape.lg,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(customBorder: AppShape.lg, onTap: onTap, child: preview),
+      );
+      if (menuItems == null || menuItems.isEmpty) {
+        return cardWidget;
+      }
+      return ContextMenuRegion(menuItems: menuItems, child: cardWidget);
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -865,19 +932,41 @@ class _FontFamilyItem extends ConsumerWidget {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: context.isMobileView
-              ? OpenContainer<void>(
-                  closedShape: AppShape.lg,
-                  closedColor: cardColor,
-                  closedBuilder: (_, open) => card(open),
-                  openBuilder: (_, _) => const FontFamilyView(),
-                )
-              : card(
-                  () => showSheet<void>(
-                    context: context,
-                    builder: (_) => const FontFamilyView(),
-                  ),
-                ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 8,
+            children: [
+              context.isMobileView
+                  ? OpenContainer<void>(
+                      closedShape: AppShape.lg,
+                      closedColor: cardColor,
+                      closedBuilder: (_, open) => card(open),
+                      openBuilder: (_, _) => const FontFamilyView(),
+                    )
+                  : card(
+                      () => showSheet<void>(
+                        context: context,
+                        builder: (_) => const FontFamilyView(),
+                      ),
+                    ),
+              ValueListenableBuilder<EmojiStyle>(
+                valueListenable: EmojiManager.emojiStyleNotifier,
+                builder: (context, currentEmojiStyle, _) {
+                  return generateGroup([
+                    ListItem<EmojiStyle>.options(
+                      title: Text(appLocalizations.emojiStyle),
+                      options: EmojiStyle.values,
+                      value: currentEmojiStyle,
+                      textBuilder: (style) => style.label,
+                      onChanged: (style) async {
+                        await EmojiManager.setStyle(style);
+                      },
+                    ),
+                  ]);
+                },
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -886,8 +975,6 @@ class _FontFamilyItem extends ConsumerWidget {
 
 class _TextScaleFactorItem extends ConsumerStatefulWidget {
   const _TextScaleFactorItem();
-
-  static const _step = 0.05;
 
   @override
   ConsumerState<_TextScaleFactorItem> createState() =>
@@ -917,8 +1004,6 @@ class _TextScaleFactorItemState extends ConsumerState<_TextScaleFactorItem> {
     final scale = _draft ?? (textScale.enable ? textScale.scale : systemScale);
     final percent = '${(scale * 100).round()}%';
     final level = context.raisedSurfaceLevel;
-    final divisions =
-        ((maxTextScale - minTextScale) / _TextScaleFactorItem._step).round();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1036,7 +1121,6 @@ class _TextScaleFactorItemState extends ConsumerState<_TextScaleFactorItem> {
                                 padding: EdgeInsets.zero,
                                 min: minTextScale,
                                 max: maxTextScale,
-                                divisions: divisions,
                                 value: scale,
                                 label: percent,
                                 onChanged: textScale.enable

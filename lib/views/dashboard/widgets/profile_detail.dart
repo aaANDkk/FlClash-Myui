@@ -259,10 +259,10 @@ class _StatsGrid extends StatelessWidget {
     final appLocalizations = context.appLocalizations;
     final stats = this.stats;
     final tiles = [
+      (appLocalizations.providerCount, stats?.providers),
+      (appLocalizations.nodeCount, stats?.proxies),
+      (appLocalizations.ruleCount, stats?.rules),
       (appLocalizations.proxyGroup, stats?.groups),
-      (appLocalizations.proxies, stats?.proxies),
-      (appLocalizations.rules, stats?.rules),
-      (appLocalizations.providers, stats?.providers),
     ];
     Widget rowOf(Iterable<(String, int?)> pair) {
       return Row(

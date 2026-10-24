@@ -270,6 +270,11 @@ class MessageLookup extends MessageLookupByLibrary {
     "allReferencedProxyProviders": MessageLookupByLibrary.simpleMessage(
       "참조된 모든 프록시 공급자",
     ),
+    "customFont": MessageLookupByLibrary.simpleMessage("사용자 지정 글꼴"),
+    "nodeCount": MessageLookupByLibrary.simpleMessage("노드 수"),
+    "ruleCount": MessageLookupByLibrary.simpleMessage("규칙 항목"),
+    "providerCount": MessageLookupByLibrary.simpleMessage("제공자"),
+    "emojiStyle": MessageLookupByLibrary.simpleMessage("이모지 글꼴"),
     "allowBypass": MessageLookupByLibrary.simpleMessage("앱의 VPN 우회 허용"),
     "allowLan": MessageLookupByLibrary.simpleMessage("LAN 허용"),
     "allowedIps": MessageLookupByLibrary.simpleMessage("허용 IP"),
@@ -871,6 +876,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "ipFlagVpn": MessageLookupByLibrary.simpleMessage("VPN"),
     "ipFlags": MessageLookupByLibrary.simpleMessage("플래그"),
     "ipOrganization": MessageLookupByLibrary.simpleMessage("조직"),
+    "proxyNode": MessageLookupByLibrary.simpleMessage("프록시 노드"),
     "ipQualityFailed": MessageLookupByLibrary.simpleMessage(
       "IP 유형을 확인할 수 없습니다",
     ),
@@ -1603,6 +1609,10 @@ class MessageLookup extends MessageLookupByLibrary {
     "webDAVConfiguration": MessageLookupByLibrary.simpleMessage("WebDAV 구성"),
     "whitelistMode": MessageLookupByLibrary.simpleMessage("화이트리스트 모드"),
     "writeToSystem": MessageLookupByLibrary.simpleMessage("시스템에 기록"),
+    "secondaryDevelopmentBuild": MessageLookupByLibrary.simpleMessage(
+      "2차 개발 빌드",
+    ),
+    "wakelock": MessageLookupByLibrary.simpleMessage("화면 켜짐 유지"),
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "시스템에 기록하면 시스템 시계도 설정합니다. Android에서는 무시됩니다.",
     ),

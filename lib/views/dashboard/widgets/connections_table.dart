@@ -28,7 +28,7 @@ const _wideTableWidth = 880.0;
 const _cellInset = 8.0;
 const _tableGap = 12.0;
 const _headerHeight = 32.0;
-const _minRows = 3;
+const _minRows = 1;
 
 double _tabHeightOf(DashboardDensity density) => density.isCompact ? 32 : 36;
 

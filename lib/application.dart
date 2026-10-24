@@ -150,43 +150,53 @@ class ApplicationState extends ConsumerState<Application> {
   @override
   Widget build(context) {
     return Consumer(
-      builder: (_, ref, child) {
+      builder: (_, ref, homePage) {
         final locale = ref.watch(
           appSettingProvider.select((state) => state.locale),
         );
         final themeProps = ref.watch(themeSettingProvider);
-        return MaterialApp(
-          debugShowCheckedModeBanner: false,
-          navigatorKey: globalState.navigatorKey,
-          onNavigationNotification: (_) => true,
-          localizationsDelegates: const [
-            AppLocalizations.delegate,
-            AppUiLocalizations.delegate,
-            ...GlobalMaterialLocalizations.delegates,
-          ],
-          builder: (context, child) {
-            return ThemeCrossFade(
-              child: buildManagerStack(
-                isDesktop: system.isDesktop,
-                onConnectivityChanged: _handleConnectivityChanged,
-                terminateSignals: _terminateSignals,
-                child: RemoteFocusAdapter(
-                  enabled: system.isTV,
-                  floatingKeyboard: app?.floatingKeyboard,
-                  child: child!,
-                ),
-              ),
+        return ValueListenableBuilder<String?>(
+          valueListenable: FontManager.fontFamilyNotifier,
+          builder: (context, currentFont, _) {
+            return ValueListenableBuilder<EmojiStyle>(
+              valueListenable: EmojiManager.emojiStyleNotifier,
+              builder: (context, emojiStyle, _) {
+                return MaterialApp(
+                  debugShowCheckedModeBanner: false,
+                  navigatorKey: globalState.navigatorKey,
+                  onNavigationNotification: (_) => true,
+                  localizationsDelegates: const [
+                    AppLocalizations.delegate,
+                    AppUiLocalizations.delegate,
+                    ...GlobalMaterialLocalizations.delegates,
+                  ],
+                  builder: (context, child) {
+                    return ThemeCrossFade(
+                      child: buildManagerStack(
+                        isDesktop: system.isDesktop,
+                        onConnectivityChanged: _handleConnectivityChanged,
+                        terminateSignals: _terminateSignals,
+                        child: RemoteFocusAdapter(
+                          enabled: system.isTV,
+                          floatingKeyboard: app?.floatingKeyboard,
+                          child: child!,
+                        ),
+                      ),
+                    );
+                  },
+                  scrollBehavior: const BaseScrollBehavior(),
+                  title: appName,
+                  locale: getLocaleForString(locale),
+                  supportedLocales: AppLocalizations.delegate.supportedLocales,
+                  themeMode: themeProps.themeMode,
+                  theme: watchAppTheme(ref, Brightness.light),
+                  darkTheme: watchAppTheme(ref, Brightness.dark),
+                  themeAnimationStyle: AnimationStyle.noAnimation,
+                  home: KeyboardInsetHold(child: homePage!),
+                );
+              },
             );
           },
-          scrollBehavior: const BaseScrollBehavior(),
-          title: appName,
-          locale: getLocaleForString(locale),
-          supportedLocales: AppLocalizations.delegate.supportedLocales,
-          themeMode: themeProps.themeMode,
-          theme: watchAppTheme(ref, Brightness.light),
-          darkTheme: watchAppTheme(ref, Brightness.dark),
-          themeAnimationStyle: AnimationStyle.noAnimation,
-          home: KeyboardInsetHold(child: child!),
         );
       },
       child: const HomePage(),
