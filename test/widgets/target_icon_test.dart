@@ -1,11 +1,14 @@
+import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter_svg/svg.dart';
 
 import '../helpers/glyph_finders.dart';
 import '../helpers/test_app.dart';
@@ -71,6 +74,138 @@ void main() {
 
     tearDown(() => readRemoteIcon = null);
 
+    testWidgets('a cold group icon stays visible until its first image frame', (
+      tester,
+    ) async {
+      final stream = StreamController<Uint8List>();
+      addTearDown(() => unawaited(stream.close()));
+      readRemoteIcon = (_) => stream.stream;
+      imageCache.clear();
+      await _pump(
+        tester,
+        const SizedBox.square(
+          dimension: 32,
+          child: CommonTargetIcon(
+            src: 'https://example.com/cold-desktop-group.png',
+            fallback: GroupMonogram('Proxy'),
+          ),
+        ),
+      );
+      expect(find.text('P'), findsOne);
+      final size = tester.getSize(find.byType(CommonTargetIcon));
+      stream.add(Uint8List.fromList(_onePixelPng));
+      await tester.pump();
+      final painted =
+          find.byType(RawImage).evaluate().isNotEmpty &&
+          tester.widget<RawImage>(find.byType(RawImage)).image != null;
+      expect(find.text('P'), painted ? findsNothing : findsOne);
+      await tester.runAsync(() async {
+        await precacheImage(
+          tester.widget<Image>(find.byType(Image)).image,
+          tester.element(find.byType(Image)),
+        );
+      });
+      await tester.pump();
+      expect(tester.widget<RawImage>(find.byType(RawImage)).image, isNotNull);
+      expect(find.text('P'), findsNothing);
+      expect(tester.getSize(find.byType(CommonTargetIcon)), size);
+      await tester.pumpWidget(const SizedBox.shrink());
+    }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
+
+    testWidgets('refreshing a loaded group keeps its previous image until the '
+        'replacement decodes', (tester) async {
+      final stream = StreamController<Uint8List>();
+      addTearDown(() => unawaited(stream.close()));
+      readRemoteIcon = (_) => stream.stream;
+      await _pump(
+        tester,
+        const CommonTargetIcon(
+          src: 'https://example.com/refresh-group.png',
+          fallback: GroupMonogram('Refresh'),
+        ),
+      );
+      Future<void> finishDecode() async {
+        await tester.runAsync(
+          () => precacheImage(
+            tester.widget<Image>(find.byType(Image)).image,
+            tester.element(find.byType(Image)),
+          ),
+        );
+        await tester.pump();
+      }
+
+      stream.add(Uint8List.fromList(_onePixelPng));
+      await tester.pump();
+      await finishDecode();
+      expect(find.text('R'), findsNothing);
+      final previous = tester.widget<RawImage>(find.byType(RawImage)).image;
+      final replacement = (await tester.runAsync(() => _squarePng(2)))!;
+      stream.add(replacement);
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('R'), findsNothing);
+      expect(tester.widget<RawImage>(find.byType(RawImage)).image, previous);
+      await finishDecode();
+      expect(tester.widget<RawImage>(find.byType(RawImage)).image!.width, 2);
+      expect(find.text('R'), findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('a group SVG keeps its fallback through reading and decoding', (
+      tester,
+    ) async {
+      final stream = StreamController<Uint8List>();
+      addTearDown(() => unawaited(stream.close()));
+      readRemoteIcon = (_) => stream.stream;
+      final bytes = Uint8List.fromList(
+        utf8.encode(
+          '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">'
+          '<rect width="32" height="32" fill="#00aa00"/></svg>',
+        ),
+      );
+      const key = ValueKey('group-svg-paint');
+      await _pump(
+        tester,
+        const SizedBox.square(
+          dimension: 32,
+          child: RepaintBoundary(
+            key: key,
+            child: CommonTargetIcon(
+              src: 'https://example.com/cold-group.svg',
+              fallback: GroupMonogram('SVG'),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('S'), findsOne);
+      stream.add(bytes);
+      await tester.pump();
+      expect(await _hasPaintedIcon(tester, key), isTrue);
+      await tester.runAsync(() async {
+        final picture = await vg.loadPicture(SvgBytesLoader(bytes), null);
+        picture.picture.dispose();
+      });
+      await tester.pumpAndSettle();
+      expect(find.byType(SvgPicture), findsOne);
+      expect(find.text('S'), findsNothing);
+      expect(await _hasPaintedIcon(tester, key), isTrue);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('a generic image keeps its quiet loading state', (
+      tester,
+    ) async {
+      readRemoteIcon = (_) => const Stream.empty();
+      await _pump(
+        tester,
+        const CommonTargetIcon(src: 'https://example.com/generic-missing.png'),
+      );
+      expect(find.byGlyph(AppGlyphs.photos), findsNothing);
+      await tester.pump();
+      expect(find.byGlyph(AppGlyphs.photos), findsOne);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
     testWidgets('loads at once on a page that sits still', (tester) async {
       const src = 'https://example.com/still.png';
       await _pump(tester, const CommonTargetIcon(src: src));
@@ -87,7 +222,7 @@ void main() {
           child: Builder(
             builder: (context) => TextButton(
               onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
+                HostPageRoute<void>(
                   builder: (_) => const Center(
                     child: IconTheme(
                       data: IconThemeData(size: 32),
@@ -130,7 +265,7 @@ void main() {
           child: Builder(
             builder: (context) => TextButton(
               onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
+                HostPageRoute<void>(
                   builder: (_) => IconTheme(
                     data: const IconThemeData(size: 32),
                     child: icons,
@@ -166,7 +301,7 @@ void main() {
       expect(imageCache.currentSize, 1);
     });
 
-    testWidgets('shows the fallback once a load ends without an image', (
+    testWidgets('keeps the group fallback when a load ends without an image', (
       tester,
     ) async {
       readRemoteIcon = (_) => const Stream.empty();
@@ -178,13 +313,31 @@ void main() {
         ),
       );
 
-      expect(find.text('P'), findsNothing);
+      expect(find.text('P'), findsOne);
 
       await tester.pump();
 
       expect(find.text('P'), findsOne);
     });
   });
+}
+
+Future<bool> _hasPaintedIcon(WidgetTester tester, Key key) async {
+  final boundary = tester.renderObject<RenderRepaintBoundary>(find.byKey(key));
+  return (await tester.runAsync(() async {
+    final image = await boundary.toImage();
+    try {
+      final data = (await image.toByteData(
+        format: ui.ImageByteFormat.rawRgba,
+      ))!;
+      for (var offset = 3; offset < data.lengthInBytes; offset += 4) {
+        if (data.getUint8(offset) != 0) return true;
+      }
+      return false;
+    } finally {
+      image.dispose();
+    }
+  }))!;
 }
 
 Future<Uint8List> _squarePng(int size) async {

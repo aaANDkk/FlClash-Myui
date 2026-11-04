@@ -112,6 +112,7 @@ var serviceCheckers = []serviceChecker{
 	{name: "spotify", check: checkSpotify},
 	{name: "tiktok", check: checkTikTok},
 	{name: "discord", check: checkDiscord},
+	{name: "twitter", check: checkReachable("https://twitter.com/")},
 	{name: "bilibili", check: checkBilibili},
 }
 

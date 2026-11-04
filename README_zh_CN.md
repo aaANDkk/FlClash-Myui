@@ -1,135 +1,72 @@
-<div align="center">
+# FlClash Myui
 
-<img src="assets/images/icon.png" alt="FlClash" width="88">
+基于 [FlClash 官方 0.9.3](https://github.com/chen08209/FlClash/tree/v0.9.3) 的个性化定制版本，主要调整字体、首页小部件、代理页和 IP 查询体验。
 
-# FlClash
-
-基于 ClashMeta 的多平台代理客户端，简单易用，开源无广告。
-
-[English](README.md) · **简体中文**
-
-[![Release](https://img.shields.io/github/v/release/chen08209/FlClash?style=flat-square&label=release)](https://github.com/chen08209/FlClash/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/chen08209/FlClash/total?style=flat-square&logo=github)](https://github.com/chen08209/FlClash/releases)
-[![License](https://img.shields.io/github/license/chen08209/FlClash?style=flat-square)](LICENSE)
-[![Telegram](https://img.shields.io/badge/Telegram-channel-26A5E4?style=flat-square&logo=telegram&logoColor=white)](https://t.me/FlClash)
-
-[官网](https://chen08209.github.io/FlClash/zh) · [下载](#下载) · [更新日志](CHANGELOG.md) · [从源码构建](#从源码构建)
-
-</div>
-
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="snapshots/preview-dark.png">
-    <img alt="FlClash 在 MacBook 与手机上的仪表盘" src="snapshots/preview.png" width="92%">
-  </picture>
-</p>
-
-## 功能
-
-- **一个应用覆盖 Android、Windows、macOS 和 Linux**，桌面端同时提供 x64 与 ARM64 版本。
-- **mihomo（Clash.Meta）内核**：规则分流、代理组、延迟测试、系统代理与 TUN 模式。
-- **配置管理**：通过订阅链接或文件导入配置，内置编辑器，支持覆写脚本以及自定义规则、代理和代理组。
-- **实时查看**连接、请求、DNS 查询和日志。
-- **Material You 设计，融合 Apple 式交互**：支持动态取色、浅色与深色主题，连续曲率圆角，弹出面板可在几档高度间吸附，布局随屏幕从手机到桌面自适应。
-- **备份与恢复**：通过 WebDAV 或本地文件。
-- **平台细节**：Android 上有快捷设置磁贴、分应用代理和 Android TV 支持；桌面端有托盘菜单和全局快捷键。
-- **开源无广告**，以 GPL-3.0 协议发布。
+支持 Android、Windows、macOS、Linux，开源、无广告。
 
 ## 下载
 
-从 [GitHub Releases](https://github.com/chen08209/FlClash/releases/latest) 获取最新版本，或打开
-[官网](https://chen08209.github.io/FlClash/zh#download)，它会自动为你的设备选好安装包。
+[下载最新版本](https://github.com/aaANDkk/FlClash-Myui/releases/latest) · [全部版本](https://github.com/aaANDkk/FlClash-Myui/releases)
 
-| 平台 | 安装包 | 说明 |
-| --- | --- | --- |
-| Android | `arm64-v8a`、`armeabi-v7a`、`x86_64` 三种 APK | 绝大多数手机选 `arm64-v8a`。也可以通过下方的 F-Droid 仓库安装。 |
-| Windows 10 及以上 | 安装版（`.exe`）或便携版（`.zip`），分 x64 与 ARM64 | 骁龙等 ARM 架构笔记本选 ARM64。 |
-| macOS 12 及以上 | Apple Silicon 与 Intel 两种 DMG | 也可以通过 Homebrew 安装。 |
-| Linux | `.deb`、`.rpm` 和 AppImage，分 x64 与 ARM64 | 托盘依赖见下方说明。 |
-
-<p>
-  <a href="https://chen08209.github.io/FlClash-fdroid-repo/repo?fingerprint=789D6D32668712EF7672F9E58DEEB15FBD6DCEEC5AE7A4371EA72F2AAE8A12FD"><img alt="Get it on F-Droid" src="snapshots/get-it-on-fdroid.svg" height="56"></a>
-  <a href="https://github.com/chen08209/FlClash/releases/latest"><img alt="Get it on GitHub" src="snapshots/get-it-on-github.svg" height="56"></a>
-</p>
-
-**Homebrew**
-
-```bash
-brew tap chen08209/tap
-brew install --cask flclash
-```
-
-**Linux 托盘图标**
-
-`.deb` 安装包会自动安装所需依赖。使用 AppImage 或 `.rpm` 时，需要先安装 AyatanaAppIndicator 库，托盘图标才能显示：
-
-```bash
-sudo apt-get install libayatana-appindicator3-1   # Debian 与 Ubuntu
-sudo dnf install libayatana-appindicator-gtk3     # Fedora
-```
-
-**无人值守的桌面环境**
-
-FlClash 要在免责声明被接受后才会启动核心。在容器等无人点击的环境里，可在应用的环境变量中设置
-`FLCLASH_ACCEPT_DISCLAIMER=1`，首次启动时即视为接受。
-
-## 使用
-
-**通过链接导入配置。** 打开下面格式的链接，即可把订阅导入 FlClash。`clashmeta://` 和 `flclash://` 开头的链接同样可用。
-
-```text
-clash://install-config?url=<经过 URL 编码的订阅链接>
-```
-
-**Android 自动化。** Tasker、MacroDroid 等应用可以用下面的 Action 启动 Activity，从而启动、停止或切换代理：
-
-```text
-com.follow.clash.action.START
-com.follow.clash.action.STOP
-com.follow.clash.action.TOGGLE
-```
-
-在电脑上也可以通过 adb 触发：
-
-```bash
-adb shell am start -a com.follow.clash.action.TOGGLE
-```
-
-## 从源码构建
-
-需要 [Flutter](https://docs.flutter.dev/get-started/install) 3.47（正式版构建使用 3.47.6）、[Go](https://go.dev/dl/) 1.27，
-以及通过 rustup 安装的 [Rust](https://rustup.rs/)。桌面端需要在对应系统上构建，Android 在任意系统上都能构建。
-
-```bash
-git clone --recursive https://github.com/chen08209/FlClash.git
-cd FlClash
-flutter pub get
-dart setup.dart android   # 或 windows、macos、linux
-```
-
-安装包输出到 `dist/`。Go 内核和 Rust 库会在 Flutter 构建过程中一并编译。
-
-| 平台 | 额外依赖 |
+| 平台 | 安装包 |
 | --- | --- |
-| Android | 带 NDK 的 Android SDK。加上 `--arch arm64` 可以只构建单个 ABI。 |
-| Windows | 编译内核用的 GCC（MinGW-w64），以及打包安装程序用的 [Inno Setup](https://jrsoftware.org/isinfo.php) 6。 |
-| macOS | Xcode 与 Node.js。脚本会通过 npm 安装 `appdmg`。 |
-| Linux | Debian 或 Ubuntu。脚本会用 apt 安装构建所需的软件包，并下载 `appimagetool`。 |
+| Android | [ARM64](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.3/FlClash-0.9.3-android-arm64-v8a.apk) · [ARMv7](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.3/FlClash-0.9.3-android-armeabi-v7a.apk) · [x86_64](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.3/FlClash-0.9.3-android-x86_64.apk) |
+| Windows x64 | [EXE 安装版](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.3/FlClash-0.9.3-windows-amd64-setup.exe) · [ZIP 便携版](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.3/FlClash-0.9.3-windows-amd64.zip) |
+| Windows ARM64 | [EXE 安装版](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.3/FlClash-0.9.3-windows-arm64-setup.exe) · [ZIP 便携版](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.3/FlClash-0.9.3-windows-arm64.zip) |
+| macOS | [Apple Silicon](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.3/FlClash-0.9.3-macos-arm64.dmg) · [Intel](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.3/FlClash-0.9.3-macos-amd64.dmg) |
+| Linux x64 | [AppImage](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.3/FlClash-0.9.3-linux-amd64.AppImage) · [DEB](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.3/FlClash-0.9.3-linux-amd64.deb) · [RPM](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.3/FlClash-0.9.3-linux-amd64.rpm) |
+| Linux ARM64 | [AppImage](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.3/FlClash-0.9.3-linux-arm64.AppImage) · [DEB](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.3/FlClash-0.9.3-linux-arm64.deb) · [RPM](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.3/FlClash-0.9.3-linux-arm64.rpm) |
 
-其余选项可以运行 `dart setup.dart --help` 查看，例如用 `--targets` 只构建部分安装包格式。
+选择与你的系统和设备架构对应的安装包，点击即可下载。
 
-## 支持
+## 相比官方 0.9.3 的主要改动
 
-给仓库点一个 Star 是支持项目最简单的方式。问题讨论和更新通知请关注 [Telegram 频道](https://t.me/FlClash)，
-Bug 与功能建议请提交到 [GitHub Issues](https://github.com/chen08209/FlClash/issues)。
+### 字体与主题
 
-<a href="https://star-history.com/#chen08209/FlClash&Date">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=chen08209/FlClash&type=Date&theme=dark">
-    <img alt="Star history" src="https://api.star-history.com/svg?repos=chen08209/FlClash&type=Date" width="640">
-  </picture>
-</a>
+- 支持导入多款 `.ttf`、`.otf` 字体，预览、切换、导出和删除，重启后保留选择。
+- Emoji 支持 Twemoji、OpenMoji 两种风格，节点名称、国旗和编辑器同步使用。
+- 内置等宽字体更换为 Maple Mono，支持常规和粗体。
+- 文字缩放改为连续调节。
+- 弹窗增加背景模糊；纯黑主题下保留深色弹窗层次，启用液态玻璃时避免重复模糊。
 
-## 许可证
+### 首页小部件
 
-FlClash 以 [GPL-3.0 协议](LICENSE)发布。
+- 状态卡片在 IP 下方显示当前代理节点，底部显示运行时长和网络类型，替换原来的组织信息。
+- 网络速度重新排版：手机端下载、上传双栏显示，配合上下分向柱状图；电脑端分别显示上传和下载卡片，使用不同颜色区分。
+- 配置卡片改为“当前配置”，使用火箭图标，底部展示“外部资源”和“代理节点”统计。
+- 配置详情统一展示“外部资源、代理节点、路由规则、策略组”。
+- 服务状态新增 Twitter 检测，使用经典蓝鸟图标；首页在宽度足够时显示四个服务。
+- 电脑和横屏下，内存信息固定分两行显示，数值靠右对齐。
+- 调整连接和策略组大卡片的展开条件，适配高缩放和较矮窗口。
+
+### 代理页与配置列表
+
+- 列表、标签模式统一使用浅主题色选中背景和主题色边框，取消选中对勾，保留固定节点图钉。
+- 支持显示嵌套策略组的图片图标，列表组标题下显示“分组类型 · 当前节点”。
+- 风格、布局和卡片尺寸选项使用随当前选择变化的图标。
+- 外部资源中代理提供者排在规则集前，无到期时间时同时显示节点数量和“长期有效”。
+- 配置列表用标签区分“长期有效”“本地”和自定义配置策略组数量，副标题集中显示用量与更新时间。
+
+### 请求、DNS 与 IP 查询
+
+- 请求详情的公网目标地址、远程目标，以及 DNS 查询结果中的公网 IP，支持点击查看“IP 详情”。
+- **快捷查看节点相关 IP 的归属地、组织和 ASN，辅助判断是否涉及“狗妈”“奶爸”，以及国内入口、专线等线路。**
+- 公网 IP 前显示可识别的国家或地区旗帜，支持 IPv4、IPv6 查询。
+- IP 详情在当前面板内切换，全局“隐藏 IP”设置同步生效；公网地址连同端口一起隐藏，内网、保留地址和 Fake-IP 保持明文。
+
+### 其他调整与修复
+
+- 电脑首页新增亮屏锁，支持记住开关状态。
+- Windows 单色托盘未运行时随任务栏主题显示黑色或白色图标。
+- Windows 使用连续曲率圆角，侧边栏宽度随菜单文字调整，部分界面图标采用 Fluent 风格。
+- 工具页“进阶配置”改为“配置”，内部划分“进阶”和“自定义”。
+- 修复运行时配置中的国旗、Emoji 显示为转义字符的问题。
+- 修复代理组图片短暂消失、工具页启动后自动滚到底部、配置统计长期不显示，以及部分动态策略组停留在空回退的问题。
+- GeoIP、ASN、GeoSite 等资源默认改用 bett-rules 下载源，保留用户自行设置的地址。
+- 语言精简为简体中文、英语、日语、韩语和俄语。
+
+## 致谢与许可
+
+感谢 [FlClash](https://github.com/chen08209/FlClash)、[mihomo](https://github.com/MetaCubeX/mihomo) 及原项目所有贡献者。
+
+本项目遵循 [GPL-3.0](LICENSE) 协议。Maple Mono、Twemoji、OpenMoji 等资源保留各自的开源许可与署名。

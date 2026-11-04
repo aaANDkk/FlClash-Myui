@@ -6,7 +6,7 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'card.dart';
@@ -155,6 +155,10 @@ class _ProxiesListViewState extends ConsumerState<ProxiesListView> {
     animateScrollTo(_controller, _getGroupOffset(groupName) + rowOffset);
   }
 
+  Widget _scrollbar(Widget child) => system.isDesktop
+      ? Scrollbar(controller: _controller, child: child)
+      : child;
+
   @override
   Widget build(BuildContext context) {
     final appLocalizations = context.appLocalizations;
@@ -211,10 +215,8 @@ class _ProxiesListViewState extends ConsumerState<ProxiesListView> {
                 onChange: _handleChange,
                 onScrollToSelected: _scrollToGroupSelected,
               );
-              return CommonScrollBar(
-                controller: _controller,
-                thumbVisibility: true,
-                child: CustomScrollView(
+              return _scrollbar(
+                CustomScrollView(
                   key: proxiesListStoreKey,
                   controller: _controller,
                   slivers: [
@@ -611,7 +613,7 @@ class ListHeader extends ConsumerWidget {
         ? SurfaceLevel.floatingOf(colorScheme)
         : context.raisedSurfaceLevel;
     final radius = AppCorner.xl.ap(context);
-    final card = CommonCard(
+    final card = Card(
       enterActionsOnRight: true,
       enterAnimated: enterAnimated,
       key: key,
@@ -668,7 +670,7 @@ class ListHeader extends ConsumerWidget {
       child: Padding(
         padding: const EdgeInsets.all(_headerButtonInset),
         child: SurfaceScope(
-          // CommonCard fills one level above its scope.
+          // Card fills one level above its scope.
           level: SurfaceLevel.values[level.index - 1],
           child: card,
         ),
@@ -804,7 +806,8 @@ class _SelectedProxyLine extends ConsumerWidget {
     final icon = proxyName.isEmpty
         ? null
         : ref.watch(groupsProvider).getGroup(proxyName)?.icon;
-    final iconSize = style.fontSize ?? AppTextStyle.caption1.size;
+    final textScaler = MediaQuery.textScalerOf(context);
+    final iconSize = textScaler.scale(AppTextStyle.caption1.leading);
     return Row(
       children: [
         Text(groupType.name, style: style),
@@ -824,7 +827,7 @@ class _SelectedProxyLine extends ConsumerWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 4),
+            SizedBox(width: textScaler.scale(4)),
           ],
           Flexible(
             child: EmojiText(
@@ -875,7 +878,7 @@ class _GroupActions extends StatelessWidget {
                   tooltip: context.appLocalizations.delayTest,
                   onPressed: isDelayTesting ? null : onDelayTest,
                   icon: isDelayTesting
-                      ? CommonCircleLoading(size: TonalButtonSize.compact.icon)
+                      ? const ActivityIndicator(size: 24)
                       : const GlyphIcon(AppGlyphs.bolt),
                 ),
               ],
@@ -887,7 +890,7 @@ class _GroupActions extends StatelessWidget {
                   ? context.appLocalizations.showLess
                   : context.appLocalizations.showMore,
               onPressed: onToggle,
-              icon: CommonExpandIcon(expand: isExpand),
+              icon: ExpandIcon(expand: isExpand),
             ),
           ),
         ],

@@ -9,14 +9,14 @@ import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/providers/routed_probe.dart';
 import 'package:fl_clash/providers/service_status.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
-import 'package:fl_clash/views/dashboard/probe_start_hold.dart';
 import 'package:fl_clash/views/dashboard/layout.dart';
+import 'package:fl_clash/views/dashboard/probe_start_hold.dart';
 import 'package:fl_clash/views/dashboard/style.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:material_ui/material_ui.dart';
 
 import 'card.dart';
 
@@ -174,7 +174,7 @@ class _ServiceStatusCardState extends ConsumerState<ServiceStatusCard>
     final mobile = !density.isDesktop;
     final appLocalizations = context.appLocalizations;
     // At most four: what the Core checks at once (serviceCheckConcurrency).
-    final shownCount = (mobile ? 1 : 2) * widget.columns;
+    final shownCount = 2 * widget.columns;
     final stacked = widget.columns == 1;
     final shown = ref
         .watch(enabledServiceTargetsProvider)
@@ -228,19 +228,17 @@ class _ServiceStatusCardState extends ConsumerState<ServiceStatusCard>
             glyph: AppGlyphs.verified,
             title: appLocalizations.serviceStatus,
             chevron: mobile,
+            share: 0.65,
             trailing: [
-              if (!stacked) ?verdict,
-              if (!mobile)
+              if (mobile) ...[
+                if (!stacked) ?verdict,
+              ] else
                 Transform.translate(
                   offset: const Offset(8, 0),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (!stacked)
-                        _CheckAllButton(
-                          loading: shown.any(state.isLoading),
-                          onPressed: () => _services.refresh(shown),
-                        ),
+                      if (!stacked) ?verdict,
                       DashboardIconButton(
                         glyph: AppGlyphs.chevronForward,
                         tooltip: appLocalizations.serviceStatus,
@@ -309,6 +307,10 @@ class _ServiceGrid extends StatelessWidget {
                 Expanded(
                   child: _ServiceCell(service: service, height: cellHeight),
                 ),
+              for (var i = 0;
+                  i < columns - services.skip(start).take(columns).length;
+                  i++)
+                const Expanded(child: SizedBox.shrink()),
             ],
           ),
       ],
@@ -385,11 +387,11 @@ class _ServiceCell extends StatelessWidget {
                   padding: const EdgeInsetsDirectional.fromSTEB(
                     _inset,
                     0,
-                    12,
+                    8,
                     0,
                   ),
                   child: Row(
-                    spacing: 8,
+                    spacing: 6,
                     children: [
                       badge,
                       Expanded(child: text),
@@ -398,28 +400,6 @@ class _ServiceCell extends StatelessWidget {
                 ),
               ),
       ),
-    );
-  }
-}
-
-class _CheckAllButton extends StatelessWidget {
-  const _CheckAllButton({required this.loading, required this.onPressed});
-
-  final bool loading;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    if (loading) {
-      return const SizedBox.square(
-        dimension: 32,
-        child: Center(child: CommonCircleLoading(size: 18)),
-      );
-    }
-    return DashboardIconButton(
-      glyph: AppGlyphs.bolt,
-      tooltip: context.appLocalizations.serviceCheckAll,
-      onPressed: onPressed,
     );
   }
 }
@@ -507,12 +487,10 @@ class _OutboundIpLine extends StatelessWidget {
     if (ip == null) return line;
     return Tooltip(
       message: context.appLocalizations.outboundIp,
-      child: InkWell(
+      child: PressRegion(
         onTap: () => showIpQualitySheet(context, ip: ip.ip),
-        customBorder: AppShape.xs,
-        hoverColor: Colors.transparent,
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
+        shape: AppShape.xs,
+        overlay: PressRegion.focusOverlay,
         child: line,
       ),
     );
@@ -614,10 +592,13 @@ class _BadgePainter extends CustomPainter {
       bounds,
       Radius.circular(radius),
     );
-    final tilePath = Path()..addRSuperellipse(tile);
     final dot = this.dot;
     if (dot == null) {
-      canvas.drawPath(tilePath, Paint()..color = color);
+      if (system.isDesktop) {
+        canvas.drawPath(Path()..addRSuperellipse(tile), Paint()..color = color);
+      } else {
+        canvas.drawRSuperellipse(tile, Paint()..color = color);
+      }
       return;
     }
     final center = size.bottomRight(Offset(-dotRadius, -dotRadius));
@@ -627,7 +608,7 @@ class _BadgePainter extends CustomPainter {
       ..drawPath(
         Path.combine(
           PathOperation.difference,
-          tilePath,
+          Path()..addRSuperellipse(tile),
           gap,
         ),
         Paint()..color = color,
@@ -663,7 +644,7 @@ class ServiceStatusSheet extends ConsumerWidget {
     final state = ref.watch(serviceStatusProvider);
     final services = ref.read(serviceStatusProvider.notifier);
     final localizations = context.appLocalizations;
-    return CommonScaffold(
+    return Scaffold(
       title: localizations.serviceStatus,
       iconActions: [
         IconButtonData(
@@ -688,7 +669,7 @@ class ServiceStatusSheet extends ConsumerWidget {
           ),
           SliverPadding(
             padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + context.bottomInset),
-            sliver: SliverList.builder(
+            sliver: SliverPrismList(
               itemCount: targets.length,
               itemBuilder: (context, index) {
                 final target = targets[index];
@@ -758,7 +739,7 @@ class ServiceManageView extends ConsumerWidget {
       );
     }
 
-    return CommonScaffold(
+    return Scaffold(
       title: context.appLocalizations.serviceManage,
       body: CustomScrollView(
         shrinkWrap: true,
@@ -766,7 +747,7 @@ class ServiceManageView extends ConsumerWidget {
           SliverToBoxAdapter(
             child: SizedBox(height: context.contentTopPadding),
           ),
-          SliverReorderableList(
+          SliverPrismReorderableList(
             itemBuilder: (_, index) => itemAt(index),
             itemCount: targets.length,
             proxyDecorator: (child, index, animation) =>
@@ -807,7 +788,7 @@ class _ServiceManageItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final onChanged = this.onChanged;
-    return ReorderableDelayedDragStartListener(
+    return ReorderDragStartListener(
       index: index,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -835,7 +816,7 @@ class _ServiceManageItem extends StatelessWidget {
             subtitle: shown
                 ? Text(context.appLocalizations.serviceShownOnDashboard)
                 : null,
-            trailing: CommonSwitch(value: enabled, onChanged: onChanged),
+            trailing: Switch(value: enabled, onChanged: onChanged),
           ),
         ),
       ),

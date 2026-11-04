@@ -5,7 +5,7 @@ import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 void selectGroupProxy(
@@ -26,9 +26,9 @@ void selectGroupProxy(
         .changeProxyDebounce(groupName, nextProxyName);
     return;
   }
-  dialogs.showNotifier(
+  dialogs.showBanner(
     currentAppLocalizations.notSelectedTip,
-    level: MessageLevel.warning,
+    level: BannerLevel.warning,
   );
 }
 
@@ -46,7 +46,6 @@ class ProxyCard extends ConsumerWidget {
   final GroupType groupType;
   final ProxyCardType type;
   final String? testUrl;
-  final bool isTabMode;
 
   const ProxyCard({
     super.key,
@@ -55,7 +54,6 @@ class ProxyCard extends ConsumerWidget {
     required this.proxy,
     required this.groupType,
     required this.type,
-    this.isTabMode = false,
   });
 
   Measure get measure => globalState.measure;
@@ -98,7 +96,7 @@ class ProxyCard extends ConsumerWidget {
     globalState.safeRun(() => proxiesAction.addToLocalProxies(proxy.name));
   }
 
-  List<CommonPopupMenuItem> _menuItems(
+  List<PopupMenuItem> _menuItems(
     BuildContext context,
     WidgetRef ref, {
     required bool inUse,
@@ -108,21 +106,21 @@ class ProxyCard extends ConsumerWidget {
     final appLocalizations = context.appLocalizations;
     return [
       if (groupType == GroupType.Selector)
-        CommonPopupMenuItem(
+        PopupMenuItem(
           glyph: AppGlyphs.checkCircle,
           label: appLocalizations.select,
           checked: inUse,
           onPressed: () => _handleSelect(ref),
         )
       else if (groupType.isComputedSelected)
-        CommonPopupMenuItem(
+        PopupMenuItem(
           glyph: AppGlyphs.pin,
           label: appLocalizations.preferred,
           checked: pinned,
           onPressed: () => _handleSelect(ref),
         ),
       if (addable)
-        CommonPopupMenuItem(
+        PopupMenuItem(
           glyph: AppGlyphs.listAdd,
           label: appLocalizations.addToLocalProxies,
           onPressed: () => _handleAddToLocalProxies(ref),
@@ -236,8 +234,7 @@ class ProxyCard extends ConsumerWidget {
                   ],
                 ),
               );
-        final showTint = !isTabMode && inUse;
-        final showCheckmark = isTabMode && inUse;
+        final showTint = inUse;
         return ContextMenuRegion(
           menuItems: _menuItems(
             context,
@@ -246,41 +243,33 @@ class ProxyCard extends ConsumerWidget {
             pinned: pinned,
             addable: _isAddableToLocal(proxy, isCustomProfile: isCustomProfile),
           ),
-          child: CommonCard(
+          child: Card(
             radius: AppCorner.lg,
+            side: inUse
+                ? BorderSide(color: colorScheme.primary, width: 1.5)
+                : BorderSide.none,
             enterActionsOnRight: true,
             key: key,
             onPressed: () => _handleSelect(ref),
-            isSelected: inUse,
-            // The chip tint the profile cards use in list mode, not a filled primary:
-            // the card keeps its own text colours. Tab mode uses checkmark badge.
-            child: DecoratedBox(
-              decoration: ShapeDecoration(
-                color: showTint ? colorScheme.primary.opacity15 : Colors.transparent,
-                shape: AppShape.all(AppCorner.lg),
-              ),
-              child: Container(
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+            isSelected: showTint,
+            selectionTint: showTint ? colorScheme.primary.opacity15 : null,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: 4,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      spacing: 4,
-                      children: [
-                        Expanded(child: _buildNameRow(context, ref)),
-                        if (showCheckmark) const SelectionBadge(size: 20),
-                        if (pinned && !showCheckmark)
-                          SelectionBadge.preferred(inUse: inUse),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    details,
+                    Expanded(child: _buildNameRow(context, ref)),
+                    if (pinned)
+                      SelectionBadge(glyph: Glyphs.pin, tonal: !inUse),
                   ],
                 ),
-              ),
+                const SizedBox(height: 8),
+                details,
+              ],
             ),
           ),
         );
@@ -421,7 +410,7 @@ class _DelayTextState extends ConsumerState<_DelayText> {
                     height: measure.textHeight(AppTextStyle.caption2),
                     width: measure.textHeight(AppTextStyle.caption2),
                     child: _withFocusRing(context, switch (phase) {
-                      DelayTestPhase.running => CommonCircleLoading(
+                      DelayTestPhase.running => ActivityIndicator(
                         size: measure.textHeight(AppTextStyle.caption2),
                       ),
                       DelayTestPhase.queued => GlyphIcon(
@@ -429,7 +418,7 @@ class _DelayTextState extends ConsumerState<_DelayText> {
                         size: measure.textHeight(AppTextStyle.caption2),
                         color: context.colorScheme.onSurfaceVariant.opacity38,
                       ),
-                      null => Tooltip(
+                      null => HoverTooltip(
                         message: context.appLocalizations.delayTest,
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,

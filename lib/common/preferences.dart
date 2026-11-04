@@ -77,6 +77,38 @@ class Preferences {
     }
   }
 
+  Future<ConfigCounts?> getAppliedConfigCounts() async {
+    final preferences = await _store.value;
+    final jsonStr = preferences?.getString('appliedConfigCounts');
+    if (jsonStr == null) return null;
+    try {
+      final map = json.decode(jsonStr) as Map<String, dynamic>;
+      return (
+        groups: map['groups'] as int? ?? 0,
+        proxies: map['proxies'] as int? ?? 0,
+        rules: map['rules'] as int? ?? 0,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> saveAppliedConfigCounts(ConfigCounts? counts) async {
+    final preferences = await _store.value;
+    if (counts == null) {
+      await preferences?.remove('appliedConfigCounts');
+    } else {
+      await preferences?.setString(
+        'appliedConfigCounts',
+        json.encode({
+          'groups': counts.groups,
+          'proxies': counts.proxies,
+          'rules': counts.rules,
+        }),
+      );
+    }
+  }
+
   Future<Map<String, Object?>?> getConfigMap() async {
     try {
       final preferences = await _store.value;

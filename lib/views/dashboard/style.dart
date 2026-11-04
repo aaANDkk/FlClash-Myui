@@ -1,7 +1,7 @@
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/ui/ui.dart';
 import 'package:intl/intl.dart' show NumberFormat;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 class DashboardColors {
   const DashboardColors._({
@@ -12,6 +12,7 @@ class DashboardColors {
     required this.track,
     required this.thumb,
     required this.series2,
+    required this.complement,
     required this.ok,
     required this.okContainer,
     required this.onOkContainer,
@@ -34,6 +35,7 @@ class DashboardColors {
         colorScheme.primary.withValues(alpha: 0.45),
         card,
       ),
+      complement: _complementOf(colorScheme.primary, colorScheme.brightness),
       ok: colorScheme.success,
       okContainer: colorScheme.successContainer,
       onOkContainer: colorScheme.onSuccessContainer,
@@ -42,6 +44,19 @@ class DashboardColors {
       onWarnContainer: colorScheme.onWarningContainer,
     );
   }
+
+  /// Darkened on light cards, where a warm hue at the primary's lightness is
+  /// too faint to read as text.
+  static Color _complementOf(Color primary, Brightness brightness) {
+    final hsl = HSLColor.fromColor(primary);
+    final complement = hsl.withHue((hsl.hue + 180) % 360);
+    return (brightness == Brightness.light
+            ? complement.withLightness(hsl.lightness * _lightComplementDim)
+            : complement)
+        .toColor();
+  }
+
+  static const _lightComplementDim = 0.85;
 
   final Color page;
   final Color card;
@@ -52,6 +67,7 @@ class DashboardColors {
   final Color track;
   final Color thumb;
   final Color series2;
+  final Color complement;
   final Color ok;
   final Color okContainer;
   final Color onOkContainer;

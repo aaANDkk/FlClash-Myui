@@ -6,27 +6,29 @@ import 'package:fl_clash/providers/ip_quality.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'ip_quality_text.dart';
 import 'labels.dart';
 
-Future<void> showIpQualitySheet(BuildContext context, {required String ip}) {
+Future<void> showIpQualitySheet(
+  BuildContext context, {
+  required String ip,
+  bool outbound = true,
+}) {
+  Widget page(BuildContext context) =>
+      _IpQualitySheet(ip: ip, outbound: outbound);
   if (isSheetPage(context)) {
-    return Navigator.of(
-      context,
-    ).push(PagedSheetRoute(builder: (_) => _IpQualitySheet(ip: ip)));
+    return Navigator.of(context).push(PagedSheetRoute(builder: page));
   }
-  return showSheet<void>(
-    context: context,
-    builder: (_) => _IpQualitySheet(ip: ip),
-  );
+  return showSheet<void>(context: context, builder: page);
 }
 
 class _IpQualitySheet extends ConsumerWidget {
-  const _IpQualitySheet({required this.ip});
+  const _IpQualitySheet({required this.ip, required this.outbound});
 
   final String ip;
+  final bool outbound;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -34,8 +36,8 @@ class _IpQualitySheet extends ConsumerWidget {
     final isLoading = ref.watch(
       ipQualityProvider(ip).select((result) => result.isLoading),
     );
-    return CommonScaffold(
-      title: localizations.outboundIp,
+    return Scaffold(
+      title: outbound ? localizations.outboundIp : localizations.ipDetails,
       actions: [
         AppBarActionButton(
           data: IconButtonData(
@@ -65,7 +67,7 @@ class _HideIpItem extends ConsumerWidget {
     return DecorationListItem(
       title: Text(context.appLocalizations.hideIp),
       onPressed: () => update(!hideIp),
-      trailing: CommonSwitch(value: hideIp, onChanged: update),
+      trailing: Switch(value: hideIp, onChanged: update),
     );
   }
 }

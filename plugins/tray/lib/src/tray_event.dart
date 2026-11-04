@@ -8,6 +8,10 @@ final class TrayIconActivated extends TrayEvent {
   const TrayIconActivated();
 }
 
+final class TrayThemeChanged extends TrayEvent {
+  const TrayThemeChanged();
+}
+
 final class TrayMenuRequested extends TrayEvent {
   const TrayMenuRequested();
 }

@@ -2,8 +2,8 @@ import 'dart:math' as math;
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/service_probe.dart';
-import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/features.dart';
+import 'package:fl_clash/features/ip_quality/labels.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/ip_quality.dart';
 import 'package:fl_clash/providers/outbound_ip.dart';
@@ -14,10 +14,9 @@ import 'package:fl_clash/views/dashboard/layout.dart';
 import 'package:fl_clash/views/dashboard/probe_start_hold.dart';
 import 'package:fl_clash/views/dashboard/style.dart';
 import 'package:fl_clash/widgets/widgets.dart';
-import 'package:flutter/rendering.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:material_new_shapes/material_new_shapes.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:prism_ui/shapes/shapes.dart';
 
 import 'card.dart';
 
@@ -30,6 +29,8 @@ const _ipMask = '*****';
 const _decorationGrowth = 0.06;
 
 const _decorationTurn = 2 * math.pi / 12;
+
+const _decorationBottomGap = 10.0;
 
 /// The address the proxied traffic leaves by, next to the start button.
 class CurrentOutboundCard extends ConsumerStatefulWidget {
@@ -71,6 +72,8 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard>
     );
     final isStart = ref.watch(isStartProvider);
     final suspended = isStart && ref.watch(suspendProvider);
+    final rootAccess =
+        mitmFeature && (ref.watch(rootAccessProvider).value ?? false);
     final entry = ref.watch(
       outboundIpProbeProvider.select((state) => state.entryOf(routedOutbound)),
     );
@@ -93,9 +96,22 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard>
         : isStart
         ? (appLocalizations.running, DashboardChipTone.ok)
         : (appLocalizations.notRunning, DashboardChipTone.idle);
-    return DashboardCard(
-      padding: EdgeInsets.zero,
-      semanticLabel: appLocalizations.status,
+    return TweenAnimationBuilder<double>(
+      tween: Tween(end: rootAccess ? 1 : 0),
+      duration: context.motionDuration(commonDuration),
+      builder: (context, root, child) => DashboardCard(
+        padding: EdgeInsets.zero,
+        semanticLabel: rootAccess
+            ? '${appLocalizations.status} ${appLocalizations.root}'
+            : appLocalizations.status,
+        side: root == 0
+            ? BorderSide.none
+            : BorderSide(
+                color: context.colorScheme.primary.withValues(alpha: root),
+                width: 1.5,
+              ),
+        child: child!,
+      ),
       child: Stack(
         children: [
           Positioned.fill(
@@ -109,7 +125,7 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard>
                 children: [
                   PositionedDirectional(
                     end: metrics.decorationEnd,
-                    top: metrics.decorationTop,
+                    bottom: metrics.decorationBottom,
                     child: TweenAnimationBuilder<double>(
                       tween: Tween(end: isStart ? 1 : 0),
                       duration: context.motionDuration(_morphDuration),
@@ -176,6 +192,8 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard>
                       else
                         const SizedBox(height: 16),
                       _Cells(
+                        quality: quality,
+                        loading: loading,
                         active: isStart && !suspended,
                         gap: metrics.cellGap,
                       ),
@@ -214,7 +232,6 @@ class _OutboundMetrics {
     required this.buttonSlot,
     required this.decorationSize,
     required this.decorationEnd,
-    required this.decorationTop,
   });
 
   factory _OutboundMetrics.of(DashboardDensity density) => switch (density) {
@@ -229,7 +246,6 @@ class _OutboundMetrics {
       buttonSlot: 120,
       decorationSize: 268,
       decorationEnd: -52,
-      decorationTop: -76,
     ),
     DashboardDensity.compact => _OutboundMetrics(
       padding: dashboardCardPadding(density),
@@ -242,7 +258,6 @@ class _OutboundMetrics {
       buttonSlot: 100,
       decorationSize: 232,
       decorationEnd: -46,
-      decorationTop: -66,
     ),
     DashboardDensity.mobile => const _OutboundMetrics(
       padding: EdgeInsetsDirectional.fromSTEB(20, 18, 16, 18),
@@ -255,7 +270,6 @@ class _OutboundMetrics {
       buttonSlot: 88,
       decorationSize: 216,
       decorationEnd: -48,
-      decorationTop: -54,
     ),
   };
 
@@ -269,7 +283,11 @@ class _OutboundMetrics {
   final double buttonSlot;
   final double decorationSize;
   final double decorationEnd;
-  final double decorationTop;
+
+  /// Places the unscaled flower box so that when expanded by [_decorationGrowth],
+  /// its lowest lobe rests [_decorationBottomGap] above the card's bottom edge.
+  double get decorationBottom =>
+      _decorationBottomGap + decorationSize * _decorationGrowth / 2;
 }
 
 class _ExitRow extends StatelessWidget {
@@ -298,7 +316,7 @@ class _ExitRow extends StatelessWidget {
       context,
       metrics.ip,
       color: active ? colorScheme.onSurface : colorScheme.onSurfaceVariant,
-    ).copyWith(letterSpacing: 0);
+    ).copyWith(letterSpacing: 0, height: 1.15);
     final info = this.info;
     final appLocalizations = context.appLocalizations;
     final Widget ip = info != null
@@ -307,12 +325,10 @@ class _ExitRow extends StatelessWidget {
             child: FocusRing(
               shape: AppShape.xs,
               standsOff: true,
-              child: InkWell(
+              child: PressRegion(
                 onTap: () => showIpQualitySheet(context, ip: info.ip),
-                customBorder: AppShape.xs,
-                hoverColor: Colors.transparent,
-                splashColor: Colors.transparent,
-                highlightColor: Colors.transparent,
+                shape: AppShape.xs,
+                overlay: PressRegion.focusOverlay,
                 child: _IpText(ip: info.ip, style: style),
               ),
             ),
@@ -325,6 +341,9 @@ class _ExitRow extends StatelessWidget {
             style: style.copyWith(color: colorScheme.error),
           )
         : SkeletonText(width: 140, style: style);
+    final ipHeight = MediaQuery.textScalerOf(
+      context,
+    ).scale((style.fontSize ?? metrics.ip.size) * (style.height ?? 1.15));
     return Row(
       spacing: 12,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -337,17 +356,23 @@ class _ExitRow extends StatelessWidget {
           onRefresh: onRefresh,
         ),
         Expanded(
-          child: Transform.translate(
-            offset: const Offset(0, -1.5),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ip,
-                const SizedBox(height: 2),
-                _RunTimeSubText(active: active),
-              ],
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Transform.translate(
+                offset: const Offset(0, -2.5),
+                child: SizedBox(
+                  height: ipHeight,
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: ip,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 2),
+              _ProxyNodeSubText(active: active),
+            ],
           ),
         ),
       ],
@@ -379,24 +404,98 @@ class _IpText extends ConsumerWidget {
   }
 }
 
-class _RunTimeSubText extends ConsumerWidget {
-  const _RunTimeSubText({required this.active});
+String? _parseNodeFromExit(String? exit) {
+  if (exit == null || exit.isEmpty) return null;
+  if (exit.startsWith('"')) {
+    final buffer = StringBuffer();
+    var escaped = false;
+    for (var i = 1; i < exit.length; i++) {
+      final char = exit[i];
+      if (escaped) {
+        buffer.write(char);
+        escaped = false;
+      } else if (char == r'\') {
+        escaped = true;
+      } else if (char == '"') {
+        return buffer.toString();
+      } else {
+        buffer.write(char);
+      }
+    }
+    return buffer.toString();
+  }
+  return exit;
+}
+
+class _ProxyNodeSubText extends ConsumerWidget {
+  const _ProxyNodeSubText({required this.active});
 
   final bool active;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final style = _monoCellStyle(context).copyWith(
+    final style = _cellStyle(context).copyWith(
       fontSize: 14,
       height: 1.1,
       color: active
           ? context.colorScheme.onSurfaceVariant
           : context.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
     );
-    return Text(
-      active ? getTimeText(ref.watch(runTimeProvider)) : '00:00:00',
-      maxLines: 1,
-      style: style,
+    final subHeight = MediaQuery.textScalerOf(context).scale(18.0);
+    return SizedBox(
+      height: subHeight,
+      child: Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: _buildContent(context, ref, style),
+      ),
+    );
+  }
+
+  Widget _buildContent(BuildContext context, WidgetRef ref, TextStyle style) {
+    if (!active) {
+      return Text('—', maxLines: 1, style: style);
+    }
+    final entry = ref.watch(
+      outboundIpProbeProvider.select((state) => state.entryOf(routedOutbound)),
+    );
+    if (entry.isLoading) {
+      return SkeletonText(width: 80, style: style);
+    }
+    final hit = entry.stamp?.hits.firstOrNull;
+    final nodeName = _parseNodeFromExit(hit?.exit) ??
+        (hit?.proxy.isNotEmpty ?? false ? hit?.proxy : null);
+    if (nodeName != null && nodeName.isNotEmpty) {
+      return _buildNode(context, nodeName, style);
+    }
+    final groups = ref.watch(currentGroupsStateProvider).value;
+    final currentGroupName = ref.watch(
+      currentProfileProvider.select((state) => state?.currentGroupName),
+    );
+    final group = groups.where((g) => g.name == currentGroupName).firstOrNull ??
+        groups.firstOrNull;
+    if (group != null) {
+      final selected = ref.watch(
+        realSelectedProxyStateProvider(group.name).select((state) => state.proxyName),
+      );
+      if (selected.isNotEmpty) {
+        return _buildNode(context, selected, style);
+      }
+    }
+    return Text('—', maxLines: 1, style: style);
+  }
+
+  Widget _buildNode(BuildContext context, String name, TextStyle style) {
+    final nodeStyle = isBuiltinOutbound(name)
+        ? style.copyWith(color: context.colorScheme.onSurfaceVariant)
+        : style.copyWith(color: context.colorScheme.onSurface);
+    return Tooltip(
+      message: name,
+      child: EmojiText(
+        name,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: nodeStyle,
+      ),
     );
   }
 }
@@ -485,12 +584,10 @@ class _CountryBadgeState extends State<_CountryBadge>
         button: true,
         enabled: enabled,
         label: tooltip,
-        child: InkResponse(
+        child: PressRegion(
           onTap: enabled ? widget.onRefresh : null,
           onHover: (value) => setState(() => _hovered = value),
           onFocusChange: (value) => setState(() => _focused = value),
-          overlayColor: const WidgetStatePropertyAll(Colors.transparent),
-          splashFactory: NoSplash.splashFactory,
           child: ElasticPress(
             enabled: enabled,
             child: AnimatedBuilder(
@@ -528,20 +625,36 @@ class _CountryBadgeState extends State<_CountryBadge>
 }
 
 class _Cells extends StatelessWidget {
-  const _Cells({required this.active, required this.gap});
+  const _Cells({
+    required this.quality,
+    required this.loading,
+    required this.active,
+    required this.gap,
+  });
 
+  final IpQuality? quality;
+  final bool loading;
   final bool active;
   final double gap;
 
   @override
   Widget build(BuildContext context) {
     final appLocalizations = context.appLocalizations;
+    final typeLabel = quality?.type.label(context);
+    final Widget typeValue = typeLabel != null
+        ? _CellText(typeLabel)
+        : loading
+        ? SkeletonText(width: 48, style: _cellStyle(context))
+        : const _Placeholder();
+
     return Row(
       children: [
+        _RunTimeCell(active: active),
+        SizedBox(width: gap),
         Expanded(
           child: _Cell(
-            label: appLocalizations.proxyNode,
-            value: active ? const _ProxyNodeValue() : const _Placeholder(),
+            label: appLocalizations.ipType,
+            value: typeValue,
           ),
         ),
       ],
@@ -584,16 +697,10 @@ class _Cell extends StatelessWidget {
 TextStyle _cellStyle(BuildContext context) =>
     AppTextStyle.subheadline.of(context, emphasized: true).toTabular;
 
-/// The bundled mono face, so a changing figure keeps one advance per digit
-/// whatever interface font the user picked.
-TextStyle _monoCellStyle(BuildContext context) =>
-    _cellStyle(context).copyWith(fontFamily: FontFamily.mapleMono.value);
-
 class _CellText extends StatelessWidget {
-  const _CellText(this.text, {this.monospace = false});
+  const _CellText(this.text);
 
   final String text;
-  final bool monospace;
 
   @override
   Widget build(BuildContext context) {
@@ -601,7 +708,7 @@ class _CellText extends StatelessWidget {
       text,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
-      style: monospace ? _monoCellStyle(context) : _cellStyle(context),
+      style: _cellStyle(context),
     );
   }
 }
@@ -615,144 +722,62 @@ class _Placeholder extends StatelessWidget {
   }
 }
 
-String? _parseNodeFromExit(String? exit) {
-  if (exit == null || exit.isEmpty) return null;
-  if (exit.startsWith('"')) {
-    final buffer = StringBuffer();
-    var escaped = false;
-    for (var i = 1; i < exit.length; i++) {
-      final char = exit[i];
-      if (escaped) {
-        buffer.write(char);
-        escaped = false;
-      } else if (char == r'\') {
-        escaped = true;
-      } else if (char == '"') {
-        return buffer.toString();
-      } else {
-        buffer.write(char);
-      }
-    }
-    return buffer.toString();
-  }
-  return exit;
+double _measureTextWidth(BuildContext context, String text, TextStyle style) {
+  final painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: Directionality.of(context),
+    textScaler: MediaQuery.textScalerOf(context),
+    maxLines: 1,
+  )..layout();
+  return painter.width;
 }
 
-class _ProxyNodeValue extends ConsumerWidget {
-  const _ProxyNodeValue();
+double _runTimeSlotWidth(BuildContext context, int hourDigits) {
+  final style = _cellStyle(context);
+  final labelStyle = DashboardText.label(context);
+  final count = math.max(2, hourDigits);
+  final template8 = '${'8' * count}:88:88';
+  final template0 = '${'0' * count}:00:00';
+  final template4 = '${'4' * count}:44:44';
+  final template9 = '${'9' * count}:99:99';
+  final w8 = _measureTextWidth(context, template8, style);
+  final w0 = _measureTextWidth(context, template0, style);
+  final w4 = _measureTextWidth(context, template4, style);
+  final w9 = _measureTextWidth(context, template9, style);
+  final valueWidth = math.max(math.max(w8, w0), math.max(w4, w9));
+  final labelWidth = _measureTextWidth(
+    context,
+    context.appLocalizations.runTime,
+    labelStyle,
+  );
+  return math.max(valueWidth, labelWidth) + 1.0;
+}
+
+class _RunTimeCell extends ConsumerWidget {
+  const _RunTimeCell({required this.active});
+
+  final bool active;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final entry = ref.watch(
-      outboundIpProbeProvider.select((state) => state.entryOf(routedOutbound)),
-    );
-    if (entry.isLoading) {
-      return SkeletonText(width: 80, style: _cellStyle(context));
+    final appLocalizations = context.appLocalizations;
+    final String timeText;
+    final int hourDigits;
+    if (active) {
+      timeText = getTimeText(ref.watch(runTimeProvider));
+      final colon = timeText.indexOf(':');
+      hourDigits = colon == -1 ? 2 : math.max(2, colon);
+    } else {
+      timeText = '00:00:00';
+      hourDigits = 2;
     }
-    final hit = entry.stamp?.hits.firstOrNull;
-    final nodeName = _parseNodeFromExit(hit?.exit) ??
-        (hit?.proxy.isNotEmpty ?? false ? hit?.proxy : null);
-    if (nodeName != null && nodeName.isNotEmpty) {
-      return _NodeCellText(nodeName);
-    }
-    final groups = ref.watch(currentGroupsStateProvider).value;
-    final currentGroupName = ref.watch(
-      currentProfileProvider.select((state) => state?.currentGroupName),
-    );
-    final group = groups.where((g) => g.name == currentGroupName).firstOrNull ??
-        groups.firstOrNull;
-    if (group != null) {
-      final selected = ref.watch(
-        realSelectedProxyStateProvider(group.name).select((state) => state.proxyName),
-      );
-      if (selected.isNotEmpty) {
-        return _NodeCellText(selected);
-      }
-    }
-    return const _Placeholder();
-  }
-}
+    final slotWidth = _runTimeSlotWidth(context, hourDigits);
 
-class _ExtendWidth extends SingleChildRenderObjectWidget {
-  const _ExtendWidth({required this.extraWidth, super.child});
-
-  final double extraWidth;
-
-  @override
-  RenderObject createRenderObject(BuildContext context) =>
-      _RenderExtendWidth(extraWidth);
-
-  @override
-  void updateRenderObject(
-    BuildContext context,
-    _RenderExtendWidth renderObject,
-  ) {
-    renderObject.extraWidth = extraWidth;
-  }
-}
-
-class _RenderExtendWidth extends RenderShiftedBox {
-  _RenderExtendWidth(this._extraWidth) : super(null);
-
-  double _extraWidth;
-
-  set extraWidth(double value) {
-    if (_extraWidth == value) return;
-    _extraWidth = value;
-    markNeedsLayout();
-  }
-
-  @override
-  Size computeDryLayout(covariant BoxConstraints constraints) {
-    final child = this.child;
-    if (child == null) return constraints.smallest;
-    final childConstraints = constraints.copyWith(
-      maxWidth: constraints.maxWidth.isFinite
-          ? constraints.maxWidth + _extraWidth
-          : constraints.maxWidth,
-    );
-    return constraints.constrain(child.getDryLayout(childConstraints));
-  }
-
-  @override
-  void performLayout() {
-    final child = this.child;
-    if (child == null) {
-      size = constraints.smallest;
-      return;
-    }
-    final childConstraints = constraints.copyWith(
-      maxWidth: constraints.maxWidth.isFinite
-          ? constraints.maxWidth + _extraWidth
-          : constraints.maxWidth,
-    );
-    child.layout(childConstraints, parentUsesSize: true);
-    size = constraints.constrain(child.size);
-    (child.parentData! as BoxParentData).offset = Offset.zero;
-  }
-}
-
-class _NodeCellText extends StatelessWidget {
-  const _NodeCellText(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final style = _cellStyle(context);
-    final extraWidth = MediaQuery.textScalerOf(context).scale(30.0);
-    return Tooltip(
-      message: text,
-      child: _ExtendWidth(
-        extraWidth: extraWidth,
-        child: EmojiText(
-          text,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: isBuiltinOutbound(text)
-              ? style.copyWith(color: context.colorScheme.onSurfaceVariant)
-              : style,
-        ),
+    return SizedBox(
+      width: slotWidth,
+      child: _Cell(
+        label: appLocalizations.runTime,
+        value: _CellText(timeText),
       ),
     );
   }
@@ -763,11 +788,7 @@ const _stateDuration = Duration(milliseconds: 150);
 
 final _startMorph = Morph(MaterialShapes.circle, MaterialShapes.cookie9Sided);
 
-Path _morphPath(double progress) => _startMorph.toPath(
-  progress: progress,
-  rotationPivotX: 0.5,
-  rotationPivotY: 0.5,
-);
+Path _morphPath(double progress) => _startMorph.toPath(progress: progress);
 
 double _morphTurn(double progress) => progress * 2 * math.pi / 9;
 
@@ -807,7 +828,7 @@ class _StartToggleState extends ConsumerState<_StartToggle>
   var _focused = false;
 
   /// The M3 state layer, painted inside the shape: the card's decoration
-  /// covers the button, so ink on the card's Material would never show.
+  /// covers the button, so ink on the card would never show.
   double get _overlay => !widget.enabled
       ? 0
       : _focused
@@ -858,13 +879,11 @@ class _StartToggleState extends ConsumerState<_StartToggle>
         button: true,
         enabled: enabled,
         label: tooltip,
-        child: InkResponse(
+        child: PressRegion(
           onTap: enabled ? _toggle : null,
           onHover: (value) => setState(() => _hovered = value),
-          onHighlightChanged: (value) => setState(() => _pressed = value),
+          onPressedChanged: (value) => setState(() => _pressed = value),
           onFocusChange: (value) => setState(() => _focused = value),
-          overlayColor: const WidgetStatePropertyAll(Colors.transparent),
-          splashFactory: NoSplash.splashFactory,
           child: ElasticPress(
             enabled: enabled,
             child: TweenAnimationBuilder<double>(

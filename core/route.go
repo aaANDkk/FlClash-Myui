@@ -65,6 +65,7 @@ func routeStamp() (epoch, version uint64) {
 }
 
 func readPicks() (map[string]string, map[string]uint32) {
+	reconcileDynamicGroupsLocked()
 	picks := map[string]string{}
 	for name, proxy := range tunnel.AllProxies() {
 		if group, ok := adapterAs[pickableGroup](proxy); ok {

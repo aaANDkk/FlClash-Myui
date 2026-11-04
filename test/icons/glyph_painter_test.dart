@@ -3,8 +3,8 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:fl_clash/ui/icons/icons.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
 
 const _scale = 3;
 const _side = 24 * _scale;
@@ -13,6 +13,7 @@ final _glyphs = {
   'dashboard': AppGlyphs.dashboard,
   'proxies': AppGlyphs.proxies,
   'profiles': AppGlyphs.profiles,
+  'rocket': AppGlyphs.rocket,
   'requests': AppGlyphs.requests,
   'connections': AppGlyphs.connections,
   'dns': AppGlyphs.dns,
@@ -98,7 +99,9 @@ final _glyphs = {
   'puzzle': AppGlyphs.puzzle,
   'customize': AppGlyphs.customize,
   'layers': AppGlyphs.layers,
+  'dock': AppGlyphs.dock,
   'sun': AppGlyphs.sun,
+  'sunnyLow': AppGlyphs.sunnyLow,
   'pureBlack': AppGlyphs.pureBlack,
   'palette': AppGlyphs.palette,
   'paintbrush': AppGlyphs.paintbrush,
@@ -131,6 +134,14 @@ final _glyphs = {
   'wifi': AppGlyphs.wifi,
   'wifiOff': AppGlyphs.wifiOff,
   'gavel': AppGlyphs.gavel,
+  'appsListDetail': AppGlyphs.appsListDetail,
+  'appRecent': AppGlyphs.appRecent,
+  'columnsThree': AppGlyphs.columnsThree,
+  'columnsTwo': AppGlyphs.columnsTwo,
+  'columnsOne': AppGlyphs.columnsOne,
+  'cardLarge': AppGlyphs.cardLarge,
+  'cardMedium': AppGlyphs.cardMedium,
+  'cardSmall': AppGlyphs.cardSmall,
   'appsList': AppGlyphs.appsList,
   'collapsed sidebar': AppGlyphs.sidebar(0),
   'expanded sidebar': AppGlyphs.sidebar(1),

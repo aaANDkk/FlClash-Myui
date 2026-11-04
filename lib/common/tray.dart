@@ -1,8 +1,11 @@
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'dart:io';
+
+import 'package:flutter/widgets.dart';
 import 'package:tray/tray.dart';
+import 'package:win32_registry/win32_registry.dart';
 
 import 'app_localizations.dart';
 import 'l10n_labels.dart';
@@ -13,15 +16,49 @@ import 'provider_reader.dart';
 import 'system.dart';
 import 'window.dart';
 
+@visibleForTesting
+bool Function()? isWindowsTaskbarDarkOverride;
+
+bool isWindowsTaskbarDark() {
+  if (isWindowsTaskbarDarkOverride != null) {
+    return isWindowsTaskbarDarkOverride!();
+  }
+  if (!Platform.isWindows) {
+    return false;
+  }
+  try {
+    final key = CURRENT_USER.open(
+      r'Software\Microsoft\Windows\CurrentVersion\Themes\Personalize',
+    );
+    try {
+      return key.getInt('SystemUsesLightTheme') == 0;
+    } finally {
+      key.close();
+    }
+  } catch (_) {
+    try {
+      return WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+          Brightness.dark;
+    } catch (_) {
+      return false;
+    }
+  }
+}
+
 class AppTray implements TrayPort {
   static AppTray? _instance;
 
   final bool isMacOS;
   final bool isWindows;
+  final bool Function() isTaskbarDark;
 
   bool _isShutDown = false;
 
-  AppTray._internal({required this.isMacOS, required this.isWindows});
+  AppTray._internal({
+    required this.isMacOS,
+    required this.isWindows,
+    bool Function()? isTaskbarDark,
+  }) : isTaskbarDark = isTaskbarDark ?? isWindowsTaskbarDark;
 
   factory AppTray() {
     _instance ??= AppTray._internal(
@@ -35,8 +72,13 @@ class AppTray implements TrayPort {
   factory AppTray.forPlatform({
     required bool isMacOS,
     required bool isWindows,
+    bool isTaskbarDark = false,
   }) {
-    return AppTray._internal(isMacOS: isMacOS, isWindows: isWindows);
+    return AppTray._internal(
+      isMacOS: isMacOS,
+      isWindows: isWindows,
+      isTaskbarDark: () => isTaskbarDark,
+    );
   }
 
   String get _trayIconSuffix {
@@ -59,6 +101,7 @@ class AppTray implements TrayPort {
     required bool tunEnable,
     required bool safeMode,
     bool monochrome = true,
+    bool? isTaskbarDark,
   }) {
     final status = switch ((
       safeMode,
@@ -70,6 +113,10 @@ class AppTray implements TrayPort {
       (false, false, false) => 2,
       (false, false, true) => 3,
     };
+    final taskbarDark = isTaskbarDark ?? this.isTaskbarDark();
+    if (isWindows && status == 1 && taskbarDark) {
+      return '${_trayIconDir(monochrome)}/status_1_dark.$_trayIconSuffix';
+    }
     return '${_trayIconDir(monochrome)}/status_$status.$_trayIconSuffix';
   }
 

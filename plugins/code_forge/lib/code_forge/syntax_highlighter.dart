@@ -1,7 +1,8 @@
 import 'dart:ui' as ui;
 
+import 'package:emoji_regex/emoji_regex.dart';
 import 'package:flutter/foundation.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:re_highlight/re_highlight.dart';
 
 /// Highlights each line on its own, so a line's spans follow from its text
@@ -83,9 +84,18 @@ class SyntaxHighlighter {
     String? fontFamily, {
     double? width,
   }) {
+    final effectiveStyle =
+        baseTextStyle ?? editorTheme['root'] ?? const TextStyle();
     final builder = ui.ParagraphBuilder(paragraphStyle)
-      ..pushStyle(_getUiTextStyle(fontSize, fontFamily))
-      ..addText(text.isEmpty ? ' ' : text);
+      ..pushStyle(_getUiTextStyle(fontSize, fontFamily));
+    _appendEmojiAwareText(
+      builder,
+      text.isEmpty ? ' ' : text,
+      effectiveStyle,
+      fontSize,
+      fontFamily,
+    );
+    builder.pop();
     return builder.build()
       ..layout(ui.ParagraphConstraints(width: width ?? double.infinity));
   }
@@ -107,7 +117,13 @@ class SyntaxHighlighter {
     builder.pushStyle(style);
 
     if (span.text != null) {
-      builder.addText(span.text!);
+      _appendEmojiAwareText(
+        builder,
+        span.text!,
+        effectiveStyle,
+        fontSize,
+        fontFamily,
+      );
     }
 
     if (span.children != null) {
@@ -127,13 +143,48 @@ class SyntaxHighlighter {
     builder.pop();
   }
 
+  void _appendEmojiAwareText(
+    ui.ParagraphBuilder builder,
+    String text,
+    TextStyle effectiveStyle,
+    double fontSize,
+    String? baseFontFamily,
+  ) {
+    final matches = emojiRegex().allMatches(text);
+    if (matches.isEmpty) {
+      builder.addText(text);
+      return;
+    }
+    final emojiFamily = (baseTextStyle?.fontFamilyFallback?.isNotEmpty == true
+            ? baseTextStyle!.fontFamilyFallback!.first
+            : null) ??
+        'Twemoji';
+    final emojiUiStyle =
+        _textStyleToUiStyle(effectiveStyle, fontSize, emojiFamily);
+
+    int lastEnd = 0;
+    for (final match in matches) {
+      if (match.start > lastEnd) {
+        builder.addText(text.substring(lastEnd, match.start));
+      }
+      builder.pushStyle(emojiUiStyle);
+      builder.addText(match.group(0)!);
+      builder.pop();
+      lastEnd = match.end;
+    }
+    if (lastEnd < text.length) {
+      builder.addText(text.substring(lastEnd));
+    }
+  }
+
   ui.TextStyle _textStyleToUiStyle(
     TextStyle? style,
     double fontSize,
     String? fontFamily,
   ) {
     return ui.TextStyle(
-      color: style?.color ?? editorTheme['root']?.color ?? Colors.black,
+      color:
+          style?.color ?? editorTheme['root']?.color ?? const Color(0xFF000000),
       fontSize: fontSize,
       fontFamily: fontFamily,
       fontFamilyFallback: baseTextStyle?.fontFamilyFallback,
@@ -146,7 +197,10 @@ class SyntaxHighlighter {
     final baseStyle = baseTextStyle ?? editorTheme['root'];
 
     return ui.TextStyle(
-      color: baseStyle?.color ?? editorTheme['root']?.color ?? Colors.black,
+      color:
+          baseStyle?.color ??
+          editorTheme['root']?.color ??
+          const Color(0xFF000000),
       fontSize: fontSize,
       fontFamily: fontFamily,
       fontFamilyFallback: baseTextStyle?.fontFamilyFallback,

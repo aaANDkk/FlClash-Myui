@@ -13,7 +13,7 @@ import 'package:fl_clash/views/proxies/providers.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:yaml/yaml.dart';
 
 const _statSpacing = 8.0;
@@ -56,10 +56,13 @@ ProfileStats profileStatsOf(
 
 ({String md5, ConfigCounts counts})? _countsCache;
 
+ValueNotifier<ConfigCounts?> get configCountsNotifier =>
+    globalState.configCountsNotifier;
+
 // package:yaml holds a document in many times its size.
 const _maxCountedConfigBytes = 8 << 20;
 
-ConfigCounts? _cachedCounts() {
+ConfigCounts? cachedConfigCounts() {
   if (globalState.lastConfigCounts case final counts?) {
     return counts;
   }
@@ -70,62 +73,151 @@ ConfigCounts? _cachedCounts() {
 
 ConfigCounts? _countConfigFile(String path) {
   final file = File(path);
-  if (file.lengthSync() > _maxCountedConfigBytes) {
+  if (!file.existsSync() || file.lengthSync() > _maxCountedConfigBytes) {
     return null;
   }
   final config = loadYaml(file.readAsStringSync());
-  return configCountsOf(config is Map ? config : const {});
+  if (config is! Map) return null;
+  int lengthOf(Object? value) => value is List ? value.length : 0;
+  final rules = config['rules'] ?? config['rule'];
+  return (
+    groups: lengthOf(config['proxy-groups']),
+    proxies: lengthOf(config['proxies']),
+    rules: lengthOf(rules),
+  );
 }
 
 /// Parsed in an isolate: a large profile takes far longer than a frame.
-Future<ConfigCounts?> _loadCounts() async {
-  if (_cachedCounts() case final counts?) {
+Future<ConfigCounts?> _loadCounts([int? profileId]) async {
+  if (cachedConfigCounts() case final counts?) {
     return counts;
   }
+  final saved = await preferences.getAppliedConfigCounts();
+  if (saved != null) {
+    globalState.lastConfigCounts = saved;
+    return saved;
+  }
   final md5 = globalState.lastConfigMd5;
-  final counts = await compute(_countConfigFile, await appPath.configFilePath);
+  ConfigCounts? counts =
+      await compute(_countConfigFile, await appPath.configFilePath);
+  if (counts == null && profileId != null) {
+    final profilePath = await appPath.getProfilePath(profileId.toString());
+    counts = await compute(_countConfigFile, profilePath);
+  }
   if (md5 != null && counts != null) {
     _countsCache = (md5: md5, counts: counts);
+  }
+  if (counts != null) {
+    globalState.lastConfigCounts = counts;
+    unawaited(preferences.saveAppliedConfigCounts(counts));
   }
   return counts;
 }
 
 mixin ConfigCountsWatch<T extends ConsumerStatefulWidget> on ConsumerState<T> {
-  ConfigCounts? configCounts = _cachedCounts();
+  ConfigCounts? configCounts = cachedConfigCounts();
   bool configCountsFailed = false;
   var _generation = 0;
+  AppLifecycleListener? _lifecycleListener;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
+    configCountsNotifier.addListener(_handleCountsNotifier);
+    _lifecycleListener = AppLifecycleListener(onResume: _handleResume);
     if (configCounts == null) {
       unawaited(_reloadCounts());
     }
   }
 
+  @override
+  void dispose() {
+    configCountsNotifier.removeListener(_handleCountsNotifier);
+    _lifecycleListener?.dispose();
+    super.dispose();
+  }
+
+  void _handleCountsNotifier() {
+    if (!mounted) return;
+    final newCounts = configCountsNotifier.value;
+    if (newCounts != null && newCounts != configCounts) {
+      setState(() {
+        configCounts = newCounts;
+        configCountsFailed = false;
+      });
+    }
+  }
+
+  void _handleResume() {
+    if (!mounted) return;
+    final cached = cachedConfigCounts() ?? configCountsNotifier.value;
+    if (cached != null) {
+      if (cached != configCounts) {
+        setState(() {
+          configCounts = cached;
+          configCountsFailed = false;
+        });
+      }
+    } else {
+      unawaited(_reloadCounts());
+    }
+  }
+
   Future<void> _reloadCounts() async {
+    if (_isLoading) return;
+    _isLoading = true;
     final generation = ++_generation;
     ConfigCounts? counts;
     var failed = false;
     try {
-      counts = await _loadCounts();
+      final profileId = ref.read(currentProfileIdProvider);
+      counts = await _loadCounts(profileId);
     } catch (error) {
       commonPrint.log('read applied config error: $error');
       failed = true;
+    } finally {
+      _isLoading = false;
     }
     if (!mounted || generation != _generation) {
       return;
     }
     setState(() {
-      configCounts = counts ?? configCounts;
-      configCountsFailed = failed || counts == null;
+      configCounts = counts ?? cachedConfigCounts() ?? configCounts;
+      configCountsFailed = failed && configCounts == null;
     });
   }
 
   /// Called from build: groups refresh after every applied setup.
   void watchConfigCounts() {
+    final cached = cachedConfigCounts() ?? configCountsNotifier.value;
+    if (cached != null && cached != configCounts) {
+      configCounts = cached;
+      configCountsFailed = false;
+    } else if (configCounts == null && !configCountsFailed && !_isLoading) {
+      unawaited(_reloadCounts());
+    }
+
+    ref.listen(currentProfileIdProvider, (_, profileId) {
+      final cached = cachedConfigCounts() ?? configCountsNotifier.value;
+      if (cached != null) {
+        setState(() {
+          configCounts = cached;
+          configCountsFailed = false;
+        });
+      } else {
+        unawaited(_reloadCounts());
+      }
+    });
+
+    ref.listen(providersProvider, (_, _) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+
     ref.listen(groupsProvider, (_, _) {
-      final cached = _cachedCounts();
+      final cached = cachedConfigCounts() ?? configCountsNotifier.value;
       if (cached == null) {
         unawaited(_reloadCounts());
       } else if (cached != configCounts) {
@@ -165,7 +257,7 @@ class _ProfileDetailSheetState extends ConsumerState<ProfileDetailSheet>
     final isUpdating = ref.watch(isUpdatingProvider(profile.updatingKey));
     final appLocalizations = context.appLocalizations;
     final subscriptionInfo = profile.subscriptionInfo;
-    return CommonScaffold(
+    return Scaffold(
       title: profile.realLabel,
       iconActions: [
         if (profile.type == ProfileType.url)
@@ -193,7 +285,7 @@ class _ProfileDetailSheetState extends ConsumerState<ProfileDetailSheet>
                 SliverList.list(
                   children: [
                     _StatsGrid(
-                      stats: switch (configCounts) {
+                      stats: switch (configCounts ?? cachedConfigCounts()) {
                         final counts? => profileStatsOf(counts, providers),
                         null => null,
                       },

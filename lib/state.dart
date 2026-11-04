@@ -4,7 +4,7 @@ import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/ui/ui.dart';
 import 'package:flutter/foundation.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -31,7 +31,11 @@ class GlobalState {
   }
 
   String? lastConfigMd5;
-  ConfigCounts? lastConfigCounts;
+  final configCountsNotifier = ValueNotifier<ConfigCounts?>(null);
+  ConfigCounts? get lastConfigCounts => configCountsNotifier.value;
+  set lastConfigCounts(ConfigCounts? value) {
+    configCountsNotifier.value = value;
+  }
   bool isAttach = false;
 
   GlobalState._internal();
@@ -120,7 +124,7 @@ class GlobalState {
       );
       final message = userFacingErrorMessage(e, currentAppLocalizations);
       if (silence) {
-        dialogs.showNotifier(message, level: MessageLevel.error);
+        dialogs.showBanner(message, level: BannerLevel.error);
       } else {
         unawaited(
           dialogs.showAlert(

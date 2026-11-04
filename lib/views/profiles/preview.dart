@@ -1,7 +1,8 @@
+import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/models/profile.dart';
 import 'package:fl_clash/pages/editor.dart';
 import 'package:fl_clash/providers/action.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class PreviewProfileView extends ConsumerWidget {
@@ -14,9 +15,11 @@ class PreviewProfileView extends ConsumerWidget {
     return EditorPage(
       title: profile.realLabel,
       load: () async => CodeForgeDocument.fromText(
-        await ref
-            .read(setupActionProvider.notifier)
-            .getProfileWithId(profile.id),
+        unescapeYamlUnicode(
+          await ref
+              .read(setupActionProvider.notifier)
+              .getProfileWithId(profile.id),
+        ),
       ),
     );
   }

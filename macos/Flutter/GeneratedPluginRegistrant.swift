@@ -18,6 +18,7 @@ import shared_preferences_foundation
 import sqflite_darwin
 import tray
 import url_launcher_macos
+import wakelock_plus
 import wifi_ssid
 import window
 
@@ -35,6 +36,7 @@ func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   SqflitePlugin.register(with: registry.registrar(forPlugin: "SqflitePlugin"))
   TrayPlugin.register(with: registry.registrar(forPlugin: "TrayPlugin"))
   UrlLauncherPlugin.register(with: registry.registrar(forPlugin: "UrlLauncherPlugin"))
+  WakelockPlusMacosPlugin.register(with: registry.registrar(forPlugin: "WakelockPlusMacosPlugin"))
   WifiSsidPlugin.register(with: registry.registrar(forPlugin: "WifiSsidPlugin"))
   WindowPlugin.register(with: registry.registrar(forPlugin: "WindowPlugin"))
 }

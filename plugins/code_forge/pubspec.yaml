@@ -11,10 +11,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  material_ui: ^1.4.0
   re_highlight: ^0.0.3
   rust_api:
     path: ../rust_api
+  emoji_regex: ^0.0.5
 
 dev_dependencies:
   flutter_test:

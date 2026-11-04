@@ -118,7 +118,7 @@ final class ShownServiceCountProvider
   }
 }
 
-String _$shownServiceCountHash() => r'5ed23369fc7ba6ce8d809f06ff026cdbe60f5233';
+String _$shownServiceCountHash() => r'e7d02305f33916eede119d04fb064c73487f2ac1';
 
 /// How many of [enabledServiceTargets] the dashboard card has room for, which
 /// its sheet marks as shown there.

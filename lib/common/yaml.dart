@@ -16,6 +16,35 @@ class Yaml {
   }
 }
 
+String unescapeYamlUnicode(String text) {
+  if (!text.contains(r'\U') && !text.contains(r'\u')) {
+    return text;
+  }
+  return text.replaceAllMapped(
+    RegExp(r'(\\*)\\([Uu])([0-9a-fA-F]{4,8})'),
+    (match) {
+      final leadingSlashes = match[1]!;
+      if (leadingSlashes.length.isOdd) {
+        return match[0]!;
+      }
+      final type = match[2]!;
+      final hex = match[3]!;
+      if (type == 'U' && hex.length >= 8) {
+        final code = int.tryParse(hex.substring(0, 8), radix: 16);
+        if (code != null && code >= 0 && code <= 0x10FFFF) {
+          return '$leadingSlashes${String.fromCharCode(code)}${hex.substring(8)}';
+        }
+      } else if (type == 'u' && hex.length >= 4) {
+        final code = int.tryParse(hex.substring(0, 4), radix: 16);
+        if (code != null) {
+          return '$leadingSlashes${String.fromCharCode(code)}${hex.substring(4)}';
+        }
+      }
+      return match[0]!;
+    },
+  );
+}
+
 final yaml = Yaml();
 
 /// Applies `<<` merge keys as mihomo does; package:yaml keeps them as keys.

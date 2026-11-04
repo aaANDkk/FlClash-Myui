@@ -48,6 +48,16 @@ jobs:
             flutter-channel: master
 
     steps:
+      - name: Free disk space (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android/sdk/ndk
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo docker system prune --all --force --volumes 2>/dev/null || true
+          df -h
+
       - name: Setup rust
         if: startsWith(matrix.os, 'windows-11-arm')
         shell: pwsh
@@ -221,25 +231,11 @@ jobs:
       - name: Generate release notes
         shell: bash
         env:
-          IS_STABLE: ${{ env.IS_STABLE }}
           TAG: ${{ github.ref_name }}
         run: |
-          echo "## 更新内容 / What's Changed" > release.md
-          echo "" >> release.md
-          PREV_TAG=$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)
-          if [ -n "$PREV_TAG" ]; then
-            git log "${PREV_TAG}..${TAG}" --pretty=format:"* %s (%h)" --no-merges >> release.md || true
-          else
-            git log -n 20 --pretty=format:"* %s (%h)" --no-merges >> release.md || true
-          fi
-          echo "" >> release.md
-
-      - name: Patch release.md
-        run: |
-          version=$(echo "${{ github.ref_name }}" | sed 's/^v//')
-          if [ -f ./.github/release_template.md ]; then
-            sed "s|VERSION|$version|g" ./.github/release_template.md >> release.md
-          fi
+          version="${TAG#v}"
+          build_version=$(sed -n 's/^version: *\([^+ ]*\).*/\1/p' pubspec.yaml | head -n 1)
+          sed "s|BUILD_VERSION|$build_version|g; s|VERSION|$version|g" .github/release_template.md > release.md
 
       - name: Generate sha256
         run: |
@@ -252,4 +248,3 @@ jobs:
           files: ./dist/*
           body_path: './release.md'
           prerelease: ${{ env.IS_STABLE != 'true' }}
-

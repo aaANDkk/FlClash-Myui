@@ -9,9 +9,9 @@ import 'package:fl_clash/views/dashboard/layout.dart';
 import 'package:fl_clash/views/dashboard/widgets/card.dart';
 import 'package:fl_clash/views/dashboard/widgets/widgets.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
 
 import '../../helpers/glyph_finders.dart';
 import '../../helpers/test_app.dart';
@@ -125,7 +125,7 @@ void main() {
     expect(service.width, closeTo(upload.width, 0.01));
     expect(
       tester.widget<ServiceStatusCard>(find.byType(ServiceStatusCard)).columns,
-      1,
+      2,
     );
     expect(memory.top, service.top);
     expect(memory.left, closeTo(service.right + 16, 0.01));

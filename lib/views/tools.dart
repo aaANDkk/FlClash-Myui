@@ -10,11 +10,10 @@ import 'package:fl_clash/views/backup_and_restore.dart';
 import 'package:fl_clash/views/config/general.dart';
 import 'package:fl_clash/views/hotkey.dart';
 import 'package:fl_clash/widgets/widgets.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'config/advanced.dart';
-import 'config/custom_resources.dart';
 import 'developer.dart';
 import 'disclaimer.dart';
 import 'theme.dart';
@@ -48,17 +47,15 @@ class _ToolViewState extends ConsumerState<ToolsView> {
   }
 
   Widget _getSettingList() {
-    final appLocalizations = context.appLocalizations;
     return generateSection(
-      title: appLocalizations.settings,
+      title: context.appLocalizations.settings,
       items: [
         const _LocaleItem(),
         const _ThemeItem(),
-        const _BackupItem(),
         if (system.isDesktop) const _HotkeyItem(),
         if (system.isAndroid) const _AccessItem(),
+        const _BackupItem(),
         const _AdvancedConfigItem(),
-        const _CustomResourcesItem(),
         const _GeneralItem(),
       ],
     );
@@ -84,19 +81,23 @@ class _ToolViewState extends ConsumerState<ToolsView> {
       _getSettingList(),
       _getOtherList(developerMode),
     ];
-    return CommonScaffold(
+    return Scaffold(
       title: context.appLocalizations.tools,
       body: Builder(
-        builder: (context) => ListView.builder(
+        builder: (context) => CustomScrollView(
           key: toolsStoreKey,
-          itemCount: items.length,
-          itemBuilder: (_, index) => items[index],
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: context.sectionsTopPadding,
-            bottom: 20 + context.bottomInset,
-          ),
+          slivers: [
+            SliverPadding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: context.sectionsTopPadding,
+                bottom: 20 + context.bottomInset,
+              ),
+              // These few sections need real extents before restoring an offset.
+              sliver: SliverToBoxAdapter(child: Column(children: items)),
+            ),
+          ],
         ),
       ),
     );
@@ -204,21 +205,8 @@ class _AdvancedConfigItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListItem.open(
       leading: const GlyphIcon(AppGlyphs.wrench),
-      title: Text(context.appLocalizations.advancedConfig),
+      title: Text(context.appLocalizations.config),
       widget: const AdvancedConfigView(),
-    );
-  }
-}
-
-class _CustomResourcesItem extends StatelessWidget {
-  const _CustomResourcesItem();
-
-  @override
-  Widget build(BuildContext context) {
-    return ListItem.open(
-      leading: const GlyphIcon(AppGlyphs.customize),
-      title: Text(context.appLocalizations.customProfileResources),
-      widget: const CustomResourcesView(),
     );
   }
 }

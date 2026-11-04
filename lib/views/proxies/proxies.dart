@@ -5,7 +5,7 @@ import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/proxies/list.dart';
 import 'package:fl_clash/widgets/widgets.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'tab.dart';
@@ -35,16 +35,19 @@ class _ProxiesViewState extends ConsumerState<ProxiesView> {
     ref.read(proxiesStyleSettingProvider.notifier).update(update);
   }
 
-  List<CommonPopupMenuItem> _buildMenuItems(
+  List<PopupMenuItem> _buildMenuItems(
     BuildContext context,
     ProxiesStyleProps style,
   ) {
     final appLocalizations = context.appLocalizations;
     return [
       _optionsMenuItem(
-        glyph: AppGlyphs.appsList,
+        glyph: switch (style.type) {
+          ProxiesType.list => AppGlyphs.appsListDetail,
+          ProxiesType.tab => AppGlyphs.appRecent,
+        },
         label: appLocalizations.style,
-        section: const CommonPopupMenuSection(),
+        section: const PopupMenuSection(),
         options: ProxiesType.values,
         value: style.type,
         textOf: (type) => type.label,
@@ -65,7 +68,11 @@ class _ProxiesViewState extends ConsumerState<ProxiesView> {
             _updateStyle((state) => state.copyWith(sortType: type)),
       ),
       _optionsMenuItem(
-        glyph: AppGlyphs.dashboard,
+        glyph: switch (style.layout) {
+          ProxiesLayout.tight => AppGlyphs.columnsThree,
+          ProxiesLayout.standard => AppGlyphs.columnsTwo,
+          ProxiesLayout.loose => AppGlyphs.columnsOne,
+        },
         label: appLocalizations.layout,
         options: ProxiesLayout.values,
         value: style.layout,
@@ -78,7 +85,11 @@ class _ProxiesViewState extends ConsumerState<ProxiesView> {
             _updateStyle((state) => state.copyWith(layout: layout)),
       ),
       _optionsMenuItem(
-        glyph: AppGlyphs.textSize,
+        glyph: switch (style.cardType) {
+          ProxyCardType.loose => AppGlyphs.cardLarge,
+          ProxyCardType.standard => AppGlyphs.cardMedium,
+          ProxyCardType.compact => AppGlyphs.cardSmall,
+        },
         label: appLocalizations.size,
         options: ProxyCardType.values,
         value: style.cardType,
@@ -100,11 +111,11 @@ class _ProxiesViewState extends ConsumerState<ProxiesView> {
           onSelected: (iconStyle) =>
               _updateStyle((state) => state.copyWith(iconStyle: iconStyle)),
         ),
-      CommonPopupMenuItem(
+      PopupMenuItem(
         glyph: AppGlyphs.eyeOff,
         label: appLocalizations.hideTimeoutProxies,
         checked: style.hideTimeoutProxies,
-        section: const CommonPopupMenuSection(),
+        section: const PopupMenuSection(),
         onPressed: () => _updateStyle(
           (state) =>
               state.copyWith(hideTimeoutProxies: !state.hideTimeoutProxies),
@@ -156,7 +167,7 @@ class _ProxiesViewState extends ConsumerState<ProxiesView> {
     final isLoading = ref.watch(loadingProvider(LoadingTag.proxies));
     final picker = widget.picker;
     final primaryAction = _buildPrimaryAction();
-    return CommonScaffold(
+    return Scaffold(
       isLoading: isLoading,
       resizeToAvoidBottomInset: false,
       primaryAction: primaryAction,
@@ -182,22 +193,22 @@ class _ProxiesViewState extends ConsumerState<ProxiesView> {
   }
 }
 
-CommonPopupMenuItem _optionsMenuItem<T>({
+PopupMenuItem _optionsMenuItem<T>({
   required Glyph glyph,
   required String label,
   required List<T> options,
   required T value,
   required String Function(T option) textOf,
   required ValueSetter<T> onSelected,
-  CommonPopupMenuSection? section,
+  PopupMenuSection? section,
 }) {
-  return CommonPopupMenuItem(
+  return PopupMenuItem(
     glyph: glyph,
     label: label,
     section: section,
     subItems: [
       for (final option in options)
-        CommonPopupMenuItem(
+        PopupMenuItem(
           label: textOf(option),
           checked: option == value,
           onPressed: () => onSelected(option),

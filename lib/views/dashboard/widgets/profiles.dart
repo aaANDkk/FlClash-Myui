@@ -10,11 +10,12 @@ import 'package:fl_clash/views/dashboard/layout.dart';
 import 'package:fl_clash/views/dashboard/style.dart';
 import 'package:fl_clash/views/profiles/custom/custom.dart';
 import 'package:fl_clash/widgets/widgets.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:material_ui/material_ui.dart';
 
 import 'card.dart';
 import 'profile_detail.dart';
+import 'package:prism_ui/prism_ui.dart';
 
 typedef _Usage = ({int used, int total, double share});
 
@@ -141,8 +142,8 @@ class ProfilesCard extends ConsumerWidget {
         mainAxisSize: mobile ? MainAxisSize.min : MainAxisSize.max,
         children: [
           DashboardCardHeader(
-            glyph: AppGlyphs.profiles,
-            title: appLocalizations.profile,
+            glyph: AppGlyphs.rocket,
+            title: appLocalizations.currentProfile,
             chevron: mobile,
             trailing: [
               if (mobile)
@@ -229,7 +230,7 @@ class _SyncButton extends ConsumerWidget {
     if (isUpdating) {
       return const SizedBox.square(
         dimension: 32,
-        child: Center(child: CommonCircleLoading(size: 18)),
+        child: Center(child: ActivityIndicator(size: 18)),
       );
     }
     return DashboardIconButton(
@@ -256,9 +257,20 @@ class _ConfigStatsState extends ConsumerState<_ConfigStats>
     final providers = ref.watch(providersProvider);
     final appLocalizations = context.appLocalizations;
     final colorScheme = context.colorScheme;
-    final stats = switch (configCounts) {
+    final effectiveCounts =
+        configCounts ?? cachedConfigCounts() ?? configCountsNotifier.value;
+    final stats = switch (effectiveCounts) {
       final counts? => profileStatsOf(counts, providers),
-      null => null,
+      null => providers.isNotEmpty
+          ? (
+              groups: 0,
+              proxies: providers
+                  .where((p) => p.type == 'Proxy')
+                  .fold(0, (sum, p) => sum + p.count),
+              rules: 0,
+              providers: providers.length,
+            )
+          : null,
     };
     final desktop = density.isDesktop;
     final titleStyle = DashboardText.rowTitle(context);
@@ -350,7 +362,6 @@ class _ConfigStatsState extends ConsumerState<_ConfigStats>
       children: [
         box(stats?.providers, appLocalizations.providerCount),
         box(stats?.proxies, appLocalizations.nodeCount),
-        box(stats?.rules, appLocalizations.ruleCount),
       ],
     );
   }

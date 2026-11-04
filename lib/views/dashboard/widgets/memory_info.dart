@@ -12,7 +12,7 @@ import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/dashboard/layout.dart';
 import 'package:fl_clash/views/dashboard/style.dart';
 import 'package:fl_clash/widgets/widgets.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'card.dart';
@@ -219,6 +219,29 @@ class _MemorySummary extends StatelessWidget {
         color: DashboardColors.of(context).series2,
       ),
     ];
+    final legendItems = [
+      for (final part in parts)
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 6,
+          children: [
+            DecoratedBox(
+              decoration: ShapeDecoration(
+                color: part.color,
+                shape: AppShape.circle,
+              ),
+              child: const SizedBox.square(dimension: 8),
+            ),
+            Text(part.label, style: DashboardText.label(context)),
+            Text(
+              '${part.bytes.traffic.value} ${part.bytes.traffic.unit}',
+              style: AppTextStyle.footnote
+                  .of(context, emphasized: true)
+                  .toTabular,
+            ),
+          ],
+        ),
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: mobile ? MainAxisSize.min : MainAxisSize.max,
@@ -245,33 +268,43 @@ class _MemorySummary extends StatelessWidget {
           ],
         ),
         SizedBox(height: compact ? 8 : 10),
-        Wrap(
-          spacing: 16,
-          runSpacing: 4,
-          children: [
-            for (final part in parts)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                spacing: 6,
-                children: [
-                  DecoratedBox(
-                    decoration: ShapeDecoration(
-                      color: part.color,
-                      shape: AppShape.circle,
-                    ),
-                    child: const SizedBox.square(dimension: 8),
+        if (!mobile)
+          SizedBox(
+            width: double.infinity,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 4,
+              children: [
+                for (final part in parts)
+                  Row(
+                    children: [
+                      DecoratedBox(
+                        decoration: ShapeDecoration(
+                          color: part.color,
+                          shape: AppShape.circle,
+                        ),
+                        child: const SizedBox.square(dimension: 8),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(part.label, style: DashboardText.label(context)),
+                      const Spacer(),
+                      Text(
+                        '${part.bytes.traffic.value} ${part.bytes.traffic.unit}',
+                        style: AppTextStyle.footnote
+                            .of(context, emphasized: true)
+                            .toTabular,
+                      ),
+                    ],
                   ),
-                  Text(part.label, style: DashboardText.label(context)),
-                  Text(
-                    '${part.bytes.traffic.value} ${part.bytes.traffic.unit}',
-                    style: AppTextStyle.footnote
-                        .of(context, emphasized: true)
-                        .toTabular,
-                  ),
-                ],
-              ),
-          ],
-        ),
+              ],
+            ),
+          )
+        else
+          Wrap(
+            spacing: 16,
+            runSpacing: 4,
+            children: legendItems,
+          ),
       ],
     );
   }
@@ -313,7 +346,7 @@ class _MemoryDetailSheetState extends ConsumerState<MemoryDetailSheet>
   /// Resolves to the bytes freed.
   Future<int> _release() async {
     final before = _snapshot.total;
-    await ref.read(coreHandlerProvider).requestGc();
+    await ref.read(coreHandlerProvider).forceGc();
     if (!mounted) {
       return 0;
     }
@@ -332,7 +365,7 @@ class _MemoryDetailSheetState extends ConsumerState<MemoryDetailSheet>
     setState(() => _isReleasing = true);
     final appLocalizations = context.appLocalizations;
     String message;
-    var level = MessageLevel.success;
+    var level = BannerLevel.success;
     try {
       final (freed, _) = await (
         _release(),
@@ -347,13 +380,13 @@ class _MemoryDetailSheetState extends ConsumerState<MemoryDetailSheet>
         logLevel: coreFailureLogLevel(error),
       );
       message = appLocalizations.releaseMemoryFailed;
-      level = MessageLevel.error;
+      level = BannerLevel.error;
     }
     if (!mounted) {
       return;
     }
     setState(() => _isReleasing = false);
-    context.showNotifier(message, level: level);
+    dialogs.showBanner(message, level: level);
   }
 
   List<Widget> _appItems(
@@ -411,7 +444,7 @@ class _MemoryDetailSheetState extends ConsumerState<MemoryDetailSheet>
   @override
   Widget build(BuildContext context) {
     final appLocalizations = context.appLocalizations;
-    return CommonScaffold(
+    return Scaffold(
       title: appLocalizations.memoryInfo,
       actions: [
         AppBarActionButton(

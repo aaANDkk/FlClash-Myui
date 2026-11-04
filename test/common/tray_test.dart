@@ -22,6 +22,30 @@ void main() {
       );
     });
 
+    test('windows switches to status_1_dark when taskbar is dark', () {
+      final darkWindows = AppTray.forPlatform(
+        isMacOS: false,
+        isWindows: true,
+        isTaskbarDark: true,
+      );
+      expect(
+        darkWindows.getTrayIcon(
+          isStart: false,
+          tunEnable: false,
+          safeMode: false,
+        ),
+        'assets/images/tray/windows/status_1_dark.ico',
+      );
+      expect(
+        darkWindows.getTrayIcon(
+          isStart: true,
+          tunEnable: false,
+          safeMode: false,
+        ),
+        'assets/images/tray/windows/status_2.ico',
+      );
+    });
+
     test('linux loads png files from the unix directory', () {
       expect(
         linux.getTrayIcon(isStart: false, tunEnable: false, safeMode: false),

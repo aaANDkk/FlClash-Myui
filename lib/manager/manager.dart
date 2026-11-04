@@ -6,7 +6,6 @@ export 'emoji_manager.dart';
 export 'font_manager.dart';
 export 'locale_manager.dart';
 export 'proxy_manager.dart';
-export 'status_manager.dart';
 export 'theme_manager.dart';
 export 'tile_manager.dart';
 export 'tray_manager.dart';

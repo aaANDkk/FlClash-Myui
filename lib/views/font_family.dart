@@ -1,14 +1,39 @@
 import 'dart:io';
 
 import 'package:fl_clash/common/common.dart';
-import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/form/form.dart';
 import 'package:fl_clash/manager/font_manager.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
-import 'package:flutter/foundation.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
+
+sealed class _FontChoice {
+  const _FontChoice();
+}
+
+final class _DefaultFont extends _FontChoice {
+  const _DefaultFont();
+
+  @override
+  bool operator ==(Object other) => other is _DefaultFont;
+
+  @override
+  int get hashCode => 0;
+}
+
+final class _CustomFontChoice extends _FontChoice {
+  const _CustomFontChoice(this.font);
+
+  final CustomFont font;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _CustomFontChoice && other.font.path == font.path;
+
+  @override
+  int get hashCode => font.path.hashCode;
+}
 
 class FontFamilyView extends StatefulWidget {
   const FontFamilyView({super.key});
@@ -41,9 +66,9 @@ class _FontFamilyViewState extends State<FontFamilyView> {
       return true;
     }, title: appLocalizations.tip);
     if (res == true && mounted) {
-      context.showNotifier(
+      dialogs.showBanner(
         appLocalizations.exportSuccess,
-        level: MessageLevel.success,
+        level: BannerLevel.success,
       );
     }
   }
@@ -66,27 +91,11 @@ class _FontFamilyViewState extends State<FontFamilyView> {
     setState(() {});
   }
 
-  /// What the app paints with when no custom font is picked. The theme carries
-  /// the selected custom family, so a bare `Text` here would preview that font
-  /// under the "default" entry instead of the real default.
-  TextStyle _defaultStyle() {
-    final platform = defaultTargetPlatform;
-    final base = Typography.material2021(platform: platform).black.bodyMedium!;
-    return TextStyle(
-      fontFamily: base.fontFamily,
-      fontFamilyFallback: appFontFamilyFallback(
-        platform: platform,
-        locales: WidgetsBinding.instance.platformDispatcher.locales,
-        fontFamily: base.fontFamily,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final appLocalizations = context.appLocalizations;
     final fonts = FontManager.fonts;
-    return SelectionSheet<CustomFont?>(
+    return SelectionSheet<_FontChoice>(
       title: appLocalizations.fontFamily,
       iconActions: [
         IconButtonData(
@@ -96,63 +105,61 @@ class _FontFamilyViewState extends State<FontFamilyView> {
         ),
       ],
       sections: [
-        const SelectionSection<CustomFont?>(items: [null]),
+        const SelectionSection<_FontChoice>(items: [_DefaultFont()]),
         if (fonts.isNotEmpty)
-          SelectionSection<CustomFont?>(
+          SelectionSection<_FontChoice>(
             label: appLocalizations.customFont,
-            items: fonts,
+            items: fonts.map(_CustomFontChoice.new).toList(),
           ),
       ],
-      labelBuilder: (font) => font?.name ?? appLocalizations.defaultText,
-      titleBuilder: (font, title) {
-        if (font == null) {
-          return Text(
-            appLocalizations.defaultText,
+      labelBuilder: (choice) => switch (choice) {
+        _DefaultFont() => appLocalizations.defaultText,
+        _CustomFontChoice(:final font) => font.name,
+      },
+      titleBuilder: (choice, title) => switch (choice) {
+        _DefaultFont() => title,
+        _CustomFontChoice(:final font) => switch (FontManager.familyOf(font)) {
+          final family? => Text(
+            font.name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: _defaultStyle(),
-          );
-        }
-        final family = FontManager.familyOf(font);
-        if (family == null) {
-          return title;
-        }
-        return Text(
-          font.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontFamily: family),
-        );
+            style: TextStyle(fontFamily: family),
+          ),
+          null => title,
+        },
       },
-      selectedOf: (_) => FontManager.selectedFont,
-      menuBuilder: (font) {
-        if (font == null) {
-          return null;
-        }
-        return [
-          CommonPopupMenuItem(
+      selectedOf: (_) {
+        final selected = FontManager.selectedFont;
+        return selected == null
+            ? const _DefaultFont()
+            : _CustomFontChoice(selected);
+      },
+      menuBuilder: (choice) => switch (choice) {
+        _CustomFontChoice(:final font) => [
+          PopupMenuItem(
             glyph: AppGlyphs.export,
             label: appLocalizations.exportFile,
             onPressed: () => _handleExportFont(font),
           ),
-          CommonPopupMenuItem(
+          PopupMenuItem(
             danger: true,
             glyph: AppGlyphs.delete,
             label: appLocalizations.delete,
             onPressed: () => _handleDeleteFont(font),
           ),
-        ];
+        ],
+        _ => null,
       },
-      onSelected: (font) async {
-        if (font == null) {
-          await FontManager.selectDefault();
-        } else {
-          await FontManager.select(font);
+      onSelected: (choice) async {
+        switch (choice) {
+          case _DefaultFont():
+            await FontManager.selectDefault();
+          case _CustomFontChoice(:final font):
+            await FontManager.select(font);
         }
-        if (!mounted) {
-          return;
+        if (mounted) {
+          setState(() {});
         }
-        setState(() {});
       },
     );
   }

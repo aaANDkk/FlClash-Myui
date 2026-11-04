@@ -6,7 +6,7 @@ import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/common.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/widgets/widgets.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'card.dart';
@@ -250,13 +250,15 @@ class ProxyGroupView extends ConsumerWidget {
     );
   }
 
+  Widget _scrollbar(Widget child) => system.isDesktop
+      ? Scrollbar(controller: controller, child: child)
+      : child;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final proxies = group.all;
-    return CommonScrollBar(
-      controller: controller,
-      thumbVisibility: true,
-      child: GridView.builder(
+    return _scrollbar(
+      GridView.builder(
         key: _getPageStorageKey(ref),
         controller: controller,
         padding: EdgeInsets.only(
@@ -280,7 +282,6 @@ class ProxyGroupView extends ConsumerWidget {
             type: cardType,
             proxy: proxy,
             groupName: group.name,
-            isTabMode: true,
           );
         },
       ),

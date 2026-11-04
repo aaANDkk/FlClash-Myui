@@ -6,7 +6,7 @@ import 'package:fl_clash/plugins/app.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/ui/ui.dart';
 import 'package:flutter/foundation.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_svg/svg.dart';
 
@@ -95,10 +95,15 @@ class CommonTargetIcon extends StatelessWidget {
         bytes: base64,
         isSvg: src.isSvg,
         fallback: _defaultIcon(),
+        loadingWidget: fallback,
       );
     }
 
-    return ImageCacheWidget(src: src, defaultWidget: _defaultIcon());
+    return ImageCacheWidget(
+      src: src,
+      defaultWidget: _defaultIcon(),
+      loadingWidget: fallback,
+    );
   }
 
   @override
@@ -173,31 +178,55 @@ class GroupMonogram extends StatelessWidget {
   }
 }
 
-class _BytesImage extends StatelessWidget {
+class _BytesImage extends StatefulWidget {
   const _BytesImage({
     required this.bytes,
     required this.isSvg,
     required this.fallback,
+    this.loadingWidget,
     this.onError,
   });
 
   final Uint8List bytes;
   final bool isSvg;
   final Widget fallback;
+  final Widget? loadingWidget;
   final VoidCallback? onError;
 
+  @override
+  State<_BytesImage> createState() => _BytesImageState();
+}
+
+class _BytesImageState extends State<_BytesImage> {
+  bool _hasRasterFrame = false;
+
+  @override
+  void didUpdateWidget(covariant _BytesImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isSvg != widget.isSvg) _hasRasterFrame = false;
+  }
+
   Widget _buildFallback() {
-    onError?.call();
-    return fallback;
+    widget.onError?.call();
+    return widget.fallback;
   }
 
   @override
   Widget build(BuildContext context) {
-    return isSvg
-        ? SvgPicture.memory(bytes, errorBuilder: (_, _, _) => _buildFallback())
+    final loading = widget.loadingWidget;
+    return widget.isSvg
+        ? SvgPicture.memory(
+            widget.bytes,
+            placeholderBuilder: loading == null ? null : (_) => loading,
+            errorBuilder: (_, _, _) => _buildFallback(),
+          )
         : Image(
-            image: _iconImage(bytes),
+            image: _iconImage(widget.bytes),
             gaplessPlayback: true,
+            frameBuilder: (_, child, frame, wasSynchronouslyLoaded) {
+              _hasRasterFrame |= wasSynchronouslyLoaded || frame != null;
+              return _hasRasterFrame ? child : loading ?? child;
+            },
             errorBuilder: (_, _, _) => _buildFallback(),
           );
   }
@@ -276,11 +305,13 @@ Future<void> precacheTargetIcons(Iterable<String> srcs) async {
 class ImageCacheWidget extends StatefulWidget {
   final String src;
   final Widget defaultWidget;
+  final Widget? loadingWidget;
 
   const ImageCacheWidget({
     super.key,
     required this.src,
     required this.defaultWidget,
+    this.loadingWidget,
   });
 
   @override
@@ -348,12 +379,16 @@ class _ImageCacheWidgetState extends State<ImageCacheWidget> {
         if (bytes == null) {
           return _loadEnded || widget.src.isEmpty
               ? widget.defaultWidget
-              : SizedBox.square(dimension: IconTheme.of(context).size ?? 24);
+              : widget.loadingWidget ??
+                    SizedBox.square(
+                      dimension: IconTheme.of(context).size ?? 24,
+                    );
         }
         return _BytesImage(
           bytes: bytes,
           isSvg: widget.src.isSvg,
           fallback: widget.defaultWidget,
+          loadingWidget: widget.loadingWidget,
           onError: () => _remoteIcons.remove(widget.src),
         );
       },

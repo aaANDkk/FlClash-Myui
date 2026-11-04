@@ -1,9 +1,8 @@
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/rendering.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:super_sliver_list/super_sliver_list.dart';
 
 class SelectionSection<T> {
   final String? label;
@@ -25,7 +24,7 @@ class SelectionSheet<T> extends ConsumerStatefulWidget {
   final T? Function(WidgetRef ref) selectedOf;
   final ValueChanged<T> onSelected;
   final ValueChanged<T>? onLongPressed;
-  final List<CommonPopupMenuItem>? Function(T item)? menuBuilder;
+  final List<PopupMenuItem>? Function(T item)? menuBuilder;
   final String? emptyLabel;
   final NullStatus? loadingStatus;
 
@@ -306,7 +305,7 @@ class _SelectionSheetState<T> extends ConsumerState<SelectionSheet<T>>
     final searchable =
         _query.isNotEmpty ||
         _countOf(widget.sections) >= sheetSearchMinItemCount;
-    return CommonScaffold(
+    return Scaffold(
       title: widget.title,
       iconActions: widget.iconActions,
       searchState: searchable
@@ -319,7 +318,10 @@ class _SelectionSheetState<T> extends ConsumerState<SelectionSheet<T>>
               count == 0 && (widget.emptyLabel != null || _query.isNotEmpty),
           isSearching: _query.isNotEmpty,
           loadingStatus: loadingStatus,
-          nullStatus: NullStatus(label: widget.emptyLabel ?? ''),
+          nullStatus: NullStatus(
+            label: widget.emptyLabel ?? '',
+            illustration: NullStatusIllustration.data,
+          ),
           child: CustomScrollView(
             controller: _controller,
             slivers: [
@@ -333,7 +335,7 @@ class _SelectionSheetState<T> extends ConsumerState<SelectionSheet<T>>
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  sliver: SuperSliverList.builder(
+                  sliver: SliverPrismList(
                     listController: sectionIndex == location?.section
                         ? _revealController
                         : null,

@@ -338,8 +338,11 @@ std::optional<LRESULT> TrayPlugin::HandleWindowProc(HWND window,
     return std::nullopt;
   }
 
-  if (flush_menu_themes_ != nullptr && IsColorSetChange(message, lparam)) {
-    flush_menu_themes_();
+  if (IsColorSetChange(message, lparam)) {
+    if (flush_menu_themes_ != nullptr) {
+      flush_menu_themes_();
+    }
+    SendEvent("onThemeChanged", flutter::EncodableValue());
     return std::nullopt;
   }
 

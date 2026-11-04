@@ -20,6 +20,7 @@ const String _methodOpenMenu = 'openMenu';
 const String _eventIconActivated = 'onIconActivated';
 const String _eventMenuRequested = 'onMenuRequested';
 const String _eventMenuItemSelected = 'onMenuItemSelected';
+const String _eventThemeChanged = 'onThemeChanged';
 
 final class Tray {
   Tray._() {
@@ -148,6 +149,8 @@ final class Tray {
     switch (call.method) {
       case _eventIconActivated:
         _events.add(const TrayIconActivated());
+      case _eventThemeChanged:
+        _events.add(const TrayThemeChanged());
       case _eventMenuRequested:
         _events.add(const TrayMenuRequested());
       case _eventMenuItemSelected:
