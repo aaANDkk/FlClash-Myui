@@ -9108,6 +9108,86 @@ class AppLocalizations {
     );
   }
 
+  /// `Regex icons`
+  String get iconRules {
+    return Intl.message(
+      'Regex icons',
+      name: 'iconRules',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `A group whose name matches the regex takes its icon from the chosen icon set.`
+  String get iconRulesTip {
+    return Intl.message(
+      'A group whose name matches the regex takes its icon from the chosen icon set.',
+      name: 'iconRulesTip',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Invalid regular expression`
+  String get invalidRegex {
+    return Intl.message(
+      'Invalid regular expression',
+      name: 'invalidRegex',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Icon set removed`
+  String get iconSetRemoved {
+    return Intl.message(
+      'Icon set removed',
+      name: 'iconSetRemoved',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Regex icons are empty`
+  String get iconRulesEmpty {
+    return Intl.message(
+      'Regex icons are empty',
+      name: 'iconRulesEmpty',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Add regex icon`
+  String get addIconRule {
+    return Intl.message(
+      'Add regex icon',
+      name: 'addIconRule',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Edit regex icon`
+  String get editIconRule {
+    return Intl.message(
+      'Edit regex icon',
+      name: 'editIconRule',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// Regex icon help examples
+  String get iconRuleHelp {
+    return Intl.message(
+      '1. Exact match: e.g. ^YouTube\$ matches only the group named YouTube.\\n2. Keyword match: e.g. YouTube matches any group whose name contains YouTube.\\n3. Multiple match: e.g. (YouTube|Netflix|Disney) matches multiple media groups.\\n4. Wildcard: e.g. .* matches all groups to use the selected icon.\\n5. Prefix & suffix: e.g. ^PROXY matches prefix, Auto\$ matches suffix; evaluated from top to bottom.',
+      name: 'iconRuleHelp',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Keep screen on`
   String get wakelock {
     return Intl.message('Keep screen on', name: 'wakelock', desc: '', args: []);

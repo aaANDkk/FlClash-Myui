@@ -86,9 +86,11 @@ class _GroupIcon extends StatelessWidget {
             size: size - inset * 2,
             color: colorScheme.onSurfaceVariant,
           ),
-          child: CommonTargetIcon(
-            src: group.icon,
-            fallback: GroupMonogram(group.name),
+          child: Consumer(
+            builder: (_, ref, _) => CommonTargetIcon(
+              src: ref.watch(proxyGroupIconProvider(group.name)),
+              fallback: GroupMonogram(group.name),
+            ),
           ),
         ),
       ),

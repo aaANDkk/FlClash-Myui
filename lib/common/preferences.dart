@@ -231,6 +231,16 @@ class Preferences {
     await sharedPreferencesIns?.setBool(wakelockEnabledKey, value);
   }
 
+  Future<String?> getIconRules() async {
+    final sharedPreferencesIns = await _store.value;
+    return sharedPreferencesIns?.getString(iconRulesKey);
+  }
+
+  Future<void> setIconRules(String value) async {
+    final sharedPreferencesIns = await _store.value;
+    await sharedPreferencesIns?.setString(iconRulesKey, value);
+  }
+
   Future<void> clearPreferences() async {
     final sharedPreferencesIns = await _store.value;
     await sharedPreferencesIns?.clear();

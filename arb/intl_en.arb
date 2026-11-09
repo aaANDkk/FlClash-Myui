@@ -1120,5 +1120,13 @@
   "nodeCount": "Proxies",
   "ruleCount": "Rules",
   "providerCount": "Providers",
-  "currentProfile": "Current profile"
+  "currentProfile": "Current profile",
+  "iconRules": "Regex icons",
+  "iconRulesTip": "A group whose name matches the regex takes its icon from the chosen icon set.",
+  "invalidRegex": "Invalid regular expression",
+  "iconSetRemoved": "Icon set removed",
+  "iconRulesEmpty": "Regex icons are empty",
+  "addIconRule": "Add regex icon",
+  "editIconRule": "Edit regex icon",
+  "iconRuleHelp": "1. Exact match: e.g. ^YouTube$ matches only the group named YouTube.\n2. Keyword match: e.g. YouTube matches any group whose name contains YouTube.\n3. Multiple match: e.g. (YouTube|Netflix|Disney) matches multiple media groups.\n4. Wildcard: e.g. .* matches all groups to use the selected icon.\n5. Prefix & suffix: e.g. ^PROXY matches prefix, Auto$ matches suffix; evaluated from top to bottom."
 }

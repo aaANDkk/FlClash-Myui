@@ -1120,5 +1120,13 @@
   "nodeCount": "노드 수",
   "ruleCount": "규칙 항목",
   "providerCount": "제공자",
-  "currentProfile": "현재 프로필"
+  "currentProfile": "현재 프로필",
+  "iconRules": "정규식 아이콘",
+  "iconRulesTip": "이름이 정규식과 일치하는 그룹은 선택한 아이콘 세트의 아이콘을 사용합니다.",
+  "invalidRegex": "잘못된 정규식",
+  "iconSetRemoved": "아이콘 세트가 삭제됨",
+  "iconRulesEmpty": "정규식 아이콘이 비어 있습니다",
+  "addIconRule": "정규식 아이콘 추가",
+  "editIconRule": "정규식 아이콘 수정",
+  "iconRuleHelp": "1. 완전 일치: 예: ^YouTube$ 는 이름이 YouTube 인 그룹에만 일치합니다.\n2. 키워드 일치: 예: YouTube 는 이름에 YouTube 가 포함된 모든 그룹에 일치합니다.\n3. 다중 일치: 예: (YouTube|Netflix|Disney) 는 여러 미디어 그룹과 동시에 일치합니다.\n4. 전체 와일드카드: 예: .* 는 모든 그룹과 일치하며 해당 Icon 아이콘을 적용합니다.\n5. 접두사 및 접미사: 예: ^PROXY 는 접두사, Auto$ 는 접미사에 일치하며 위에서 아래 순서로 적용됩니다."
 }

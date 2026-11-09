@@ -1120,5 +1120,13 @@
   "nodeCount": "ノード数",
   "ruleCount": "ルール項目",
   "providerCount": "プロバイダー",
-  "currentProfile": "現在のプロファイル"
+  "currentProfile": "現在のプロファイル",
+  "iconRules": "正規表現アイコン",
+  "iconRulesTip": "名前が正規表現に一致するグループは、選択したアイコンセットのアイコンを使用します。",
+  "invalidRegex": "正規表現が無効です",
+  "iconSetRemoved": "アイコンセットは削除されました",
+  "iconRulesEmpty": "正規表現アイコンが空です",
+  "addIconRule": "正規表現アイコンを追加",
+  "editIconRule": "正規表現アイコンを編集",
+  "iconRuleHelp": "1. 完全一致：例 ^YouTube$ は YouTube という名前のグループにのみ一致します。\n2. キーワード一致：例 YouTube は名前に YouTube を含むすべてのグループに一致します。\n3. 複数一致：例 (YouTube|Netflix|Disney) は複数のストリーミンググループに同時に一致します。\n4. ワイルドカード：例 .* はすべてのグループに一致し、選択したアイコンを適用します。\n5. 前方・後方一致：例 ^PROXY は前方一致、 Auto$ は後方一致；上から順に評価されます。"
 }

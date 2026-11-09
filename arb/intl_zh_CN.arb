@@ -1120,5 +1120,13 @@
   "nodeCount": "代理节点",
   "ruleCount": "路由规则",
   "providerCount": "外部资源",
-  "currentProfile": "当前配置"
+  "currentProfile": "当前配置",
+  "iconRules": "正则图标",
+  "iconRulesTip": "名称匹配该正则的策略组，会使用所选图标集中与其名称对应的图标。",
+  "invalidRegex": "正则表达式无效",
+  "iconSetRemoved": "图标集已被移除",
+  "iconRulesEmpty": "正则图标为空",
+  "addIconRule": "添加正则图标",
+  "editIconRule": "编辑正则图标",
+  "iconRuleHelp": "1. 完全匹配：如 ^YouTube$ 仅匹配名称完全为 YouTube 的策略组。\n2. 关键词匹配：如 YouTube 可匹配所有名称包含 YouTube 的策略组。\n3. 多项匹配：如 (YouTube|Netflix|Disney) 可同时匹配多个流媒体策略组。\n4. 全局通配：如 .* 可匹配所有策略组，全部使用该 Icon 图标。\n5. 前缀与后缀：如 ^PROXY 匹配前缀， Auto$ 匹配后缀；规则自上而下按序生效。"
 }

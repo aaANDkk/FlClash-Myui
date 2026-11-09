@@ -626,7 +626,7 @@ class ListHeader extends ConsumerWidget {
             Flexible(
               child: Row(
                 children: [
-                  _GroupIcon(src: group.icon, name: groupName),
+                  _GroupIcon(name: groupName),
                   Flexible(
                     child: _GroupSummary(
                       groupName: groupName,
@@ -696,13 +696,13 @@ List<BoxShadow> _floatingShadows(ColorScheme colorScheme, double lift) {
 }
 
 class _GroupIcon extends ConsumerWidget {
-  const _GroupIcon({required this.src, required this.name});
+  const _GroupIcon({required this.name});
 
-  final String src;
   final String name;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final src = ref.watch(proxyGroupIconProvider(name));
     final iconStyle = ref.watch(
       proxiesStyleSettingProvider.select((state) => state.iconStyle),
     );
@@ -805,7 +805,7 @@ class _SelectedProxyLine extends ConsumerWidget {
     final style = AppTextStyle.caption1.of(context, emphasized: true).toLight;
     final icon = proxyName.isEmpty
         ? null
-        : ref.watch(groupsProvider).getGroup(proxyName)?.icon;
+        : ref.watch(proxyGroupIconProvider(proxyName));
     final textScaler = MediaQuery.textScalerOf(context);
     final iconSize = textScaler.scale(AppTextStyle.caption1.leading);
     return Row(

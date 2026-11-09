@@ -131,8 +131,8 @@ class ProxyCard extends ConsumerWidget {
   /// A proxy that is itself a group shows the icon configured for that group, as
   /// bettbox does.
   String? _configuredIconOf(WidgetRef ref) {
-    final icon = ref.watch(groupsProvider).getGroup(proxy.name)?.icon;
-    if (icon == null || icon.isEmpty) {
+    final icon = ref.watch(proxyGroupIconProvider(proxy.name));
+    if (icon.isEmpty) {
       return null;
     }
     return icon;

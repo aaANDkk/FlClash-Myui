@@ -313,6 +313,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "addOverrideEntry": MessageLookupByLibrary.simpleMessage(
       "Add override entry",
     ),
+    "addIconRule": MessageLookupByLibrary.simpleMessage("Add regex icon"),
     "addProfile": MessageLookupByLibrary.simpleMessage("Add profile"),
     "addProxyGroup": MessageLookupByLibrary.simpleMessage("Add proxy group"),
     "addRule": MessageLookupByLibrary.simpleMessage("Add rule"),
@@ -825,6 +826,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "editGlobalRules": MessageLookupByLibrary.simpleMessage(
       "Edit global rules",
     ),
+    "editIconRule": MessageLookupByLibrary.simpleMessage("Edit regex icon"),
     "editProxy": MessageLookupByLibrary.simpleMessage("Edit proxy"),
     "editProxyGroup": MessageLookupByLibrary.simpleMessage("Edit proxy group"),
     "editRule": MessageLookupByLibrary.simpleMessage("Edit rule"),
@@ -833,6 +835,16 @@ class MessageLookup extends MessageLookupByLibrary {
       "Editor unavailable",
     ),
     "elapsed": MessageLookupByLibrary.simpleMessage("Took"),
+    "iconRules": MessageLookupByLibrary.simpleMessage("Regex icons"),
+    "iconRuleHelp": MessageLookupByLibrary.simpleMessage(
+      "1. Exact match: e.g. ^YouTube\$ matches only the group named YouTube.\n2. Keyword match: e.g. YouTube matches any group whose name contains YouTube.\n3. Multiple match: e.g. (YouTube|Netflix|Disney) matches multiple media groups.\n4. Wildcard: e.g. .* matches all groups to use the selected icon.\n5. Prefix & suffix: e.g. ^PROXY matches prefix, Auto\$ matches suffix; evaluated from top to bottom.",
+    ),
+    "iconRulesTip": MessageLookupByLibrary.simpleMessage("A group whose name matches the regex takes its icon from the chosen icon set."),
+    "invalidRegex": MessageLookupByLibrary.simpleMessage("Invalid regular expression"),
+    "iconSetRemoved": MessageLookupByLibrary.simpleMessage("Icon set removed"),
+    "iconRulesEmpty": MessageLookupByLibrary.simpleMessage(
+      "Regex icons are empty",
+    ),
     "emojiStyle": MessageLookupByLibrary.simpleMessage("Emoji font"),
     "emptyFallback": MessageLookupByLibrary.simpleMessage("Empty fallback"),
     "emptyTip": m26,

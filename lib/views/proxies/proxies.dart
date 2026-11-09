@@ -3,6 +3,7 @@ import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
+import 'package:fl_clash/views/proxies/icon_style.dart';
 import 'package:fl_clash/views/proxies/list.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
@@ -41,6 +42,14 @@ class _ProxiesViewState extends ConsumerState<ProxiesView> {
   ) {
     final appLocalizations = context.appLocalizations;
     return [
+      if (style.type == ProxiesType.list)
+        PopupMenuItem(
+          glyph: AppGlyphs.iconTile,
+          label: appLocalizations.iconStyle,
+          onPressed: () {
+            BaseNavigator.push(context, const ProxiesIconStyleView());
+          },
+        ),
       _optionsMenuItem(
         glyph: switch (style.type) {
           ProxiesType.list => AppGlyphs.appsListDetail,
@@ -97,20 +106,6 @@ class _ProxiesViewState extends ConsumerState<ProxiesView> {
         onSelected: (type) =>
             _updateStyle((state) => state.copyWith(cardType: type)),
       ),
-      if (style.type == ProxiesType.list)
-        _optionsMenuItem(
-          glyph: AppGlyphs.iconTile,
-          label: appLocalizations.iconStyle,
-          options: ProxiesIconStyle.values,
-          value: style.iconStyle,
-          textOf: (iconStyle) => switch (iconStyle) {
-            ProxiesIconStyle.filled => appLocalizations.iconStyleFilled,
-            ProxiesIconStyle.plain => appLocalizations.iconStylePlain,
-            ProxiesIconStyle.hidden => appLocalizations.iconStyleHidden,
-          },
-          onSelected: (iconStyle) =>
-              _updateStyle((state) => state.copyWith(iconStyle: iconStyle)),
-        ),
       PopupMenuItem(
         glyph: AppGlyphs.eyeOff,
         label: appLocalizations.hideTimeoutProxies,
