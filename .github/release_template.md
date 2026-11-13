@@ -55,6 +55,13 @@
 - 公网 IP 前显示可识别的国家或地区旗帜，支持 IPv4、IPv6 查询。
 - IP 详情在当前面板内切换，全局“隐藏 IP”设置同步生效；公网地址连同端口一起隐藏，内网、保留地址和 Fake-IP 保持明文。
 
+### IP 质量、流量统计与网络测速
+
+- 新增 Scamalytics IP 欺诈值与彩色风险刻度，支持查看代理类型和黑名单，首页同步展示欺诈值，并保留隐藏 IP 与主机名的隐私设置。
+- 新增本地流量统计，按时间查看域名、进程、节点、配置和规则的流量与请求排行。
+- 新增 Speedtest by Ookla 网络测速，支持出站节点与服务器选择、实时速率、延迟与响应性指标、设置和历史记录。
+- 相关功能统一采用 FlClash 风格的卡片与面板。
+
 ### 其他调整与修复
 
 - 电脑首页新增亮屏锁，支持记住开关状态。
@@ -69,5 +76,7 @@
 ## 致谢与许可
 
 感谢 [FlClash](https://github.com/chen08209/FlClash)、[mihomo](https://github.com/MetaCubeX/mihomo) 及原项目所有贡献者。
+
+特别致敬 [Bettbox](https://github.com/appshubcc/Bettbox)：IP 查询与欺诈值、流量统计、网络测速功能借鉴并改编自 Bettbox。
 
 本项目遵循 [GPL-3.0](https://github.com/aaANDkk/FlClash-Myui/blob/Myui/LICENSE) 协议。Maple Mono、Twemoji、OpenMoji 等资源保留各自的开源许可与署名。
