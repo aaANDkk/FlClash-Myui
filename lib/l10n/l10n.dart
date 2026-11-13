@@ -10337,10 +10337,10 @@ class AppLocalizations {
     );
   }
 
-  /// `Detecting outbound…`
+  /// `Detecting`
   String get speedTestProbing {
     return Intl.message(
-      'Detecting outbound…',
+      'Detecting',
       name: 'speedTestProbing',
       desc: '',
       args: [],

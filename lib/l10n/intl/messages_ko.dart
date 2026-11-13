@@ -254,23 +254,23 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m101(value) => "최고 ${value}";
 
-  static String m102(value) => "합계 ${value}";
+  static String m102(count) => "${count}일";
 
-  static String m103(transport) => "${transport} 요청 헤더";
+  static String m103(count) => "${count}회";
 
-  static String m104(label) => "${label}은(는) URL이어야 합니다";
+  static String m104(date) => "${date}부터";
 
-  static String m105(date) => "${date}까지 유효";
+  static String m105(value) => "합계 ${value}";
 
-  static String m106(count) => "${Intl.plural(count, other: '${count}년 전')}";
+  static String m106(transport) => "${transport} 요청 헤더";
 
-  static String m107(count) => "${Intl.plural(count, other: '${count}년 전')}";
+  static String m107(label) => "${label}은(는) URL이어야 합니다";
 
-  static String m108(count) => "${count}회";
+  static String m108(date) => "${date}까지 유효";
 
-  static String m109(count) => "${count}일";
+  static String m109(count) => "${Intl.plural(count, other: '${count}년 전')}";
 
-  static String m110(date) => "${date}부터";
+  static String m110(count) => "${Intl.plural(count, other: '${count}년 전')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -1920,7 +1920,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "speedTestMultiThread": MessageLookupByLibrary.simpleMessage("다중"),
     "speedTestOutbound": MessageLookupByLibrary.simpleMessage("아웃바운드"),
     "speedTestPacketLoss": MessageLookupByLibrary.simpleMessage("패킷 손실"),
-    "speedTestProbing": MessageLookupByLibrary.simpleMessage("아웃바운드 확인 중…"),
+    "speedTestProbing": MessageLookupByLibrary.simpleMessage("확인 중"),
     "speedTestProtocol": MessageLookupByLibrary.simpleMessage("프로토콜"),
     "speedTestProtocolDesc": MessageLookupByLibrary.simpleMessage(
       "HTTP/3는 QUIC(UDP)를 사용하며, 사용할 수 없으면 HTTP/2로, HTTP/2도 안 되면 HTTP/1.1로 전환합니다",
@@ -2014,13 +2014,12 @@ class MessageLookup extends MessageLookupByLibrary {
     "tproxyPort": MessageLookupByLibrary.simpleMessage("TProxy 포트"),
     "traffic": MessageLookupByLibrary.simpleMessage("트래픽"),
     "trafficPeak": m101,
-    "trafficTotal": m102,
     "trafficStats": MessageLookupByLibrary.simpleMessage("트래픽 통계"),
     "trafficStatsClearTip": MessageLookupByLibrary.simpleMessage(
       "저장된 모든 트래픽 통계 데이터를 지우시겠습니까?",
     ),
     "trafficStatsDay": MessageLookupByLibrary.simpleMessage("일"),
-    "trafficStatsDays": m109,
+    "trafficStatsDays": m102,
     "trafficStatsDesc": MessageLookupByLibrary.simpleMessage(
       "일, 주, 월별 트래픽 세부 내역을 확인합니다",
     ),
@@ -2037,7 +2036,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "trafficStatsEnable": MessageLookupByLibrary.simpleMessage("트래픽 통계 사용"),
     "trafficStatsEnableAction": MessageLookupByLibrary.simpleMessage("켜기"),
-    "trafficStatsHitCount": m108,
+    "trafficStatsHitCount": m103,
     "trafficStatsMonth": MessageLookupByLibrary.simpleMessage("월"),
     "trafficStatsNode": MessageLookupByLibrary.simpleMessage("노드"),
     "trafficStatsOverview": MessageLookupByLibrary.simpleMessage("요약"),
@@ -2046,7 +2045,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "trafficStatsRetention": MessageLookupByLibrary.simpleMessage("데이터 보관 기간"),
     "trafficStatsRuleHits": MessageLookupByLibrary.simpleMessage("규칙 일치"),
     "trafficStatsSettings": MessageLookupByLibrary.simpleMessage("통계 설정"),
-    "trafficStatsSince": m110,
+    "trafficStatsSince": m104,
     "trafficStatsSiteIcon": MessageLookupByLibrary.simpleMessage("사이트 아이콘"),
     "trafficStatsSiteIconDesc": MessageLookupByLibrary.simpleMessage(
       "도메인 순위용 파비콘을 로컬에 캐시합니다",
@@ -2054,9 +2053,10 @@ class MessageLookup extends MessageLookupByLibrary {
     "trafficStatsTotal": MessageLookupByLibrary.simpleMessage("총 트래픽"),
     "trafficStatsTrend": MessageLookupByLibrary.simpleMessage("트래픽 추이"),
     "trafficStatsWeek": MessageLookupByLibrary.simpleMessage("주"),
+    "trafficTotal": m105,
     "trafficUsage": MessageLookupByLibrary.simpleMessage("트래픽 사용량"),
     "transport": MessageLookupByLibrary.simpleMessage("전송"),
-    "transportHeaders": m103,
+    "transportHeaders": m106,
     "trustCertificate": MessageLookupByLibrary.simpleMessage("인증서 신뢰"),
     "tun": MessageLookupByLibrary.simpleMessage("TUN"),
     "tunAuthorizationFailed": MessageLookupByLibrary.simpleMessage(
@@ -2109,14 +2109,14 @@ class MessageLookup extends MessageLookupByLibrary {
     "uploadBandwidth": MessageLookupByLibrary.simpleMessage("업로드 대역폭"),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlRewrite": MessageLookupByLibrary.simpleMessage("URL 재작성"),
-    "urlTip": m104,
+    "urlTip": m107,
     "useHosts": MessageLookupByLibrary.simpleMessage("hosts 사용"),
     "useSystemHosts": MessageLookupByLibrary.simpleMessage("시스템 hosts 사용"),
     "usedShort": MessageLookupByLibrary.simpleMessage("사용"),
     "usedTraffic": MessageLookupByLibrary.simpleMessage("사용한 트래픽"),
     "userAgent": MessageLookupByLibrary.simpleMessage("User-Agent"),
     "username": MessageLookupByLibrary.simpleMessage("사용자 이름"),
-    "validUntil": m105,
+    "validUntil": m108,
     "value": MessageLookupByLibrary.simpleMessage("값"),
     "view": MessageLookupByLibrary.simpleMessage("보기"),
     "viewAll": MessageLookupByLibrary.simpleMessage("모두 보기"),
@@ -2135,8 +2135,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "시스템에 기록하면 시스템 시계도 설정합니다. Android에서는 무시됩니다.",
     ),
-    "yearsAgo": m106,
-    "yearsAgoShort": m107,
+    "yearsAgo": m109,
+    "yearsAgoShort": m110,
     "yes": MessageLookupByLibrary.simpleMessage("예"),
     "zhCN": MessageLookupByLibrary.simpleMessage("중국어 간체"),
   };

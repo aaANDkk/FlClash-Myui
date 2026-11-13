@@ -63,6 +63,14 @@ void main() {
           isNotEmpty,
           reason: '$locale.$key must not be empty',
         );
+        final source = arbByLocale[locale]![key] as String;
+        if (argumentCount == 0 && !source.contains('{')) {
+          expect(
+            translated,
+            source,
+            reason: '$locale.$key generated text must match its source',
+          );
+        }
       }
     }
   });

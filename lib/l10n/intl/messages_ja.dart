@@ -250,23 +250,23 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m101(value) => "ピーク ${value}";
 
-  static String m102(value) => "累計 ${value}";
+  static String m102(count) => "${count} 日";
 
-  static String m103(transport) => "${transport} リクエストヘッダー";
+  static String m103(count) => "${count} 回";
 
-  static String m104(label) => "${label}はURLである必要があります";
+  static String m104(date) => "${date} 以降の統計";
 
-  static String m105(date) => "有効期限 ${date}";
+  static String m105(value) => "累計 ${value}";
 
-  static String m106(count) => "${count} 年前";
+  static String m106(transport) => "${transport} リクエストヘッダー";
 
-  static String m107(count) => "${count} 年前";
+  static String m107(label) => "${label}はURLである必要があります";
 
-  static String m108(count) => "${count} 回";
+  static String m108(date) => "有効期限 ${date}";
 
-  static String m109(count) => "${count} 日";
+  static String m109(count) => "${count} 年前";
 
-  static String m110(date) => "${date} 以降の統計";
+  static String m110(count) => "${count} 年前";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -1952,7 +1952,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "speedTestMultiThread": MessageLookupByLibrary.simpleMessage("マルチ"),
     "speedTestOutbound": MessageLookupByLibrary.simpleMessage("アウトバウンド"),
     "speedTestPacketLoss": MessageLookupByLibrary.simpleMessage("パケットロス"),
-    "speedTestProbing": MessageLookupByLibrary.simpleMessage("アウトバウンドを検出中…"),
+    "speedTestProbing": MessageLookupByLibrary.simpleMessage("検出中"),
     "speedTestProtocol": MessageLookupByLibrary.simpleMessage("プロトコル"),
     "speedTestProtocolDesc": MessageLookupByLibrary.simpleMessage(
       "HTTP/3 は QUIC (UDP) を使用し、使えない場合は HTTP/2 に、HTTP/2 も使えない場合は HTTP/1.1 に切り替えます",
@@ -2044,13 +2044,12 @@ class MessageLookup extends MessageLookupByLibrary {
     "tproxyPort": MessageLookupByLibrary.simpleMessage("TProxyポート"),
     "traffic": MessageLookupByLibrary.simpleMessage("通信量"),
     "trafficPeak": m101,
-    "trafficTotal": m102,
     "trafficStats": MessageLookupByLibrary.simpleMessage("トラフィック統計"),
     "trafficStatsClearTip": MessageLookupByLibrary.simpleMessage(
       "保存されているトラフィック統計データをすべて消去しますか？",
     ),
     "trafficStatsDay": MessageLookupByLibrary.simpleMessage("日"),
-    "trafficStatsDays": m109,
+    "trafficStatsDays": m102,
     "trafficStatsDesc": MessageLookupByLibrary.simpleMessage(
       "日・週・月ごとのトラフィック内訳を確認します",
     ),
@@ -2061,13 +2060,17 @@ class MessageLookup extends MessageLookupByLibrary {
     "trafficStatsDetailOffTip": MessageLookupByLibrary.simpleMessage(
       "詳細統計がオフのため、合計と時間帯別の推移のみ記録されます。",
     ),
-    "trafficStatsDisabled": MessageLookupByLibrary.simpleMessage("トラフィック統計が無効です"),
+    "trafficStatsDisabled": MessageLookupByLibrary.simpleMessage(
+      "トラフィック統計が無効です",
+    ),
     "trafficStatsDisabledDesc": MessageLookupByLibrary.simpleMessage(
       "有効にすると、ドメイン・プロセス・ノード・ルール別の通信量をローカルに記録します。",
     ),
-    "trafficStatsEnable": MessageLookupByLibrary.simpleMessage("トラフィック統計を有効にする"),
+    "trafficStatsEnable": MessageLookupByLibrary.simpleMessage(
+      "トラフィック統計を有効にする",
+    ),
     "trafficStatsEnableAction": MessageLookupByLibrary.simpleMessage("有効化"),
-    "trafficStatsHitCount": m108,
+    "trafficStatsHitCount": m103,
     "trafficStatsMonth": MessageLookupByLibrary.simpleMessage("月"),
     "trafficStatsNode": MessageLookupByLibrary.simpleMessage("ノード"),
     "trafficStatsOverview": MessageLookupByLibrary.simpleMessage("概要"),
@@ -2076,7 +2079,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "trafficStatsRetention": MessageLookupByLibrary.simpleMessage("データ保持期間"),
     "trafficStatsRuleHits": MessageLookupByLibrary.simpleMessage("ルール一致"),
     "trafficStatsSettings": MessageLookupByLibrary.simpleMessage("統計設定"),
-    "trafficStatsSince": m110,
+    "trafficStatsSince": m104,
     "trafficStatsSiteIcon": MessageLookupByLibrary.simpleMessage("サイトアイコン"),
     "trafficStatsSiteIconDesc": MessageLookupByLibrary.simpleMessage(
       "ドメインランキング用にファビコンを取得してキャッシュします",
@@ -2084,9 +2087,10 @@ class MessageLookup extends MessageLookupByLibrary {
     "trafficStatsTotal": MessageLookupByLibrary.simpleMessage("合計トラフィック"),
     "trafficStatsTrend": MessageLookupByLibrary.simpleMessage("トラフィック推移"),
     "trafficStatsWeek": MessageLookupByLibrary.simpleMessage("週"),
+    "trafficTotal": m105,
     "trafficUsage": MessageLookupByLibrary.simpleMessage("トラフィック統計"),
     "transport": MessageLookupByLibrary.simpleMessage("トランスポート"),
-    "transportHeaders": m103,
+    "transportHeaders": m106,
     "trustCertificate": MessageLookupByLibrary.simpleMessage("証明書を信頼"),
     "tun": MessageLookupByLibrary.simpleMessage("TUN"),
     "tunAuthorizationFailed": MessageLookupByLibrary.simpleMessage(
@@ -2139,14 +2143,14 @@ class MessageLookup extends MessageLookupByLibrary {
     "uploadBandwidth": MessageLookupByLibrary.simpleMessage("アップロード帯域幅"),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlRewrite": MessageLookupByLibrary.simpleMessage("URL 書き換え"),
-    "urlTip": m104,
+    "urlTip": m107,
     "useHosts": MessageLookupByLibrary.simpleMessage("Hostsを使用"),
     "useSystemHosts": MessageLookupByLibrary.simpleMessage("システムのHostsを使用"),
     "usedShort": MessageLookupByLibrary.simpleMessage("使用済み"),
     "usedTraffic": MessageLookupByLibrary.simpleMessage("使用済みトラフィック"),
     "userAgent": MessageLookupByLibrary.simpleMessage("User-Agent"),
     "username": MessageLookupByLibrary.simpleMessage("ユーザー名"),
-    "validUntil": m105,
+    "validUntil": m108,
     "value": MessageLookupByLibrary.simpleMessage("値"),
     "view": MessageLookupByLibrary.simpleMessage("表示"),
     "viewAll": MessageLookupByLibrary.simpleMessage("すべて表示"),
@@ -2165,8 +2169,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "システムに書き込むを有効にするとシステムクロックも設定します。Android では無視されます。",
     ),
-    "yearsAgo": m106,
-    "yearsAgoShort": m107,
+    "yearsAgo": m109,
+    "yearsAgoShort": m110,
     "yes": MessageLookupByLibrary.simpleMessage("はい"),
     "zhCN": MessageLookupByLibrary.simpleMessage("簡体字中国語"),
   };

@@ -278,25 +278,25 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m101(value) => "Пик ${value}";
 
-  static String m102(value) => "Всего ${value}";
+  static String m102(count) => "${count} дн.";
 
-  static String m103(transport) => "Заголовки ${transport}";
+  static String m103(count) => "${count} раз";
 
-  static String m104(label) => "Значение «${label}» должно быть URL";
+  static String m104(date) => "С ${date}";
 
-  static String m105(date) => "Действителен до ${date}";
+  static String m105(value) => "Всего ${value}";
 
-  static String m106(count) =>
+  static String m106(transport) => "Заголовки ${transport}";
+
+  static String m107(label) => "Значение «${label}» должно быть URL";
+
+  static String m108(date) => "Действителен до ${date}";
+
+  static String m109(count) =>
       "${Intl.plural(count, one: '${count} год назад', few: '${count} года назад', many: '${count} лет назад', other: '${count} года назад')}";
 
-  static String m107(count) =>
+  static String m110(count) =>
       "${Intl.plural(count, one: '${count} г. назад', few: '${count} г. назад', many: '${count} л. назад', other: '${count} г. назад')}";
-
-  static String m108(count) => "${count} раз";
-
-  static String m109(count) => "${count} дн.";
-
-  static String m110(date) => "С ${date}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -2388,9 +2388,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "speedTestMultiThread": MessageLookupByLibrary.simpleMessage("Несколько"),
     "speedTestOutbound": MessageLookupByLibrary.simpleMessage("Выход"),
     "speedTestPacketLoss": MessageLookupByLibrary.simpleMessage("Потери"),
-    "speedTestProbing": MessageLookupByLibrary.simpleMessage(
-      "Определение выхода…",
-    ),
+    "speedTestProbing": MessageLookupByLibrary.simpleMessage("Проверка"),
     "speedTestProtocol": MessageLookupByLibrary.simpleMessage("Протокол"),
     "speedTestProtocolDesc": MessageLookupByLibrary.simpleMessage(
       "HTTP/3 работает поверх QUIC (UDP); если он недоступен — откат на HTTP/2, а если недоступен и HTTP/2 — на HTTP/1.1",
@@ -2508,17 +2506,18 @@ class MessageLookup extends MessageLookupByLibrary {
     "tproxyPort": MessageLookupByLibrary.simpleMessage("Порт TProxy"),
     "traffic": MessageLookupByLibrary.simpleMessage("Трафик"),
     "trafficPeak": m101,
-    "trafficTotal": m102,
     "trafficStats": MessageLookupByLibrary.simpleMessage("Статистика трафика"),
     "trafficStatsClearTip": MessageLookupByLibrary.simpleMessage(
       "Очистить все сохранённые данные статистики трафика?",
     ),
     "trafficStatsDay": MessageLookupByLibrary.simpleMessage("День"),
-    "trafficStatsDays": m109,
+    "trafficStatsDays": m102,
     "trafficStatsDesc": MessageLookupByLibrary.simpleMessage(
       "Подробная разбивка трафика по дням, неделям и месяцам",
     ),
-    "trafficStatsDetail": MessageLookupByLibrary.simpleMessage("Подробный учёт"),
+    "trafficStatsDetail": MessageLookupByLibrary.simpleMessage(
+      "Подробный учёт",
+    ),
     "trafficStatsDetailDesc": MessageLookupByLibrary.simpleMessage(
       "Записывать детализацию по доменам, процессам, узлам, профилям и правилам",
     ),
@@ -2534,31 +2533,42 @@ class MessageLookup extends MessageLookupByLibrary {
     "trafficStatsEnable": MessageLookupByLibrary.simpleMessage(
       "Включить статистику трафика",
     ),
-    "trafficStatsEnableAction": MessageLookupByLibrary.simpleMessage("Включить"),
-    "trafficStatsHitCount": m108,
+    "trafficStatsEnableAction": MessageLookupByLibrary.simpleMessage(
+      "Включить",
+    ),
+    "trafficStatsHitCount": m103,
     "trafficStatsMonth": MessageLookupByLibrary.simpleMessage("Месяц"),
     "trafficStatsNode": MessageLookupByLibrary.simpleMessage("Узел"),
     "trafficStatsOverview": MessageLookupByLibrary.simpleMessage("Обзор"),
-    "trafficStatsRanking": MessageLookupByLibrary.simpleMessage("Рейтинг трафика"),
+    "trafficStatsRanking": MessageLookupByLibrary.simpleMessage(
+      "Рейтинг трафика",
+    ),
     "trafficStatsRefresh": MessageLookupByLibrary.simpleMessage("Обновить"),
-    "trafficStatsRetention": MessageLookupByLibrary.simpleMessage("Срок хранения"),
+    "trafficStatsRetention": MessageLookupByLibrary.simpleMessage(
+      "Срок хранения",
+    ),
     "trafficStatsRuleHits": MessageLookupByLibrary.simpleMessage(
       "Срабатывания правил",
     ),
     "trafficStatsSettings": MessageLookupByLibrary.simpleMessage(
       "Настройки статистики",
     ),
-    "trafficStatsSince": m110,
-    "trafficStatsSiteIcon": MessageLookupByLibrary.simpleMessage("Иконки сайтов"),
+    "trafficStatsSince": m104,
+    "trafficStatsSiteIcon": MessageLookupByLibrary.simpleMessage(
+      "Иконки сайтов",
+    ),
     "trafficStatsSiteIconDesc": MessageLookupByLibrary.simpleMessage(
       "Загружать и кэшировать иконки доменов локально",
     ),
     "trafficStatsTotal": MessageLookupByLibrary.simpleMessage("Всего трафика"),
-    "trafficStatsTrend": MessageLookupByLibrary.simpleMessage("Динамика трафика"),
+    "trafficStatsTrend": MessageLookupByLibrary.simpleMessage(
+      "Динамика трафика",
+    ),
     "trafficStatsWeek": MessageLookupByLibrary.simpleMessage("Неделя"),
+    "trafficTotal": m105,
     "trafficUsage": MessageLookupByLibrary.simpleMessage("Статистика трафика"),
     "transport": MessageLookupByLibrary.simpleMessage("Транспорт"),
-    "transportHeaders": m103,
+    "transportHeaders": m106,
     "trustCertificate": MessageLookupByLibrary.simpleMessage(
       "Доверять сертификату",
     ),
@@ -2619,7 +2629,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "uploadBandwidth": MessageLookupByLibrary.simpleMessage("Скорость отдачи"),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlRewrite": MessageLookupByLibrary.simpleMessage("Перезапись URL"),
-    "urlTip": m104,
+    "urlTip": m107,
     "useHosts": MessageLookupByLibrary.simpleMessage("Использовать hosts"),
     "useSystemHosts": MessageLookupByLibrary.simpleMessage(
       "Использовать системный hosts",
@@ -2630,7 +2640,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "userAgent": MessageLookupByLibrary.simpleMessage("User-Agent"),
     "username": MessageLookupByLibrary.simpleMessage("Имя пользователя"),
-    "validUntil": m105,
+    "validUntil": m108,
     "value": MessageLookupByLibrary.simpleMessage("Значение"),
     "view": MessageLookupByLibrary.simpleMessage("Просмотр"),
     "viewAll": MessageLookupByLibrary.simpleMessage("Показать всё"),
@@ -2655,8 +2665,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "«Записывать в систему» также устанавливает системные часы; Android это игнорирует.",
     ),
-    "yearsAgo": m106,
-    "yearsAgoShort": m107,
+    "yearsAgo": m109,
+    "yearsAgoShort": m110,
     "yes": MessageLookupByLibrary.simpleMessage("Да"),
     "zhCN": MessageLookupByLibrary.simpleMessage("Упрощённый китайский"),
   };

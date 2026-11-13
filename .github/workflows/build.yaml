@@ -154,6 +154,11 @@ jobs:
           flutter --version
           flutter pub get
 
+      - name: Generate localizations
+        run: |
+          dart run intl_utils:generate
+          git diff --exit-code -- lib/l10n
+
       - name: Disable Impeller on Intel macOS
         if: matrix.platform == 'macos' && matrix.arch == 'amd64'
         run: plutil -replace FLTEnableImpeller -bool NO macos/Runner/Info.plist

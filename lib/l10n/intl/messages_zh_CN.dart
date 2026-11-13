@@ -244,23 +244,23 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m101(value) => "峰值 ${value}";
 
-  static String m102(value) => "累计 ${value}";
+  static String m102(count) => "${count} 天";
 
-  static String m103(transport) => "${transport} 请求头";
+  static String m103(count) => "${count} 次";
 
-  static String m104(label) => "${label}必须为URL";
+  static String m104(date) => "统计自 ${date}";
 
-  static String m105(date) => "有效期至 ${date}";
+  static String m105(value) => "累计 ${value}";
 
-  static String m106(count) => "${count} 年前";
+  static String m106(transport) => "${transport} 请求头";
 
-  static String m107(count) => "${count} 年前";
+  static String m107(label) => "${label}必须为URL";
 
-  static String m108(count) => "${count} 次";
+  static String m108(date) => "有效期至 ${date}";
 
-  static String m109(count) => "${count} 天";
+  static String m109(count) => "${count} 年前";
 
-  static String m110(date) => "统计自 ${date}";
+  static String m110(count) => "${count} 年前";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -1760,7 +1760,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "speedTestMultiThread": MessageLookupByLibrary.simpleMessage("多线程"),
     "speedTestOutbound": MessageLookupByLibrary.simpleMessage("出站"),
     "speedTestPacketLoss": MessageLookupByLibrary.simpleMessage("丢包"),
-    "speedTestProbing": MessageLookupByLibrary.simpleMessage("正在探测出站…"),
+    "speedTestProbing": MessageLookupByLibrary.simpleMessage("探测中"),
     "speedTestProtocol": MessageLookupByLibrary.simpleMessage("协议"),
     "speedTestProtocolDesc": MessageLookupByLibrary.simpleMessage(
       "HTTP/3 基于 QUIC (UDP)，不可用时依次回退到 HTTP/2、（HTTP/2 不可用时）HTTP/1.1",
@@ -1844,14 +1844,12 @@ class MessageLookup extends MessageLookupByLibrary {
     "tproxyPort": MessageLookupByLibrary.simpleMessage("Tproxy端口"),
     "traffic": MessageLookupByLibrary.simpleMessage("流量"),
     "trafficPeak": m101,
-    "trafficTotal": m102,
-    "trafficUsage": MessageLookupByLibrary.simpleMessage("流量统计"),
     "trafficStats": MessageLookupByLibrary.simpleMessage("流量统计"),
     "trafficStatsClearTip": MessageLookupByLibrary.simpleMessage(
       "确定要清除所有已保存的流量统计数据吗？",
     ),
     "trafficStatsDay": MessageLookupByLibrary.simpleMessage("日"),
-    "trafficStatsDays": m109,
+    "trafficStatsDays": m102,
     "trafficStatsDesc": MessageLookupByLibrary.simpleMessage("按日、周、月查看流量具体去向"),
     "trafficStatsDetail": MessageLookupByLibrary.simpleMessage("详细统计"),
     "trafficStatsDetailDesc": MessageLookupByLibrary.simpleMessage(
@@ -1866,7 +1864,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "trafficStatsEnable": MessageLookupByLibrary.simpleMessage("启用流量统计"),
     "trafficStatsEnableAction": MessageLookupByLibrary.simpleMessage("开启"),
-    "trafficStatsHitCount": m108,
+    "trafficStatsHitCount": m103,
     "trafficStatsMonth": MessageLookupByLibrary.simpleMessage("月"),
     "trafficStatsNode": MessageLookupByLibrary.simpleMessage("节点"),
     "trafficStatsOverview": MessageLookupByLibrary.simpleMessage("流量概览"),
@@ -1875,7 +1873,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "trafficStatsRetention": MessageLookupByLibrary.simpleMessage("数据保留天数"),
     "trafficStatsRuleHits": MessageLookupByLibrary.simpleMessage("规则命中"),
     "trafficStatsSettings": MessageLookupByLibrary.simpleMessage("统计设置"),
-    "trafficStatsSince": m110,
+    "trafficStatsSince": m104,
     "trafficStatsSiteIcon": MessageLookupByLibrary.simpleMessage("网站图标"),
     "trafficStatsSiteIconDesc": MessageLookupByLibrary.simpleMessage(
       "为域名排行获取并本地缓存网站图标",
@@ -1883,8 +1881,10 @@ class MessageLookup extends MessageLookupByLibrary {
     "trafficStatsTotal": MessageLookupByLibrary.simpleMessage("总流量"),
     "trafficStatsTrend": MessageLookupByLibrary.simpleMessage("流量趋势"),
     "trafficStatsWeek": MessageLookupByLibrary.simpleMessage("周"),
+    "trafficTotal": m105,
+    "trafficUsage": MessageLookupByLibrary.simpleMessage("流量统计"),
     "transport": MessageLookupByLibrary.simpleMessage("传输协议"),
-    "transportHeaders": m103,
+    "transportHeaders": m106,
     "trustCertificate": MessageLookupByLibrary.simpleMessage("信任证书"),
     "tun": MessageLookupByLibrary.simpleMessage("虚拟网卡"),
     "tunAuthorizationFailed": MessageLookupByLibrary.simpleMessage(
@@ -1929,14 +1929,14 @@ class MessageLookup extends MessageLookupByLibrary {
     "uploadBandwidth": MessageLookupByLibrary.simpleMessage("上行带宽"),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlRewrite": MessageLookupByLibrary.simpleMessage("URL 重写"),
-    "urlTip": m104,
+    "urlTip": m107,
     "useHosts": MessageLookupByLibrary.simpleMessage("使用Hosts"),
     "useSystemHosts": MessageLookupByLibrary.simpleMessage("使用系统Hosts"),
     "usedShort": MessageLookupByLibrary.simpleMessage("已用"),
     "usedTraffic": MessageLookupByLibrary.simpleMessage("已用流量"),
     "userAgent": MessageLookupByLibrary.simpleMessage("用户代理"),
     "username": MessageLookupByLibrary.simpleMessage("用户名"),
-    "validUntil": m105,
+    "validUntil": m108,
     "value": MessageLookupByLibrary.simpleMessage("值"),
     "view": MessageLookupByLibrary.simpleMessage("查看"),
     "viewAll": MessageLookupByLibrary.simpleMessage("查看全部"),
@@ -1955,8 +1955,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "写入系统会同时设置系统时钟，Android 上不生效。",
     ),
-    "yearsAgo": m106,
-    "yearsAgoShort": m107,
+    "yearsAgo": m109,
+    "yearsAgoShort": m110,
     "yes": MessageLookupByLibrary.simpleMessage("是"),
     "zhCN": MessageLookupByLibrary.simpleMessage("简体中文"),
   };

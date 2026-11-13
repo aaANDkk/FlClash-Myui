@@ -279,24 +279,24 @@ class MessageLookup extends MessageLookupByLibrary {
 
   static String m101(value) => "Peak ${value}";
 
-  static String m102(value) => "Total ${value}";
+  static String m102(count) => "${count} days";
 
-  static String m103(transport) => "${transport} Headers";
+  static String m103(count) => "${count} hits";
 
-  static String m104(label) => "${label} must be a URL";
+  static String m104(date) => "Since ${date}";
 
-  static String m105(date) => "Valid until ${date}";
+  static String m105(value) => "Total ${value}";
 
-  static String m106(count) =>
+  static String m106(transport) => "${transport} Headers";
+
+  static String m107(label) => "${label} must be a URL";
+
+  static String m108(date) => "Valid until ${date}";
+
+  static String m109(count) =>
       "${Intl.plural(count, one: '1 year ago', other: '${count} years ago')}";
 
-  static String m107(count) => "${Intl.plural(count, other: '${count}y ago')}";
-
-  static String m108(count) => "${count} hits";
-
-  static String m109(count) => "${count} days";
-
-  static String m110(date) => "Since ${date}";
+  static String m110(count) => "${Intl.plural(count, other: '${count}y ago')}";
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
@@ -2268,9 +2268,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "speedTestMultiThread": MessageLookupByLibrary.simpleMessage("Multi"),
     "speedTestOutbound": MessageLookupByLibrary.simpleMessage("Outbound"),
     "speedTestPacketLoss": MessageLookupByLibrary.simpleMessage("Packet Loss"),
-    "speedTestProbing": MessageLookupByLibrary.simpleMessage(
-      "Detecting outbound…",
-    ),
+    "speedTestProbing": MessageLookupByLibrary.simpleMessage("Detecting"),
     "speedTestProtocol": MessageLookupByLibrary.simpleMessage("Protocol"),
     "speedTestProtocolDesc": MessageLookupByLibrary.simpleMessage(
       "HTTP/3 runs over QUIC (UDP); if unavailable it falls back to HTTP/2, and to HTTP/1.1 if HTTP/2 is unavailable too",
@@ -2380,14 +2378,12 @@ class MessageLookup extends MessageLookupByLibrary {
     "tproxyPort": MessageLookupByLibrary.simpleMessage("TProxy port"),
     "traffic": MessageLookupByLibrary.simpleMessage("Traffic"),
     "trafficPeak": m101,
-    "trafficTotal": m102,
-    "trafficUsage": MessageLookupByLibrary.simpleMessage("Traffic usage"),
     "trafficStats": MessageLookupByLibrary.simpleMessage("Traffic Statistics"),
     "trafficStatsClearTip": MessageLookupByLibrary.simpleMessage(
       "Are you sure you want to clear all saved traffic statistics data?",
     ),
     "trafficStatsDay": MessageLookupByLibrary.simpleMessage("Day"),
-    "trafficStatsDays": m109,
+    "trafficStatsDays": m102,
     "trafficStatsDesc": MessageLookupByLibrary.simpleMessage(
       "View detailed breakdown of traffic by day, week, or month",
     ),
@@ -2410,7 +2406,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Enable Traffic Statistics",
     ),
     "trafficStatsEnableAction": MessageLookupByLibrary.simpleMessage("Enable"),
-    "trafficStatsHitCount": m108,
+    "trafficStatsHitCount": m103,
     "trafficStatsMonth": MessageLookupByLibrary.simpleMessage("Month"),
     "trafficStatsNode": MessageLookupByLibrary.simpleMessage("Node"),
     "trafficStatsOverview": MessageLookupByLibrary.simpleMessage("Overview"),
@@ -2425,7 +2421,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "trafficStatsSettings": MessageLookupByLibrary.simpleMessage(
       "Statistics Settings",
     ),
-    "trafficStatsSince": m110,
+    "trafficStatsSince": m104,
     "trafficStatsSiteIcon": MessageLookupByLibrary.simpleMessage(
       "Website Icons",
     ),
@@ -2435,8 +2431,10 @@ class MessageLookup extends MessageLookupByLibrary {
     "trafficStatsTotal": MessageLookupByLibrary.simpleMessage("Total Traffic"),
     "trafficStatsTrend": MessageLookupByLibrary.simpleMessage("Traffic Trend"),
     "trafficStatsWeek": MessageLookupByLibrary.simpleMessage("Week"),
+    "trafficTotal": m105,
+    "trafficUsage": MessageLookupByLibrary.simpleMessage("Traffic usage"),
     "transport": MessageLookupByLibrary.simpleMessage("Transport"),
-    "transportHeaders": m103,
+    "transportHeaders": m106,
     "trustCertificate": MessageLookupByLibrary.simpleMessage(
       "Trust certificate",
     ),
@@ -2495,14 +2493,14 @@ class MessageLookup extends MessageLookupByLibrary {
     "uploadBandwidth": MessageLookupByLibrary.simpleMessage("Upload bandwidth"),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlRewrite": MessageLookupByLibrary.simpleMessage("URL rewrite"),
-    "urlTip": m104,
+    "urlTip": m107,
     "useHosts": MessageLookupByLibrary.simpleMessage("Use hosts"),
     "useSystemHosts": MessageLookupByLibrary.simpleMessage("Use system hosts"),
     "usedShort": MessageLookupByLibrary.simpleMessage("used"),
     "usedTraffic": MessageLookupByLibrary.simpleMessage("Used traffic"),
     "userAgent": MessageLookupByLibrary.simpleMessage("User-Agent"),
     "username": MessageLookupByLibrary.simpleMessage("Username"),
-    "validUntil": m105,
+    "validUntil": m108,
     "value": MessageLookupByLibrary.simpleMessage("Value"),
     "view": MessageLookupByLibrary.simpleMessage("View"),
     "viewAll": MessageLookupByLibrary.simpleMessage("View all"),
@@ -2523,8 +2521,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "writeToSystemDesc": MessageLookupByLibrary.simpleMessage(
       "Write to system also sets the system clock; Android ignores it.",
     ),
-    "yearsAgo": m106,
-    "yearsAgoShort": m107,
+    "yearsAgo": m109,
+    "yearsAgoShort": m110,
     "yes": MessageLookupByLibrary.simpleMessage("Yes"),
     "zhCN": MessageLookupByLibrary.simpleMessage("Simplified Chinese"),
   };
