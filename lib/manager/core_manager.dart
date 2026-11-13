@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/core/core.dart';
 import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/features/traffic_stats/store.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/action.dart';
 import 'package:fl_clash/providers/app.dart';
@@ -89,12 +90,55 @@ class _CoreContainerState extends ConsumerState<CoreManager>
         _syncLogStream();
       }
     });
-    // Every Core process starts without a log stream.
+    // Every Core process starts without a log stream or traffic stats config.
     ref.listenManual(coreStatusProvider, (prev, next) {
       if (next == CoreStatus.connected && prev != CoreStatus.connected) {
         _syncLogStream();
+        unawaited(_syncTrafficStats());
       }
     }, fireImmediately: true);
+    ref.listenManual(trafficStatsStoreProvider, (prev, next) {
+      if (next.hasValue && prev?.value != next.value) {
+        unawaited(_syncTrafficStats());
+      }
+    });
+    ref.listenManual(
+      currentProfileProvider.select((state) => state?.realLabel ?? ''),
+      (prev, next) {
+        if (prev != next) {
+          unawaited(_syncTrafficStats());
+        }
+      },
+    );
+    ref.listenManual(appVisibleProvider, (prev, next) {
+      if (prev != next) {
+        unawaited(_syncTrafficStats(screenOn: next));
+      }
+    });
+  }
+
+  Future<void> _syncTrafficStats({bool? screenOn}) async {
+    if (ref.read(coreStatusProvider) != CoreStatus.connected) {
+      return;
+    }
+    try {
+      final settings = await ref.read(trafficStatsStoreProvider.future);
+      if (!mounted || ref.read(coreStatusProvider) != CoreStatus.connected) {
+        return;
+      }
+      final profile = ref.read(currentProfileProvider)?.realLabel ?? '';
+      await ref.read(coreHandlerProvider).configureTrafficStats(
+        settings,
+        profile: profile,
+        tzOffset: DateTime.now().timeZoneOffset.inMinutes,
+        screenOn: screenOn,
+      );
+    } catch (error) {
+      commonPrint.log(
+        'syncTrafficStats error: $error',
+        logLevel: coreFailureLogLevel(error),
+      );
+    }
   }
 
   void _syncLogStream() {

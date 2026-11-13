@@ -28,6 +28,7 @@ String _iconSetJson(String name, List<String> icons) => json.encode({
 void main() {
   late HttpServer server;
   late String body;
+  final cacheHeaders = <String?>[];
   Completer<void>? held;
   late db.Database testDatabase;
   late ProviderContainer container;
@@ -42,6 +43,7 @@ void main() {
     );
     server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     server.listen((request) async {
+      cacheHeaders.add(request.headers.value(HttpHeaders.cacheControlHeader));
       await held?.future;
       final response = request.response;
       if (request.uri.path == '/missing') {
@@ -60,6 +62,7 @@ void main() {
     HttpOverrides.global = null;
     addTearDown(() => HttpOverrides.global = bindingOverrides);
     held = null;
+    cacheHeaders.clear();
     testDatabase = db.Database(NativeDatabase.memory());
     db.database = testDatabase;
     container = ProviderContainer();
@@ -80,6 +83,20 @@ void main() {
     await pumpEventQueue();
     return testDatabase.iconSetsDao.query().get();
   }
+
+  test(
+    'fresh sync replaces old remote set contents and revalidates upstream',
+    () async {
+      body = _iconSetJson('Remote', ['Old']);
+      final original = await action().importUrl(urlOf('refresh.json'));
+      body = _iconSetJson('Remote', ['Latest']);
+      final updated = await action().sync(original, fresh: true);
+      expect(updated.id, original.id);
+      expect(updated.icons.single.name, 'Latest.png');
+      expect(cacheHeaders.last, 'no-cache');
+      expect((await stored()).single.icons.single.name, 'Latest.png');
+    },
+  );
 
   test('a url import takes the name of the set unless one is given', () async {
     body = _iconSetJson('Qure', ['Proxy']);

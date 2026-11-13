@@ -58,6 +58,7 @@ class Scaffold extends StatefulWidget {
   /// Folded into the overflow menu once the bar would hold more than three
   /// buttons, as [primaryAction] and [menuItems] are; [actions] never fold.
   final List<IconButtonData> iconActions;
+  final bool groupIconActions;
   final List<PopupMenuItem> menuItems;
 
   /// Answers a form: last in the bar, and in a form sheet the filled default
@@ -98,6 +99,7 @@ class Scaffold extends StatefulWidget {
     this.selectionActions = const [],
     this.primaryAction,
     this.iconActions = const [],
+    this.groupIconActions = true,
     this.menuItems = const [],
     this.confirmationAction,
     this.keywords,
@@ -587,7 +589,9 @@ class ScaffoldState extends State<Scaffold>
       menuItems: widget.menuItems,
     );
     final shown = [?lead, ...fold.shown];
-    final grouped = shown.length > 1 ? shown.take(_maxGroupedActions) : null;
+    final grouped = widget.groupIconActions && shown.length > 1
+        ? shown.take(_maxGroupedActions)
+        : null;
     final actions = [
       if (grouped != null)
         TonalButtonGroup(

@@ -59,13 +59,24 @@ class Request {
     return FlClashHttpOverrides.findProxyForReader(read, uri);
   }
 
-  Future<Response<T>> _download<T>(String url, ResponseType responseType) {
+  Future<Response<T>> _download<T>(
+    String url,
+    ResponseType responseType, {
+    bool fresh = false,
+  }) {
     final target = downloadTarget(url);
     final cancelToken = CancelToken();
     return _clashDio
         .getUri<T>(
           target.uri,
-          options: Options(responseType: responseType, headers: target.headers),
+          options: Options(
+            responseType: responseType,
+            headers: {
+              ...target.headers,
+              if (fresh) 'Cache-Control': 'no-cache',
+              if (fresh) 'Pragma': 'no-cache',
+            },
+          ),
           cancelToken: cancelToken,
         )
         .timeout(
@@ -92,9 +103,34 @@ class Request {
     }
   }
 
-  Future<Response<String>> getTextResponseForUrl(String url) async {
+  Future<Uint8List?> getSiteIconBytes(
+    String url, {
+    CancelToken? cancelToken,
+    Duration timeout = const Duration(seconds: 6),
+  }) async {
     try {
-      return await _download<String>(url, ResponseType.plain);
+      final response = await _clashDio.get<Uint8List>(
+        url,
+        options: Options(
+          responseType: ResponseType.bytes,
+          sendTimeout: timeout,
+          receiveTimeout: timeout,
+          validateStatus: (status) => status == 200,
+        ),
+        cancelToken: cancelToken,
+      );
+      return response.data;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<Response<String>> getTextResponseForUrl(
+    String url, {
+    bool fresh = false,
+  }) async {
+    try {
+      return await _download<String>(url, ResponseType.plain, fresh: fresh);
     } catch (e) {
       commonPrint.log(
         'getTextResponseForUrl error ${compactError(e)}',

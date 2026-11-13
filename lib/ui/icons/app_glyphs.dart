@@ -425,6 +425,15 @@ abstract final class AppGlyphs {
     ], role: GlyphRole.detail),
   ]);
 
+  static const helpCircle = Glyph([
+    GlyphCircle(12, 12, 8.8),
+    GlyphPath(
+      'M9.4 8.5C9.4 5.8 14.9 5.8 14.9 8.7C14.9 10.7 12 10.8 12 13.1',
+      role: GlyphRole.detail,
+    ),
+    GlyphCircle(12, 16.5, 1, role: GlyphRole.detail, solid: true),
+  ]);
+
   static const warning = Glyph([
     GlyphPolyline([
       GlyphVertex(12, 1.6, 3),

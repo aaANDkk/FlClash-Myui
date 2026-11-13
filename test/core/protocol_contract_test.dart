@@ -36,6 +36,14 @@ class _RecordingCoreHandler extends CoreHandlerInterface {
   }) async {
     calls[method] = arguments;
     return switch (method) {
+      CoreMethod.speedTestStart || CoreMethod.speedTestProbe => {
+        'id': (arguments as Map)['id'],
+        'phase': 'done',
+        'download': 125000000,
+      },
+      CoreMethod.speedTestServers => [
+        {'host': 'speed.example:8080', 'name': 'Tokyo', 'latency': 12},
+      ],
       CoreMethod.coreInitialized => true,
       CoreMethod.trafficCurrent ||
       CoreMethod.trafficTotal => {'up': 12, 'down': 34},
@@ -152,6 +160,26 @@ class _RecordingCoreHandler extends CoreHandlerInterface {
         'route-version': 3,
         'held': [true, false],
       },
+      CoreMethod.trafficStatsGet => {
+        'up': 1024,
+        'down': 4096,
+        'proxy-up': 512,
+        'proxy-down': 2048,
+        'series': [
+          {'label': '00', 'up': 1024, 'down': 4096},
+        ],
+        'hosts': [
+          {'name': 'example.com', 'up': 512, 'down': 2048},
+        ],
+        'processes': <Object>[],
+        'nodes': <Object>[],
+        'profiles': <Object>[],
+        'rules': [
+          {'name': 'MATCH', 'up': 512, 'down': 2048, 'hits': 3},
+        ],
+        'rule-hits': 3,
+        'since': '2026-11-11',
+      },
       _ => null,
     };
   }
@@ -198,6 +226,37 @@ class _EmptyConfigCoreHandler extends _RecordingCoreHandler {
 }
 
 void main() {
+  test(
+    'Speedtest uses structured payloads and retains cancellation ownership',
+    () async {
+      final handler = _RecordingCoreHandler();
+      const settings = SpeedTestSettings(duration: 15, multiThread: false);
+      final result = await handler.startSpeedTest(settings, 'Node A', 'run-1');
+      expect(result.id, 'run-1');
+      expect(result.download, 125000000);
+      expect(
+        handler.calls[CoreMethod.speedTestStart],
+        settings.toParams('Node A', 'run-1'),
+      );
+      expect(
+        (await handler.probeSpeedTest(settings, 'DIRECT', 'probe-1')).id,
+        'probe-1',
+      );
+      final servers = await handler.speedTestServers(
+        'Node A',
+        'Tokyo',
+        'search-1',
+      );
+      expect(servers.single.host, 'speed.example:8080');
+      expect(handler.calls[CoreMethod.speedTestServers], {
+        'proxy': 'Node A',
+        'search': 'Tokyo',
+        'id': 'search-1',
+      });
+      await handler.cancelSpeedTest('run-1');
+      expect(handler.calls[CoreMethod.speedTestCancel], {'id': 'run-1'});
+    },
+  );
   test('method call keeps structured arguments', () async {
     final fixture =
         json.decode(
@@ -698,5 +757,51 @@ void main() {
     expect(failure.toJson(), isNot(contains('file')));
     expect(spilled.file, '/home/responses/1234.json');
     expect(spilled.toJson(), containsPair('file', '/home/responses/1234.json'));
+  });
+
+  test('traffic stats configure, get, and clear cross the RPC boundary cleanly', () async {
+    final handler = _RecordingCoreHandler();
+
+    await handler.configureTrafficStats(
+      const TrafficStatsSettings(
+        enable: true,
+        detail: false,
+        retentionDays: 14,
+      ),
+      profile: 'Main',
+      tzOffset: 480,
+      screenOn: true,
+      suspended: false,
+    );
+    expect(handler.calls[CoreMethod.trafficStatsConfigure], {
+      'enable': true,
+      'detail': false,
+      'retention-days': 14,
+      'tz-offset': 480,
+      'profile': 'Main',
+      'screen-on': true,
+      'suspended': false,
+    });
+
+    final result = await handler.getTrafficStats(
+      start: '2026-11-11',
+      end: '2026-11-11',
+      top: 25,
+    );
+    expect(handler.calls[CoreMethod.trafficStatsGet], {
+      'start': '2026-11-11',
+      'end': '2026-11-11',
+      'top': 25,
+    });
+    expect(result.up, 1024);
+    expect(result.down, 4096);
+    expect(result.proxyTotal, 2560);
+    expect(result.hosts.single.name, 'example.com');
+    expect(result.rules.single.hits, 3);
+    expect(result.ruleHits, 3);
+    expect(result.since, '2026-11-11');
+
+    await handler.clearTrafficStats();
+    expect(handler.calls.containsKey(CoreMethod.trafficStatsClear), isTrue);
   });
 }

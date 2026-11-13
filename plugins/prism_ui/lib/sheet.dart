@@ -116,11 +116,12 @@ Future<T?> showFormSheet<T>({
   required BuildContext context,
   required WidgetBuilder builder,
   SheetProps props = const SheetProps(),
+  bool useRootNavigator = true,
 }) {
   if (context.isMobileView) {
     return _showBottomSheet<T>(context, builder: builder, props: props);
   }
-  final navigator = sheetNavigatorOf(context);
+  final navigator = Navigator.of(context, rootNavigator: useRootNavigator);
   return navigator.push(
     FormSheetRoute<T>(
       builder: builder,

@@ -27,7 +27,7 @@ class ThemeView extends StatelessWidget {
       title: appLocalizations.theme,
       body: ListView(
         padding: EdgeInsets.only(
-          top: context.appBarInset,
+          top: context.contentTopPadding,
           bottom: 32 + context.bottomInset,
         ),
         children: [

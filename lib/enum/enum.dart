@@ -187,6 +187,7 @@ enum ResultType {
 }
 
 enum CoreEventType {
+  speedTest,
   log,
   delay,
   request,

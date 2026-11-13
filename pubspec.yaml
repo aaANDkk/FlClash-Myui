@@ -91,6 +91,7 @@ dev_dependencies:
   sqlite3: ^3.7.0
   cross_file: ^0.3.5+5
   mocktail: ^1.0.5
+  file: ^7.0.1
 
 flutter:
   assets:

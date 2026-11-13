@@ -31,6 +31,7 @@ func handleInit(params *InitParams) error {
 	sdkVersion.Store(int32(params.Version))
 	constant.SetHomeDir(params.HomeDir)
 	initOwnership(params.HomeDir)
+	initTrafficStats(params.HomeDir)
 	clearSpilledResponses()
 	isInit.Store(true)
 	return nil
@@ -56,6 +57,8 @@ func handleStartListener() {
 }
 
 func handleStopListener() {
+	_ = handleCancelSpeedTest(SpeedTestCancelParams{})
+	flushTrafficStats()
 	configMu.Lock()
 	defer configMu.Unlock()
 	setRunning(false)
@@ -92,6 +95,7 @@ func updateListeners(cfg *config.Config) {
 func handleShutdown() {
 	handleStopLog()
 	stopRouteWatch()
+	flushTrafficStats()
 
 	configMu.Lock()
 	setRunning(false)

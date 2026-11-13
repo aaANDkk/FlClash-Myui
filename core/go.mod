@@ -9,9 +9,12 @@ require (
 	github.com/dlclark/regexp2 v1.12.0
 	github.com/metacubex/http v0.1.8
 	github.com/metacubex/mihomo v0.0.0-00010101000000-000000000000
+	github.com/metacubex/quic-go v0.61.1-0.20260727080200-2548683b76f4
 	github.com/metacubex/tls v0.1.9
 	github.com/miekg/dns v1.1.63
+	github.com/oschwald/maxminddb-golang v1.12.0
 	go.yaml.in/yaml/v3 v3.0.5
+	golang.org/x/net v0.59.0
 )
 
 require (
@@ -79,7 +82,6 @@ require (
 	github.com/metacubex/mlkem v0.1.0 // indirect
 	github.com/metacubex/nftables v0.0.0-20260426003805-208c2c1ba2cb // indirect
 	github.com/metacubex/qpack v0.6.0 // indirect
-	github.com/metacubex/quic-go v0.61.1-0.20260727080200-2548683b76f4 // indirect
 	github.com/metacubex/randv2 v0.2.0 // indirect
 	github.com/metacubex/restls-client-go v0.1.9 // indirect
 	github.com/metacubex/sevenzip v1.6.4 // indirect
@@ -105,7 +107,6 @@ require (
 	github.com/mroth/weightedrand/v2 v2.1.0 // indirect
 	github.com/oasisprotocol/deoxysii v0.0.0-20220228165953-2091330c22b7 // indirect
 	github.com/openacid/low v0.1.21 // indirect
-	github.com/oschwald/maxminddb-golang v1.12.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.27 // indirect
 	github.com/pires/go-proxyproto v0.8.0 // indirect
 	github.com/rasky/go-lzo v0.0.0-20200203143853-96a758eda86e // indirect
@@ -136,7 +137,6 @@ require (
 	golang.org/x/exp v0.0.0-20240904232852-e7e105dedf7e // indirect
 	golang.org/x/mobile v0.0.0-20260908204917-8b95e45f8d3e // indirect
 	golang.org/x/mod v0.41.0 // indirect
-	golang.org/x/net v0.59.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/term v0.46.0 // indirect

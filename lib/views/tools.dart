@@ -10,6 +10,8 @@ import 'package:fl_clash/views/backup_and_restore.dart';
 import 'package:fl_clash/views/config/general.dart';
 import 'package:fl_clash/views/hotkey.dart';
 import 'package:fl_clash/widgets/widgets.dart';
+import 'package:fl_clash/features/speed_test/view.dart';
+import 'package:fl_clash/features/traffic_stats/view.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -70,11 +72,39 @@ class _ToolViewState extends ConsumerState<ToolsView> {
       Consumer(
         builder: (_, ref, _) {
           final state = ref.watch(moreToolsSelectorStateProvider);
-          if (state.navigationItems.isEmpty) {
-            return Container();
-          }
+          final navigation = state.navigationItems;
+          final resources = navigation.indexWhere(
+            (item) => item.label == PageLabel.resources,
+          );
+          final logs = navigation.indexWhere(
+            (item) => item.label == PageLabel.logs,
+          );
+          final speedTestIndex = resources >= 0
+              ? resources
+              : logs >= 0
+              ? logs
+              : 0;
           return generateSection(
-            items: state.navigationItems.map(_buildNavigationMenuItem),
+            items: [
+              for (var index = 0; index <= navigation.length; index++) ...[
+                if (index == speedTestIndex) ...[
+                  ListItem.open(
+                    leading: const GlyphIcon(AppGlyphs.speed),
+                    title: Text(context.appLocalizations.speedTest),
+                    widget: const SpeedTestView(),
+                    forceFull: true,
+                  ),
+                  ListItem.open(
+                    leading: const GlyphIcon(AppGlyphs.dataUsage),
+                    title: Text(context.appLocalizations.trafficStats),
+                    widget: const TrafficStatsView(),
+                    forceFull: true,
+                  ),
+                ],
+                if (index < navigation.length)
+                  _buildNavigationMenuItem(navigation[index]),
+              ],
+            ],
           );
         },
       ),

@@ -1,10 +1,9 @@
-﻿import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/form/form.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
-import 'package:fl_clash/ui/null_status_illustration.dart';
 import 'package:fl_clash/views/profiles/custom/icon.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/services.dart';
@@ -22,6 +21,68 @@ class ProxiesIconStyleView extends ConsumerStatefulWidget {
 class _ProxiesIconStyleViewState extends ConsumerState<ProxiesIconStyleView> {
   var _selected = <int>{};
   var _sorting = false;
+  var _refreshing = false;
+
+  Future<void> _handleRefreshIcons() async {
+    if (_refreshing) {
+      return;
+    }
+    final l10n = context.appLocalizations;
+    final container = ProviderScope.containerOf(context, listen: false);
+    setState(() => _refreshing = true);
+    try {
+      final confirmed = await dialogs.showMessage(
+        context: context,
+        title: l10n.refreshGroupIcons,
+        message: TextSpan(text: l10n.refreshGroupIconsTip),
+        confirmText: l10n.confirm,
+      );
+      if (confirmed != true || !mounted) {
+        return;
+      }
+      await refreshTargetIcons(
+        const [],
+        reloadSources: () async {
+          final sets = await container.read(iconSetsProvider.future);
+          final actions = container.read(iconSetsActionProvider.notifier);
+          final updatedSets = await Future.wait([
+            for (final set in sets)
+              if (set.isRemote)
+                actions.sync(set, fresh: true).catchError((e) {
+                  commonPrint.log('Failed to sync icon set ${set.name}: $e');
+                  return set;
+                })
+              else
+                Future.value(set),
+          ]);
+          final List<IconSet> allSets =
+              container.read(iconSetsProvider).value ?? updatedSets;
+          return [
+            for (final group in container.read(groupsProvider))
+              container.read(proxyGroupIconProvider(group.name)),
+            for (final rule in container.read(iconRulesProvider)) rule.icon,
+            for (final IconSet set in allSets)
+              if (set.cover.isNotEmpty) set.cover,
+          ];
+        },
+      );
+      if (mounted) {
+        dialogs.showBanner(
+          l10n.groupIconsRefreshed,
+          level: BannerLevel.success,
+        );
+      }
+    } catch (error) {
+      commonPrint.log('Failed to refresh group icons: $error');
+      if (mounted) {
+        dialogs.showBanner(l10n.updateFailed, level: BannerLevel.error);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _refreshing = false);
+      }
+    }
+  }
 
   void _handleStyle(ProxiesIconStyle iconStyle) {
     ref
@@ -76,9 +137,7 @@ class _ProxiesIconStyleViewState extends ConsumerState<ProxiesIconStyleView> {
     final rule = await showFormSheet<IconRule>(
       context: context,
       props: nestedPagedSheetProps,
-      builder: (_) => NestedPagedSheet(
-        builder: (_) => const _IconRuleForm(),
-      ),
+      builder: (_) => NestedPagedSheet(builder: (_) => const _IconRuleForm()),
     );
     if (rule == null || !mounted) {
       return;
@@ -251,6 +310,13 @@ class _ProxiesIconStyleViewState extends ConsumerState<ProxiesIconStyleView> {
             },
       child: Scaffold(
         title: appLocalizations.iconStyle,
+        iconActions: [
+          IconButtonData(
+            glyph: AppGlyphs.refresh,
+            tooltip: appLocalizations.refreshGroupIcons,
+            onPressed: _refreshing ? null : _handleRefreshIcons,
+          ),
+        ],
         body: SortModeScope(
           sorting: _sorting,
           child: CustomScrollView(
@@ -258,13 +324,19 @@ class _ProxiesIconStyleViewState extends ConsumerState<ProxiesIconStyleView> {
               SliverPadding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
-                ).copyWith(top: context.contentTopPadding + 8),
+                ).copyWith(top: context.contentTopPadding),
                 sliver: SliverToBoxAdapter(
                   child: SegmentedControl<ProxiesIconStyle>(
                     segments: [
-                      (ProxiesIconStyle.filled, appLocalizations.iconStyleFilled),
+                      (
+                        ProxiesIconStyle.filled,
+                        appLocalizations.iconStyleFilled,
+                      ),
                       (ProxiesIconStyle.plain, appLocalizations.iconStylePlain),
-                      (ProxiesIconStyle.hidden, appLocalizations.iconStyleHidden),
+                      (
+                        ProxiesIconStyle.hidden,
+                        appLocalizations.iconStyleHidden,
+                      ),
                     ],
                     value: iconStyle,
                     onChanged: _handleStyle,
@@ -316,9 +388,7 @@ class _ProxiesIconStyleViewState extends ConsumerState<ProxiesIconStyleView> {
                   horizontal: 16,
                 ).copyWith(bottom: 16 + context.bottomInset),
                 sliver: SliverToBoxAdapter(
-                  child: ListFooter(
-                    text: appLocalizations.iconRulesTip,
-                  ),
+                  child: ListFooter(text: appLocalizations.iconRulesTip),
                 ),
               ),
             ],
@@ -424,14 +494,8 @@ class _IconRuleFormState extends ConsumerState<_IconRuleForm> {
     }
     context.safeNestedPop(
       widget.rule != null
-          ? widget.rule!.copyWith(
-              pattern: _controller.text.trim(),
-              icon: _icon,
-            )
-          : IconRule(
-              pattern: _controller.text.trim(),
-              icon: _icon,
-            ),
+          ? widget.rule!.copyWith(pattern: _controller.text.trim(), icon: _icon)
+          : IconRule(pattern: _controller.text.trim(), icon: _icon),
     );
   }
 

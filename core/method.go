@@ -216,9 +216,12 @@ var methodHandlers = map[CoreMethod]methodHandler{
 	ruleSetCompileMethod:   withFallible(handleCompileRuleSet),
 	geoUpdateMethod:        command(handleUpdateGeoData),
 
-	trafficCurrentMethod:     withArguments(handleGetTraffic),
-	trafficTotalMethod:       withArguments(handleGetTotalTraffic),
-	trafficResetMethod:       action(handleResetTraffic),
+	trafficCurrentMethod:        withArguments(handleGetTraffic),
+	trafficTotalMethod:          withArguments(handleGetTotalTraffic),
+	trafficResetMethod:          action(handleResetTraffic),
+	trafficStatsConfigureMethod: command(handleConfigureTrafficStats),
+	trafficStatsGetMethod:       withArguments(handleGetTrafficStats),
+	trafficStatsClearMethod:     action(handleClearTrafficStats),
 	connectionListMethod:     withoutArguments(handleGetConnections),
 	connectionCountMethod:    withoutArguments(handleGetConnectionCount),
 	connectionCloseMethod:    command(handleCloseConnection),
@@ -234,9 +237,13 @@ var methodHandlers = map[CoreMethod]methodHandler{
 	routeWatchMethod:    watchRouteHandler,
 	routeCheckMethod:    withArguments(handleCheckRoutes),
 
-	probeOutboundIPMethod: withArguments(handleOutboundIp),
-	probeServicesMethod:   withArguments(handleServiceCheck),
-	ipCountryMethod:       withArguments(handleIPCountry),
+	speedTestStartMethod:   withArguments(handleStartSpeedTest),
+	speedTestProbeMethod:   withArguments(handleProbeSpeedTest),
+	speedTestCancelMethod:  command(handleCancelSpeedTest),
+	speedTestServersMethod: withFallible(handleSpeedTestServers),
+	probeOutboundIPMethod:  withArguments(handleOutboundIp),
+	probeServicesMethod:    withArguments(handleServiceCheck),
+	ipCountryMethod:        withArguments(handleIPCountry),
 }
 
 func watchRouteHandler(call *MethodCall) (any, error) {

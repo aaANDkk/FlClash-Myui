@@ -51,9 +51,12 @@ const (
 	ruleSetCompileMethod   CoreMethod = "ruleSet.compile"
 	geoUpdateMethod        CoreMethod = "geo.update"
 
-	trafficCurrentMethod     CoreMethod = "traffic.current"
-	trafficTotalMethod       CoreMethod = "traffic.total"
-	trafficResetMethod       CoreMethod = "traffic.reset"
+	trafficCurrentMethod         CoreMethod = "traffic.current"
+	trafficTotalMethod           CoreMethod = "traffic.total"
+	trafficResetMethod           CoreMethod = "traffic.reset"
+	trafficStatsConfigureMethod  CoreMethod = "trafficStats.configure"
+	trafficStatsGetMethod        CoreMethod = "trafficStats.get"
+	trafficStatsClearMethod      CoreMethod = "trafficStats.clear"
 	connectionListMethod     CoreMethod = "connection.list"
 	connectionCountMethod    CoreMethod = "connection.count"
 	connectionCloseMethod    CoreMethod = "connection.close"
@@ -68,6 +71,11 @@ const (
 	listenerStopMethod  CoreMethod = "listener.stop"
 	routeWatchMethod    CoreMethod = "route.watch"
 	routeCheckMethod    CoreMethod = "route.check"
+
+	speedTestStartMethod   CoreMethod = "speedTest.start"
+	speedTestProbeMethod   CoreMethod = "speedTest.probe"
+	speedTestCancelMethod  CoreMethod = "speedTest.cancel"
+	speedTestServersMethod CoreMethod = "speedTest.servers"
 
 	probeOutboundIPMethod CoreMethod = "probe.outboundIp"
 	probeServicesMethod   CoreMethod = "probe.services"
@@ -89,6 +97,7 @@ const (
 type MessageType string
 
 const (
+	SpeedTestMessage MessageType = "speedTest"
 	LogMessage       MessageType = "log"
 	DelayMessage     MessageType = "delay"
 	RequestMessage   MessageType = "request"
@@ -308,4 +317,51 @@ type GeoUpdateStatus struct {
 	Updating bool   `json:"updating"`
 	Skipped  bool   `json:"skipped,omitempty"`
 	Error    string `json:"error,omitempty"`
+}
+
+type TrafficStatsConfigParams struct {
+	Enable        bool   `json:"enable"`
+	Detail        bool   `json:"detail"`
+	RetentionDays int    `json:"retention-days"`
+	TzOffset      int    `json:"tz-offset"`
+	Profile       string `json:"profile"`
+	ScreenOn      *bool  `json:"screen-on,omitempty"`
+	Suspended     *bool  `json:"suspended,omitempty"`
+}
+
+type TrafficStatsQuery struct {
+	Start string `json:"start"`
+	End   string `json:"end"`
+	Top   int    `json:"top"`
+	Host  string `json:"host,omitempty"`
+}
+
+type TrafficStatsItem struct {
+	Name string             `json:"name"`
+	Up   int64              `json:"up"`
+	Down int64              `json:"down"`
+	Hits int64              `json:"hits,omitempty"`
+	Path string             `json:"path,omitempty"`
+	Subs []TrafficStatsItem `json:"subs,omitempty"`
+}
+
+type TrafficStatsPoint struct {
+	Label string `json:"label"`
+	Up    int64  `json:"up"`
+	Down  int64  `json:"down"`
+}
+
+type TrafficStatsResult struct {
+	Up        int64               `json:"up"`
+	Down      int64               `json:"down"`
+	ProxyUp   int64               `json:"proxy-up"`
+	ProxyDown int64               `json:"proxy-down"`
+	Series    []TrafficStatsPoint `json:"series"`
+	Hosts     []TrafficStatsItem  `json:"hosts"`
+	Processes []TrafficStatsItem  `json:"processes"`
+	Nodes     []TrafficStatsItem  `json:"nodes"`
+	Profiles  []TrafficStatsItem  `json:"profiles"`
+	Rules     []TrafficStatsItem  `json:"rules"`
+	RuleHits  int64               `json:"rule-hits"`
+	Since     string              `json:"since"`
 }

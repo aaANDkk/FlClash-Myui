@@ -1,0 +1,3 @@
+Traffic statistics functionality inspired by and adapted from appshubcc/Bettbox.
+Upstream: https://github.com/appshubcc/Bettbox (GPL-3.0).
+FlClash Core protocol, local persistence, lifecycle integration and UI are adapted here.

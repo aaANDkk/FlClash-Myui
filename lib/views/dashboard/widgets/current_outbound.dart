@@ -3,9 +3,10 @@ import 'dart:math' as math;
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/service_probe.dart';
 import 'package:fl_clash/features/features.dart';
-import 'package:fl_clash/features/ip_quality/labels.dart';
 import 'package:fl_clash/models/models.dart';
-import 'package:fl_clash/providers/ip_quality.dart';
+import 'package:fl_clash/features/ip_quality/risk_provider.dart';
+import 'package:fl_clash/features/ip_quality/risk_model.dart';
+import 'package:fl_clash/features/ip_quality/risk_view.dart';
 import 'package:fl_clash/providers/outbound_ip.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/providers/routed_probe.dart';
@@ -59,8 +60,8 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard>
 
   void _refresh(String? ip) {
     _probe.refresh(const [routedOutbound]);
-    if (ip != null && ref.read(ipQualityProvider(ip)).hasError) {
-      ref.invalidate(ipQualityProvider(ip));
+    if (ip != null && ref.read(ipRiskProvider(ip)).hasError) {
+      ref.invalidate(ipRiskProvider(ip));
     }
   }
 
@@ -82,7 +83,7 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard>
     final failed = phase == ProbePhase.failed && ipInfo == null;
     final qualityState = ipInfo == null
         ? null
-        : ref.watch(ipQualityProvider(ipInfo.ip));
+        : ref.watch(ipRiskProvider(ipInfo.ip));
     final quality = qualityState?.value;
     final qualityLoading =
         qualityState != null && quality == null && qualityState.isLoading;
@@ -462,7 +463,8 @@ class _ProxyNodeSubText extends ConsumerWidget {
       return SkeletonText(width: 80, style: style);
     }
     final hit = entry.stamp?.hits.firstOrNull;
-    final nodeName = _parseNodeFromExit(hit?.exit) ??
+    final nodeName =
+        _parseNodeFromExit(hit?.exit) ??
         (hit?.proxy.isNotEmpty ?? false ? hit?.proxy : null);
     if (nodeName != null && nodeName.isNotEmpty) {
       return _buildNode(context, nodeName, style);
@@ -471,11 +473,14 @@ class _ProxyNodeSubText extends ConsumerWidget {
     final currentGroupName = ref.watch(
       currentProfileProvider.select((state) => state?.currentGroupName),
     );
-    final group = groups.where((g) => g.name == currentGroupName).firstOrNull ??
+    final group =
+        groups.where((g) => g.name == currentGroupName).firstOrNull ??
         groups.firstOrNull;
     if (group != null) {
       final selected = ref.watch(
-        realSelectedProxyStateProvider(group.name).select((state) => state.proxyName),
+        realSelectedProxyStateProvider(
+          group.name,
+        ).select((state) => state.proxyName),
       );
       if (selected.isNotEmpty) {
         return _buildNode(context, selected, style);
@@ -632,7 +637,7 @@ class _Cells extends StatelessWidget {
     required this.gap,
   });
 
-  final IpQuality? quality;
+  final IpRisk? quality;
   final bool loading;
   final bool active;
   final double gap;
@@ -640,9 +645,27 @@ class _Cells extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appLocalizations = context.appLocalizations;
-    final typeLabel = quality?.type.label(context);
-    final Widget typeValue = typeLabel != null
-        ? _CellText(typeLabel)
+    final risk = quality;
+    final Widget scoreValue = risk != null
+        ? FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(text: '${risk.displayScore} \u00b7 '),
+                  TextSpan(
+                    text: risk.levelLabel(context),
+                    style: TextStyle(color: riskScoreColor(risk.displayScore)),
+                  ),
+                ],
+              ),
+              maxLines: 1,
+              style: _cellStyle(
+                context,
+              ).copyWith(color: context.colorScheme.onSurface),
+            ),
+          )
         : loading
         ? SkeletonText(width: 48, style: _cellStyle(context))
         : const _Placeholder();
@@ -652,10 +675,7 @@ class _Cells extends StatelessWidget {
         _RunTimeCell(active: active),
         SizedBox(width: gap),
         Expanded(
-          child: _Cell(
-            label: appLocalizations.ipType,
-            value: typeValue,
-          ),
+          child: _Cell(label: appLocalizations.ipRiskScore, value: scoreValue),
         ),
       ],
     );
@@ -775,10 +795,7 @@ class _RunTimeCell extends ConsumerWidget {
 
     return SizedBox(
       width: slotWidth,
-      child: _Cell(
-        label: appLocalizations.runTime,
-        value: _CellText(timeText),
-      ),
+      child: _Cell(label: appLocalizations.runTime, value: _CellText(timeText)),
     );
   }
 }

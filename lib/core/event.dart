@@ -46,6 +46,8 @@ abstract mixin class CoreEventListener {
   void onRouteChanged(RouteSnapshot snapshot) {}
 
   void onDialerLoop(String proxyName) {}
+
+  void onSpeedTest(SpeedTestState state) {}
 }
 
 class CoreEventManager {
@@ -56,6 +58,11 @@ class CoreEventManager {
       for (final CoreEventListener listener in List.of(_listeners)) {
         try {
           switch (event.type) {
+            case CoreEventType.speedTest:
+              listener.onSpeedTest(
+                SpeedTestState.fromJson(speedTestMap(event.data)),
+              );
+              break;
             case CoreEventType.log:
               listener.onLog(Log.fromJson(event.data));
               break;

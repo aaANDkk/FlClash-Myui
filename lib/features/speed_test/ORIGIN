@@ -1,0 +1,3 @@
+Speedtest engine and gauge adapted from appshubcc/Bettbox, commit 88b9597ad88f597e61a2843ad6fe33d5bdee8950.
+Source: core/toolbox/speedtest.go and lib/pages/speed_test.dart, GPL-3.0.
+Only the Speedtest by Ookla measurement source is exposed. FlClash UI, Core protocol, persistence and navigation integration are adapted here.

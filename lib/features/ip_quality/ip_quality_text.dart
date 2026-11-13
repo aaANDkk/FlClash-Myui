@@ -1,12 +1,12 @@
 import 'package:fl_clash/manager/emoji_manager.dart';
-import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/config.dart';
-import 'package:fl_clash/providers/ip_quality.dart';
 import 'package:fl_clash/ui/ui.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'labels.dart';
+import 'risk_model.dart';
+import 'risk_provider.dart';
+import 'risk_view.dart';
 
 class IpQualityText extends ConsumerWidget {
   const IpQualityText({super.key, required this.ip, this.style, this.leading});
@@ -22,12 +22,12 @@ class IpQualityText extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final quality = ref.watch(ipQualityProvider(ip)).value;
+    final quality = ref.watch(ipRiskProvider(ip)).value;
     final hideIp = ref.watch(
       appSettingProvider.select((state) => state.hideIp),
     );
     final shownIp = hideIp ? _mask : ip;
-    final color = quality?.level.color(context);
+    final color = quality == null ? null : riskScoreColor(quality.displayScore);
     var style = this.style;
     if (hideIp) {
       style = (style ?? const TextStyle()).toJetBrainsMono;

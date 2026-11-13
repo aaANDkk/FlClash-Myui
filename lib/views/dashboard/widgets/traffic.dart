@@ -5,6 +5,7 @@ import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
+import 'package:fl_clash/widgets/traffic_chart.dart';
 import 'package:fl_clash/views/dashboard/layout.dart';
 import 'package:fl_clash/views/dashboard/style.dart';
 import 'package:fl_clash/widgets/widgets.dart';
@@ -14,7 +15,6 @@ import 'package:flutter/widgets.dart';
 
 import 'card.dart';
 
-const _minSpeedScale = 8 * 1024.0;
 
 const _desktopChartLength = 30;
 
@@ -94,14 +94,13 @@ class _SpeedChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _SingleTrafficBarsPainter(
-        samples: traffics.list,
-        capacity: _desktopChartLength,
-        direction: direction,
-        color: direction.colorOf(context),
-        baselineColor: Divider.colorOf(context),
-      ),
+    return TrafficBarsChart(
+      samples: traffics.list,
+      capacity: _desktopChartLength,
+      upload: direction == TrafficDirection.upload,
+      downColor: TrafficDirection.download.colorOf(context),
+      upColor: TrafficDirection.upload.colorOf(context),
+      baselineColor: Divider.colorOf(context),
     );
   }
 }
@@ -187,10 +186,7 @@ class SpeedCard extends ConsumerWidget {
               style: DashboardText.label(context),
             ),
             SizedBox(height: compact ? 8 : 10),
-            if (constraints.hasBoundedHeight)
-              Expanded(child: chart)
-            else
-              chart,
+            if (constraints.hasBoundedHeight) Expanded(child: chart) else chart,
           ],
         ),
       ),
@@ -258,14 +254,12 @@ class NetworkSpeedCard extends ConsumerWidget {
                   child: SizedBox(
                     width: double.infinity,
                     height: _chartHeight,
-                    child: CustomPaint(
-                      painter: _TrafficBarsPainter(
-                        samples: traffics.list,
-                        capacity: _phoneChartLength,
-                        downColor: TrafficDirection.download.accentOf(context),
-                        upColor: TrafficDirection.upload.accentOf(context),
-                        baselineColor: Divider.colorOf(context),
-                      ),
+                    child: TrafficBarsChart(
+                      samples: traffics.list,
+                      capacity: _phoneChartLength,
+                      downColor: TrafficDirection.download.accentOf(context),
+                      upColor: TrafficDirection.upload.accentOf(context),
+                      baselineColor: Divider.colorOf(context),
                     ),
                   ),
                 ),
@@ -426,7 +420,10 @@ class _BaselineAt extends SingleChildRenderObjectWidget {
       _RenderBaselineAt(baseline);
 
   @override
-  void updateRenderObject(BuildContext context, _RenderBaselineAt renderObject) {
+  void updateRenderObject(
+    BuildContext context,
+    _RenderBaselineAt renderObject,
+  ) {
     renderObject.baseline = baseline;
   }
 }
@@ -588,159 +585,4 @@ class _SpeedArrowPainter extends CustomPainter {
       glyph != oldDelegate.glyph ||
       color != oldDelegate.color ||
       opticalOffset != oldDelegate.opticalOffset;
-}
-
-/// Download grows up from the baseline and upload down from it, each on its own
-/// scale: upload is usually so much smaller that a shared one would flatten it.
-class _TrafficBarsPainter extends CustomPainter {
-  const _TrafficBarsPainter({
-    required this.samples,
-    required this.capacity,
-    required this.downColor,
-    required this.upColor,
-    required this.baselineColor,
-  });
-
-  static const _downShare = 0.58;
-  static const _barShare = 0.62;
-  static const _baselineGap = 2.0;
-  static const _oldestOpacity = 0.4;
-  static const _minBarLength = 0.01;
-
-  final List<Traffic> samples;
-  final int capacity;
-  final Color downColor;
-  final Color upColor;
-  final Color baselineColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final baseline = size.height * _downShare;
-    canvas.drawLine(
-      Offset(0, baseline),
-      Offset(size.width, baseline),
-      Paint()..color = baselineColor,
-    );
-    final step = size.width / capacity;
-    final barWidth = step * _barShare;
-    final inset = _baselineGap + barWidth / 2;
-    final downScale = _scaleOf(TrafficDirection.download);
-    final upScale = _scaleOf(TrafficDirection.upload);
-    final downRoom = baseline - inset - barWidth / 2;
-    final upRoom = size.height - baseline - inset - barWidth / 2;
-    final bar = Paint()
-      ..strokeWidth = barWidth
-      ..strokeCap = StrokeCap.round;
-    for (var age = 0; age < capacity; age++) {
-      final sample = age < samples.length
-          ? samples[samples.length - 1 - age]
-          : const Traffic();
-      final x = size.width - step * (age + 0.5);
-      final opacity = 1 - (1 - _oldestOpacity) * age / (capacity - 1);
-      final top = baseline - inset;
-      canvas.drawLine(
-        Offset(x, top),
-        Offset(x, top - _barLength(sample.down / downScale * downRoom)),
-        bar..color = downColor.withValues(alpha: opacity),
-      );
-      final bottom = baseline + inset;
-      canvas.drawLine(
-        Offset(x, bottom),
-        Offset(x, bottom + _barLength(sample.up / upScale * upRoom)),
-        bar..color = upColor.withValues(alpha: opacity),
-      );
-    }
-  }
-
-  /// A renderer may drop a zero-length line, caps included, and an idle second
-  /// still has to show its dot.
-  double _barLength(double length) => math.max(length, _minBarLength);
-
-  double _scaleOf(TrafficDirection direction) => math.max(
-    _minSpeedScale,
-    _peakOf(
-      samples.skip(math.max(0, samples.length - capacity)),
-      direction,
-    ).toDouble(),
-  );
-
-  @override
-  bool shouldRepaint(_TrafficBarsPainter oldDelegate) {
-    return !identical(oldDelegate.samples, samples) ||
-        oldDelegate.capacity != capacity ||
-        oldDelegate.downColor != downColor ||
-        oldDelegate.upColor != upColor ||
-        oldDelegate.baselineColor != baselineColor;
-  }
-}
-
-class _SingleTrafficBarsPainter extends CustomPainter {
-  const _SingleTrafficBarsPainter({
-    required this.samples,
-    required this.capacity,
-    required this.direction,
-    required this.color,
-    required this.baselineColor,
-  });
-
-  static const _barShare = 0.60;
-  static const _baselineGap = 2.0;
-  static const _oldestOpacity = 0.4;
-  static const _minBarLength = 0.01;
-
-  final List<Traffic> samples;
-  final int capacity;
-  final TrafficDirection direction;
-  final Color color;
-  final Color baselineColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final baseline = size.height - 0.5;
-    canvas.drawLine(
-      Offset(0, baseline),
-      Offset(size.width, baseline),
-      Paint()..color = baselineColor,
-    );
-    final step = size.width / capacity;
-    final barWidth = step * _barShare;
-    final inset = _baselineGap + barWidth / 2;
-    final scale = math.max(
-      _minSpeedScale,
-      _peakOf(
-        samples.skip(math.max(0, samples.length - capacity)),
-        direction,
-      ).toDouble(),
-    );
-    final room = math.max(0.0, baseline - inset - barWidth / 2);
-    final bar = Paint()
-      ..strokeWidth = barWidth
-      ..strokeCap = StrokeCap.round;
-    final bottom = baseline - inset;
-    for (var age = 0; age < capacity; age++) {
-      final sample = age < samples.length
-          ? samples[samples.length - 1 - age]
-          : const Traffic();
-      final x = size.width - step * (age + 0.5);
-      final opacity = 1 - (1 - _oldestOpacity) * age / (capacity - 1);
-      final length = math.max(
-        direction.of(sample) / scale * room,
-        _minBarLength,
-      );
-      canvas.drawLine(
-        Offset(x, bottom),
-        Offset(x, bottom - length),
-        bar..color = color.withValues(alpha: opacity),
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_SingleTrafficBarsPainter oldDelegate) {
-    return !identical(oldDelegate.samples, samples) ||
-        oldDelegate.capacity != capacity ||
-        oldDelegate.direction != direction ||
-        oldDelegate.color != color ||
-        oldDelegate.baselineColor != baselineColor;
-  }
 }
