@@ -50,15 +50,56 @@ class _SpeedTestGaugeState extends State<SpeedTestGauge>
     vsync: this,
     duration: const Duration(milliseconds: 1600),
   );
+  late final _spinPresence = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 220),
+    reverseDuration: const Duration(milliseconds: 150),
+  );
+  late final _needlePresence = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 240),
+    reverseDuration: const Duration(milliseconds: 200),
+  );
   bool _initialized = false;
   double _fromFraction = 0;
   double _toFraction = 0;
   double _fromSpeed = 0;
   double _toSpeed = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    _motion.addStatusListener(_onMotionStatus);
+    _spinPresence.addStatusListener(_onSpinPresenceStatus);
+  }
+
+  void _onMotionStatus(AnimationStatus status) {
+    if (!mounted) return;
+    if (status == AnimationStatus.completed && widget.waiting) {
+      _sync();
+    }
+  }
+
+  void _onSpinPresenceStatus(AnimationStatus status) {
+    if (!mounted) return;
+    if (status == AnimationStatus.dismissed) {
+      _spinner.reset();
+      if (!widget.waiting) {
+        _sync();
+      }
+    }
+  }
+
   SpeedTestPhase? get _phase {
     final state = widget.state;
     return state?.error.isNotEmpty == true ? null : state?.phase;
+  }
+
+  bool get _measured {
+    final phase = _phase;
+    return phase == SpeedTestPhase.download ||
+        phase == SpeedTestPhase.upload ||
+        phase == SpeedTestPhase.done;
   }
 
   double get _desiredSpeed {
@@ -83,15 +124,51 @@ class _SpeedTestGaugeState extends State<SpeedTestGauge>
     return ui.lerpDouble(_fromSpeed, _toSpeed, t) ?? _toSpeed;
   }
 
-  void _syncSpinner({required bool disableAnimations}) {
-    final canSpin =
-        widget.waiting && !disableAnimations && _currentFraction <= 0.002;
-    if (canSpin) {
-      if (!_spinner.isAnimating) {
-        _spinner.repeat(reverse: true);
+  void _startSpin({required bool immediate}) {
+    if (immediate) {
+      _spinner.reset();
+      _spinPresence.value = 1;
+      return;
+    }
+    if (!_spinner.isAnimating) {
+      _spinner.repeat(reverse: true);
+    }
+    if (_spinPresence.status != AnimationStatus.forward &&
+        _spinPresence.value < 1) {
+      unawaited(_spinPresence.forward());
+    }
+  }
+
+  void _stopSpin({required bool immediate}) {
+    if (immediate) {
+      _spinner.reset();
+      _spinPresence.value = 0;
+      return;
+    }
+    if (_spinPresence.value > 0 &&
+        _spinPresence.status != AnimationStatus.reverse) {
+      unawaited(_spinPresence.reverse());
+    } else if (_spinPresence.value == 0) {
+      _spinner.reset();
+    }
+  }
+
+  void _syncNeedle({required bool immediate}) {
+    final show = _measured && !widget.waiting;
+    if (immediate) {
+      _needlePresence.value = show ? 1 : 0;
+      return;
+    }
+    if (show) {
+      if (_needlePresence.status != AnimationStatus.forward &&
+          _needlePresence.value < 1) {
+        unawaited(_needlePresence.forward());
       }
     } else {
-      _spinner.reset();
+      if (_needlePresence.value > 0 &&
+          _needlePresence.status != AnimationStatus.reverse) {
+        unawaited(_needlePresence.reverse());
+      }
     }
   }
 
@@ -103,28 +180,49 @@ class _SpeedTestGaugeState extends State<SpeedTestGauge>
       _fromFraction = _toFraction = targetFraction;
       _fromSpeed = _toSpeed = targetSpeed;
       _motion.value = 1;
-      _syncSpinner(disableAnimations: disableAnimations);
+      _syncNeedle(immediate: disableAnimations || initial);
+      if (widget.waiting) {
+        _startSpin(immediate: disableAnimations);
+      } else {
+        _stopSpin(immediate: disableAnimations || initial);
+      }
       return;
     }
+
+    if (widget.waiting) {
+      _syncNeedle(immediate: false);
+      if ((_toFraction - targetFraction).abs() > 0.0001 ||
+          (_toSpeed - targetSpeed).abs() > 1) {
+        _stopSpin(immediate: false);
+        _fromFraction = _currentFraction;
+        _toFraction = targetFraction;
+        _fromSpeed = _currentSpeed;
+        _toSpeed = targetSpeed;
+        unawaited(_motion.forward(from: 0));
+        return;
+      }
+      if (_currentFraction <= 0.002 && !_motion.isAnimating) {
+        _startSpin(immediate: false);
+      }
+      return;
+    }
+
+    // Clear the probing arc gracefully before restoring progress so the two
+    // arcs never overlap on the same track.
+    if (_spinPresence.value > 0.001) {
+      _stopSpin(immediate: false);
+      return;
+    }
+
+    _spinner.reset();
+    _syncNeedle(immediate: false);
     if ((_toFraction - targetFraction).abs() > 0.0001 ||
         (_toSpeed - targetSpeed).abs() > 1) {
       _fromFraction = _currentFraction;
       _toFraction = targetFraction;
       _fromSpeed = _currentSpeed;
       _toSpeed = targetSpeed;
-      // Clear the probing arc before returning to 0 or restoring progress so
-      // the two arcs never overlap.
-      _spinner.reset();
-      unawaited(
-        _motion.forward(from: 0).whenComplete(() {
-          if (!mounted) return;
-          _syncSpinner(
-            disableAnimations: MediaQuery.disableAnimationsOf(context),
-          );
-        }),
-      );
-    } else {
-      _syncSpinner(disableAnimations: disableAnimations);
+      unawaited(_motion.forward(from: 0));
     }
   }
 
@@ -144,8 +242,12 @@ class _SpeedTestGaugeState extends State<SpeedTestGauge>
 
   @override
   void dispose() {
+    _motion.removeStatusListener(_onMotionStatus);
+    _spinPresence.removeStatusListener(_onSpinPresenceStatus);
     _motion.dispose();
     _spinner.dispose();
+    _spinPresence.dispose();
+    _needlePresence.dispose();
     super.dispose();
   }
 
@@ -171,10 +273,7 @@ class _SpeedTestGaugeState extends State<SpeedTestGauge>
             SpeedTestPhase.connecting => l.speedTestConnecting,
             _ => l.speedTestReady,
           };
-    final measured =
-        phase == SpeedTestPhase.download ||
-        phase == SpeedTestPhase.upload ||
-        phase == SpeedTestPhase.done;
+    final measured = _measured;
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = min(320.0, constraints.maxWidth);
@@ -184,10 +283,21 @@ class _SpeedTestGaugeState extends State<SpeedTestGauge>
             height: width * .96,
             child: RepaintBoundary(
               child: AnimatedBuilder(
-                animation: Listenable.merge([_motion, _spinner]),
+                animation: Listenable.merge([
+                  _motion,
+                  _spinner,
+                  _spinPresence,
+                  _needlePresence,
+                ]),
                 builder: (context, _) {
                   final fraction = _currentFraction;
                   final value = _currentSpeed;
+                  final spinOpacity = Curves.easeOutCubic.transform(
+                    _spinPresence.value,
+                  );
+                  final needleOpacity = Curves.easeOutCubic.transform(
+                    _needlePresence.value,
+                  );
                   return CustomPaint(
                     painter: _GaugePainter(
                       fraction: fraction,
@@ -203,10 +313,11 @@ class _SpeedTestGaugeState extends State<SpeedTestGauge>
                             color: context.colorScheme.onSurfaceVariant,
                           ),
                       passedLabelColor: context.colorScheme.onSurface,
-                      spin: _spinner.isAnimating
-                          ? Curves.easeInOut.transform(_spinner.value)
+                      spin: spinOpacity > 0.001
+                          ? Curves.easeInOutSine.transform(_spinner.value)
                           : null,
-                      showNeedle: measured && (!waiting || fraction > 0.002),
+                      spinOpacity: spinOpacity,
+                      needleOpacity: needleOpacity,
                     ),
                     child: Align(
                       alignment: const Alignment(0, .94),
@@ -276,7 +387,8 @@ class _GaugePainter extends CustomPainter {
   final TextStyle labelStyle;
   final Color passedLabelColor;
   final double? spin;
-  final bool showNeedle;
+  final double spinOpacity;
+  final double needleOpacity;
 
   _GaugePainter({
     required this.fraction,
@@ -287,7 +399,8 @@ class _GaugePainter extends CustomPainter {
     required this.labelStyle,
     required this.passedLabelColor,
     required this.spin,
-    required this.showNeedle,
+    required this.spinOpacity,
+    required this.needleOpacity,
   });
 
   static const _start = pi * 0.75;
@@ -308,16 +421,19 @@ class _GaugePainter extends CustomPainter {
 
     final sweep = _sweep * fraction;
     if (fraction > 0.002) {
+      final arcAlpha = (fraction / 0.015).clamp(0.0, 1.0);
+      final activeStart = startColor.withValues(alpha: startColor.a * arcAlpha);
+      final activeEnd = color.withValues(alpha: color.a * arcAlpha);
       canvas.drawArc(
         rect,
         _start,
         sweep,
         false,
         stroke
-          ..color = color
+          ..color = activeEnd
           ..shader = SweepGradient(
             endAngle: _sweep,
-            colors: [startColor, color],
+            colors: [activeStart, activeEnd],
             transform: const GradientRotation(_start),
           ).createShader(rect),
       );
@@ -326,25 +442,27 @@ class _GaugePainter extends CustomPainter {
       canvas.drawCircle(
         center + Offset(cos(_start), sin(_start)) * radius,
         strokeWidth / 2,
-        Paint()..color = startColor,
+        Paint()..color = activeStart,
       );
     }
 
     final spin = this.spin;
-    if (spin != null) {
-      const length = pi / 5;
+    if (spin != null && spinOpacity > 0.001) {
+      final length = (pi / 5) * (0.35 + 0.65 * spinOpacity);
       final start = _start + (_sweep - length) * spin;
       final capMargin = strokeWidth / radius;
+      final spinStart = startColor.withValues(alpha: startColor.a * spinOpacity);
+      final spinEnd = color.withValues(alpha: color.a * spinOpacity);
       canvas.drawArc(
         rect,
         start,
         length,
         false,
         stroke
-          ..color = color
+          ..color = spinEnd
           ..shader = SweepGradient(
             endAngle: length + 2 * capMargin,
-            colors: [startColor, color],
+            colors: [spinStart, spinEnd],
             transform: GradientRotation(start - capMargin),
           ).createShader(rect),
       );
@@ -374,13 +492,13 @@ class _GaugePainter extends CustomPainter {
       );
     }
 
-    if (!showNeedle) return;
+    if (needleOpacity <= 0.001) return;
     final angle = _start + sweep;
     final direction = Offset(cos(angle), sin(angle));
     final normal = Offset(-direction.dy, direction.dx);
     final outer = size.width / 2;
-    final base = center - direction * outer * 0.1;
-    final tip = center + direction * outer * 0.5;
+    final base = center - direction * outer * (0.1 * needleOpacity);
+    final tip = center + direction * outer * (0.18 + 0.32 * needleOpacity);
     final baseHalf = outer * 0.03;
     final tipHalf = outer * 0.018;
     final needle = Path()
@@ -397,8 +515,8 @@ class _GaugePainter extends CustomPainter {
           tip,
           [
             needleColor.withValues(alpha: 0),
-            needleColor.withValues(alpha: 0.35),
-            needleColor.withValues(alpha: 0.9),
+            needleColor.withValues(alpha: 0.35 * needleOpacity),
+            needleColor.withValues(alpha: 0.9 * needleOpacity),
           ],
           const [0, 0.4, 1],
         ),
@@ -414,7 +532,8 @@ class _GaugePainter extends CustomPainter {
         oldDelegate.needleColor != needleColor ||
         oldDelegate.passedLabelColor != passedLabelColor ||
         oldDelegate.spin != spin ||
-        oldDelegate.showNeedle != showNeedle ||
+        oldDelegate.spinOpacity != spinOpacity ||
+        oldDelegate.needleOpacity != needleOpacity ||
         oldDelegate.labelStyle != labelStyle;
   }
 }

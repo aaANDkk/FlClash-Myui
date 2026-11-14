@@ -159,6 +159,34 @@ jobs:
           dart run intl_utils:generate
           git diff --exit-code -- lib/l10n
 
+      - name: Check group icon refresh
+        if: matrix.platform == 'android'
+        run: |
+          flutter analyze --no-fatal-infos lib/widgets/icon.dart lib/views/proxies/icon_style.dart test/widgets/target_icon_test.dart
+          flutter test test/widgets/target_icon_test.dart test/l10n test/lint/dynamic_message_key_test.dart
+
+      - name: Check IP risk sheets
+        if: matrix.platform == 'android'
+        run: |
+          flutter analyze --no-fatal-infos lib/features/ip_quality lib/views/dashboard/widgets/current_outbound.dart test/features/ip_risk_sheet_test.dart test/views/dashboard/current_outbound_test.dart
+          flutter test test/features/ip_risk_sheet_test.dart test/widgets/ip_address_row_test.dart test/views/dashboard/current_outbound_test.dart
+
+      - name: Check Speedtest
+        if: matrix.platform == 'android'
+        run: |
+          flutter analyze --no-fatal-infos lib/features/speed_test lib/models/speed_test.dart lib/widgets/traffic_chart.dart test/features/speed_test_test.dart test/features/speed_test_store_test.dart
+          flutter test test/features/speed_test_test.dart test/features/speed_test_store_test.dart test/core/protocol_contract_test.dart
+          cd core
+          CGO_ENABLED=0 go test . -run '^TestSpeedTest' -count=1
+
+      - name: Check Traffic Stats
+        if: matrix.platform == 'android'
+        run: |
+          flutter analyze --no-fatal-infos lib/features/traffic_stats lib/models/traffic_stats.dart test/features/traffic_stats_test.dart test/features/traffic_stats_store_test.dart
+          flutter test test/features/traffic_stats_test.dart test/features/traffic_stats_store_test.dart test/core/protocol_contract_test.dart test/l10n/localization_contract_test.dart
+          cd core
+          CGO_ENABLED=0 go test . -run '^TestTrafficStats' -count=1
+
       - name: Disable Impeller on Intel macOS
         if: matrix.platform == 'macos' && matrix.arch == 'amd64'
         run: plutil -replace FLTEnableImpeller -bool NO macos/Runner/Info.plist

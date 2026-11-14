@@ -8,6 +8,7 @@ import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/ui/ui.dart' as app_ui;
 import 'package:fl_clash/views/tools.dart';
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -366,4 +367,59 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });
+
+  testWidgets(
+    'rule hit card shows tooltip only on bottom-left badge via hover or long press',
+    (tester) async {
+      _setScreen(tester, 430, 840);
+      final client = _FakeTrafficStatsClient(result: _sampleResult());
+      await tester.pumpWidget(
+        _app(
+          client,
+          settings: const TrafficStatsSettings(enable: true, siteIcon: false),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await Scrollable.ensureVisible(
+        tester.element(find.text('GEOSITE:google')),
+        alignment: 0.5,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('GEOSITE:google'), findsOneWidget);
+      expect(find.text('Rule'), findsOneWidget);
+
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: Offset.zero);
+      addTearDown(mouse.removePointer);
+
+      // Hovering the rule body must not show the full-card tooltip.
+      await mouse.moveTo(tester.getCenter(find.text('GEOSITE:google')));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('GEOSITE:google'), findsOneWidget);
+
+      // Hovering the bottom-left badge raises the full-rule tooltip.
+      await mouse.moveTo(tester.getCenter(find.text('Rule')));
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('GEOSITE:google'), findsNWidgets(2));
+
+      await mouse.moveTo(Offset.zero);
+      await tester.pumpAndSettle(const Duration(seconds: 1));
+      expect(find.text('GEOSITE:google'), findsOneWidget);
+
+      // Touch long press on the bottom-left badge also shows the tooltip.
+      final touch = await tester.startGesture(
+        tester.getCenter(find.text('Rule')),
+      );
+      await tester.pump(const Duration(milliseconds: 700));
+      expect(find.text('GEOSITE:google'), findsNWidgets(2));
+      await touch.up();
+      await tester.pumpAndSettle(const Duration(seconds: 2));
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

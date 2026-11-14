@@ -789,7 +789,7 @@ class _TrendBarPainter extends CustomPainter {
   static const _leftPad = 4.0;
   static const _minRightPad = 46.0;
   static const _topPad = 10.0;
-  static const _bottomPad = 26.0;
+  static const _bottomPad = 24.0;
   static const _axisGap = 8.0;
   static const _unitNames = ['B', 'KB', 'MB', 'GB', 'TB'];
   static const _niceSteps = [
@@ -880,7 +880,10 @@ class _TrendBarPainter extends CustomPainter {
 
     final gridPaint = Paint()
       ..color = gridColor
-      ..strokeWidth = 0.8;
+      ..strokeWidth = 0.7;
+    final dashPaint = Paint()
+      ..color = gridColor
+      ..strokeWidth = 0.7;
 
     const steps = 2;
     for (var s = 0; s <= steps; s++) {
@@ -906,16 +909,27 @@ class _TrendBarPainter extends CustomPainter {
 
     final count = points.length;
     final slotWidth = chartWidth / count;
+    final guideBottom = math.min(size.height - 2.0, chartBottom + 20.0);
+    for (final boundary in _verticalGuideIndices(count)) {
+      final x = chartLeft + boundary * slotWidth;
+      _drawDashedVerticalLine(canvas, x, chartTop, guideBottom, dashPaint);
+    }
+
     final barWidth = math.max(
-      2.5,
-      math.min(18.0, slotWidth * (count > 20 ? 0.58 : 0.46)),
+      3.0,
+      math.min(
+        count <= 10 ? 28.0 : 14.0,
+        slotWidth * (count <= 10 ? 0.56 : 0.62),
+      ),
     );
     final downPaint = Paint()..color = downloadColor;
     final upPaint = Paint()..color = uploadColor;
-    final capRadius = math.min(4.0, barWidth / 2);
-    final radius = Radius.circular(capRadius);
-    final minBaseH = math.max(3.0, capRadius);
-    final minUpH = math.max(7.0, capRadius + 3.0);
+    final cornerRadius = math.min(
+      count <= 10 ? 4.0 : 2.8,
+      barWidth * 0.25,
+    );
+    final topRadius = Radius.circular(cornerRadius);
+    const minSegH = 3.0;
 
     for (var i = 0; i < count; i++) {
       final point = points[i];
@@ -934,60 +948,59 @@ class _TrendBarPainter extends CustomPainter {
       }
 
       if (point.total > 0) {
-        var totalH = math.max(minBaseH, (point.total / maxTotal) * chartHeight);
+        var totalH = 0.0;
         var downH = 0.0;
         var upH = 0.0;
         if (point.up > 0 && point.down > 0) {
-          totalH = math.max(totalH, minUpH + 2.5);
-          upH = (totalH * (point.up / point.total))
-              .clamp(minUpH, totalH - 2.0)
-              .toDouble();
-          downH = totalH - upH;
+          final rawH = (point.total / maxTotal) * chartHeight;
+          final minBothH = math.min(chartHeight, 2 * minSegH + 1.5);
+          totalH = math.max(rawH, minBothH).clamp(minBothH, chartHeight).toDouble();
+          final extra = math.max(0.0, totalH - 2 * minSegH);
+          downH = minSegH + extra * (point.down / point.total);
+          upH = totalH - downH;
         } else if (point.down > 0) {
-          downH = totalH;
+          final minSingle = math.min(chartHeight, minSegH);
+          downH = math
+              .max((point.down / maxTotal) * chartHeight, minSingle)
+              .clamp(minSingle, chartHeight)
+              .toDouble();
+          totalH = downH;
         } else if (point.up > 0) {
-          upH = math.max(totalH, minUpH);
+          final minSingle = math.min(chartHeight, minSegH);
+          upH = math
+              .max((point.up / maxTotal) * chartHeight, minSingle)
+              .clamp(minSingle, chartHeight)
+              .toDouble();
           totalH = upH;
         }
+
         final barLeft = cx - barWidth / 2;
         final barRight = cx + barWidth / 2;
+        final barTop = chartBottom - totalH;
+        final barClip = RRect.fromLTRBAndCorners(
+          barLeft,
+          barTop,
+          barRight,
+          chartBottom,
+          topLeft: topRadius,
+          topRight: topRadius,
+        );
 
+        canvas.save();
+        canvas.clipRRect(barClip);
         if (downH > 0) {
-          final downTop = chartBottom - downH;
-          final rrect = upH <= 0
-              ? RRect.fromLTRBAndCorners(
-                  barLeft,
-                  downTop,
-                  barRight,
-                  chartBottom,
-                  topLeft: radius,
-                  topRight: radius,
-                )
-              : RRect.fromLTRBR(
-                  barLeft,
-                  downTop,
-                  barRight,
-                  chartBottom,
-                  Radius.zero,
-                );
-          canvas.drawRRect(rrect, downPaint);
+          canvas.drawRect(
+            Rect.fromLTRB(barLeft, chartBottom - downH, barRight, chartBottom),
+            downPaint,
+          );
         }
-
         if (upH > 0) {
-          final top = chartBottom - totalH;
-          final bottom = chartBottom - downH;
-          canvas.drawRRect(
-            RRect.fromLTRBAndCorners(
-              barLeft,
-              top,
-              barRight,
-              bottom,
-              topLeft: radius,
-              topRight: radius,
-            ),
+          canvas.drawRect(
+            Rect.fromLTRB(barLeft, barTop, barRight, chartBottom - downH),
             upPaint,
           );
         }
+        canvas.restore();
       }
 
       if (_shouldShowTick(i, count)) {
@@ -998,30 +1011,61 @@ class _TrendBarPainter extends CustomPainter {
           ),
           textDirection: TextDirection.ltr,
         )..layout();
-        final x = (cx - tp.width / 2)
-            .clamp(chartLeft, math.max(chartLeft, chartRight - tp.width))
-            .toDouble();
-        tp.paint(canvas, Offset(x, chartBottom + 10));
+        final x = period == TrafficStatsPeriod.week
+            ? (cx - tp.width / 2)
+                  .clamp(chartLeft, math.max(chartLeft, chartRight - tp.width))
+                  .toDouble()
+            : (slotLeft + 4.0)
+                  .clamp(chartLeft, math.max(chartLeft, chartRight - tp.width))
+                  .toDouble();
+        tp.paint(canvas, Offset(x, chartBottom + 6));
       }
+    }
+  }
+
+  List<int> _verticalGuideIndices(int count) {
+    switch (period) {
+      case TrafficStatsPeriod.day:
+        return [
+          for (var i = 0; i < count; i += 6) i,
+          count,
+        ];
+      case TrafficStatsPeriod.week:
+        return [for (var i = 0; i <= count; i++) i];
+      case TrafficStatsPeriod.month:
+        return [
+          for (var i = 0; i < count; i += 7)
+            if (i == 0 || count - i >= 4) i,
+          count,
+        ];
+    }
+  }
+
+  void _drawDashedVerticalLine(
+    Canvas canvas,
+    double x,
+    double top,
+    double bottom,
+    Paint paint,
+  ) {
+    const dash = 2.5;
+    const gap = 2.5;
+    var y = top;
+    while (y < bottom) {
+      final nextY = math.min(y + dash, bottom);
+      canvas.drawLine(Offset(x, y), Offset(x, nextY), paint);
+      y += dash + gap;
     }
   }
 
   bool _shouldShowTick(int index, int count) {
     switch (period) {
       case TrafficStatsPeriod.day:
-        return index == 0 ||
-            index == 6 ||
-            index == 12 ||
-            index == 18 ||
-            index == count - 1;
+        return index == 0 || index == 6 || index == 12 || index == 18;
       case TrafficStatsPeriod.week:
         return true;
       case TrafficStatsPeriod.month:
-        return index == 0 ||
-            index == 7 ||
-            index == 14 ||
-            index == 21 ||
-            index == count - 1;
+        return (index % 7 == 0) && (index == 0 || count - index >= 4);
     }
   }
 
@@ -1161,65 +1205,67 @@ class _RuleHitCard extends StatelessWidget {
         .of(context, emphasized: true)
         .toTabular
         .copyWith(color: cs.onSurface);
-    return HoverTooltip(
-      message: item.name,
-      child: SizedBox(
-        width: 244,
-        child: Card(
-          radius: AppCorner.xl,
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  RingChart(
-                    size: 44,
-                    strokeWidth: 4.5,
-                    trackColor: trackColor,
-                    total: totalHits > 0 ? totalHits.toDouble() : null,
-                    segments: [
-                      RingSegment(value: item.hits.toDouble(), color: accent),
-                    ],
-                    centerChild: Text(
-                      '$pct%',
-                      style: AppTextStyle.caption2
-                          .of(context, emphasized: true)
-                          .toTabular
-                          .copyWith(color: cs.onSurface),
-                    ),
+    return SizedBox(
+      width: 244,
+      child: Card(
+        radius: AppCorner.xl,
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                RingChart(
+                  size: 44,
+                  strokeWidth: 4.5,
+                  trackColor: trackColor,
+                  total: totalHits > 0 ? totalHits.toDouble() : null,
+                  segments: [
+                    RingSegment(value: item.hits.toDouble(), color: accent),
+                  ],
+                  centerChild: Text(
+                    '$pct%',
+                    style: AppTextStyle.caption2
+                        .of(context, emphasized: true)
+                        .toTabular
+                        .copyWith(color: cs.onSurface),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      rule.body,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyle.subheadline
-                          .of(context, emphasized: true)
-                          .copyWith(color: cs.onSurface, height: 1.25),
-                    ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    rule.body,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyle.subheadline
+                        .of(context, emphasized: true)
+                        .copyWith(color: cs.onSurface, height: 1.25),
                   ),
-                ],
-              ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 10),
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: cs.outlineVariant.withValues(alpha: 0.45),
-                    ),
-                    child: const SizedBox(height: 0.5),
+                ),
+              ],
+            ),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 10),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: cs.outlineVariant.withValues(alpha: 0.45),
                   ),
-                  const SizedBox(height: 9),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Flexible(
+                  child: const SizedBox(height: 0.5),
+                ),
+                const SizedBox(height: 9),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(
+                      child: Tooltip(
+                        message: item.name,
+                        preferBelow: false,
+                        triggerMode: TooltipTriggerMode.longPress,
                         child: DecoratedBox(
                           decoration: ShapeDecoration(
                             color: accent.withValues(alpha: 0.12),
@@ -1241,31 +1287,31 @@ class _RuleHitCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      Padding(
-                        padding: const EdgeInsetsDirectional.only(start: 8),
-                        child: Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(
-                                text: '$hitCountText \u00b7 ',
-                                style: captionMuted,
-                              ),
-                              TextSpan(
-                                text: trafficStatsFormatBytes(item.total),
-                                style: captionStrong,
-                              ),
-                            ],
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                    ),
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(start: 8),
+                      child: Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: '$hitCountText \u00b7 ',
+                              style: captionMuted,
+                            ),
+                            TextSpan(
+                              text: trafficStatsFormatBytes(item.total),
+                              style: captionStrong,
+                            ),
+                          ],
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
