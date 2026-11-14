@@ -400,12 +400,16 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
       expect(find.text('GEOSITE:google'), findsOneWidget);
 
-      // Hovering the bottom-left badge raises the full-rule tooltip.
+      // Hovering the bottom-left badge raises the full-rule tooltip below it.
       await mouse.moveTo(tester.getCenter(find.text('Rule')));
       await tester.pump();
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
       expect(find.text('GEOSITE:google'), findsNWidgets(2));
+      expect(
+        tester.getRect(find.text('GEOSITE:google').last).top,
+        greaterThan(tester.getRect(find.text('Rule')).bottom),
+      );
 
       await mouse.moveTo(Offset.zero);
       await tester.pumpAndSettle(const Duration(seconds: 1));

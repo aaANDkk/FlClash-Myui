@@ -1264,7 +1264,6 @@ class _RuleHitCard extends StatelessWidget {
                     Flexible(
                       child: Tooltip(
                         message: item.name,
-                        preferBelow: false,
                         triggerMode: TooltipTriggerMode.longPress,
                         child: DecoratedBox(
                           decoration: ShapeDecoration(
