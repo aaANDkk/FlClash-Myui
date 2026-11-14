@@ -930,6 +930,7 @@ class _TrendBarPainter extends CustomPainter {
     );
     final topRadius = Radius.circular(cornerRadius);
     const minSegH = 3.0;
+    const segGap = 2.0;
 
     for (var i = 0; i < count; i++) {
       final point = points[i];
@@ -952,12 +953,17 @@ class _TrendBarPainter extends CustomPainter {
         var downH = 0.0;
         var upH = 0.0;
         if (point.up > 0 && point.down > 0) {
+          final gapH = math.min(segGap, math.max(0.0, chartHeight - 2 * minSegH));
           final rawH = (point.total / maxTotal) * chartHeight;
-          final minBothH = math.min(chartHeight, 2 * minSegH + 1.5);
-          totalH = math.max(rawH, minBothH).clamp(minBothH, chartHeight).toDouble();
-          final extra = math.max(0.0, totalH - 2 * minSegH);
+          final minBothH = math.min(chartHeight, 2 * minSegH + gapH + 1.5);
+          totalH = math
+              .max(rawH, minBothH)
+              .clamp(minBothH, chartHeight)
+              .toDouble();
+          final availSegH = math.max(0.0, totalH - gapH);
+          final extra = math.max(0.0, availSegH - 2 * minSegH);
           downH = minSegH + extra * (point.down / point.total);
-          upH = totalH - downH;
+          upH = availSegH - downH;
         } else if (point.down > 0) {
           final minSingle = math.min(chartHeight, minSegH);
           downH = math
@@ -996,7 +1002,7 @@ class _TrendBarPainter extends CustomPainter {
         }
         if (upH > 0) {
           canvas.drawRect(
-            Rect.fromLTRB(barLeft, barTop, barRight, chartBottom - downH),
+            Rect.fromLTRB(barLeft, barTop, barRight, barTop + upH),
             upPaint,
           );
         }
