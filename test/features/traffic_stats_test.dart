@@ -1,4 +1,6 @@
+import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/features/traffic_stats/client.dart';
+import 'package:fl_clash/features/traffic_stats/ring_chart.dart';
 import 'package:fl_clash/features/traffic_stats/settings.dart';
 import 'package:fl_clash/features/traffic_stats/store.dart';
 import 'package:fl_clash/features/traffic_stats/view.dart';
@@ -7,6 +9,7 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/ui/ui.dart' as app_ui;
+import 'package:fl_clash/views/dashboard/style.dart';
 import 'package:fl_clash/views/tools.dart';
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/widgets.dart';
@@ -252,17 +255,98 @@ void main() {
 
         expect(find.byType(TrafficStatsOverviewCard), findsOneWidget);
         expect(find.byType(TrafficStatsTrendCard), findsOneWidget);
+        if (size.width >= 760) {
+          final overview = find.byType(TrafficStatsOverviewCard);
+          expect(
+            tester.getSize(overview).height,
+            closeTo(
+              tester.getSize(find.byType(TrafficStatsTrendCard)).height,
+              0.01,
+            ),
+          );
+          final ovCtx = tester.element(overview);
+          final l = ovCtx.appLocalizations;
+          final headerBottom = tester
+              .getBottomLeft(
+                find
+                    .ancestor(
+                      of: find.descendant(
+                        of: overview,
+                        matching: find.text(l.trafficStatsOverview),
+                      ),
+                      matching: find.byType(Row),
+                    )
+                    .first,
+              )
+              .dy;
+          final statsGroup = find
+              .ancestor(
+                of: find.descendant(
+                  of: overview,
+                  matching: find.text(l.trafficStatsTotal),
+                ),
+                matching: find.byType(Column),
+              )
+              .first;
+          final statsTop = tester.getTopLeft(statsGroup).dy;
+          final statsBottom = tester.getBottomLeft(statsGroup).dy;
+          final dividerFinder = find.descendant(
+            of: overview,
+            matching: find.byType(app_ui.Divider),
+          );
+          expect(dividerFinder, findsOneWidget);
+          final dividerTop = tester.getTopLeft(dividerFinder).dy;
+          final dividerBottom = tester.getBottomLeft(dividerFinder).dy;
+          final legendTop = tester
+              .getTopLeft(
+                find
+                    .ancestor(
+                      of: find.descendant(
+                        of: overview,
+                        matching: find.text(
+                          trafficStatsFormatBytes(_sampleResult().proxyTotal),
+                        ),
+                      ),
+                      matching: find.byType(Row),
+                    )
+                    .first,
+              )
+              .dy;
+          expect(
+            statsTop - headerBottom,
+            closeTo(dividerTop - statsBottom, 1.0),
+          );
+          expect(legendTop, greaterThan(dividerBottom));
+        }
+        expect(
+          find.descendant(
+            of: find.byType(TrafficStatsTrendCard),
+            matching: find.byWidgetPredicate(
+              (w) =>
+                  w is GlyphIcon &&
+                  w.glyph == AppGlyphs.ranking &&
+                  w.size == 18,
+            ),
+          ),
+          findsOneWidget,
+        );
+        final scrollable = find
+            .descendant(
+              of: find.byType(TrafficStatsView),
+              matching: find.byType(Scrollable),
+            )
+            .first;
+        await tester.scrollUntilVisible(
+          find.byType(TrafficStatsRuleHitsSection),
+          200,
+          scrollable: scrollable,
+        );
         expect(find.byType(TrafficStatsRuleHitsSection), findsOneWidget);
         expect(find.text('GEOSITE:google'), findsOneWidget);
         await tester.scrollUntilVisible(
           find.byType(TrafficStatsRankingSection),
           200,
-          scrollable: find
-              .descendant(
-                of: find.byType(TrafficStatsView),
-                matching: find.byType(Scrollable),
-              )
-              .first,
+          scrollable: scrollable,
         );
         expect(find.byType(TrafficStatsRankingSection), findsOneWidget);
         expect(find.text('example.com'), findsOneWidget);
@@ -316,6 +400,19 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is GlyphIcon && w.glyph == AppGlyphs.sync,
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is GlyphIcon && w.glyph == AppGlyphs.refresh,
+      ),
+      findsNothing,
+    );
 
     final settingsBtn = find.byWidgetPredicate(
       (w) => w is GlyphIcon && w.glyph == AppGlyphs.sliders,
@@ -423,6 +520,221 @@ void main() {
       expect(find.text('GEOSITE:google'), findsNWidgets(2));
       await touch.up();
       await tester.pumpAndSettle(const Duration(seconds: 2));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'overview card pairs C+E tick ring with proxy/direct and keeps download/upload plain text',
+    (tester) async {
+      _setScreen(tester, 360, 720);
+      final sample = _sampleResult();
+      final client = _FakeTrafficStatsClient(result: sample);
+      await tester.pumpWidget(
+        _app(
+          client,
+          page: TrafficStatsScope(
+            child: app_ui.Scaffold(
+              title: 'Overview',
+              body: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: TrafficStatsOverviewCard(result: sample),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final overview = find.byType(TrafficStatsOverviewCard);
+      final overviewCtx = tester.element(overview);
+      final l = overviewCtx.appLocalizations;
+      final ringFinder = find.descendant(
+        of: overview,
+        matching: find.byType(RingChart),
+      );
+      final ring = tester.widget<RingChart>(ringFinder);
+      final directTotal = (sample.total - sample.proxyTotal).clamp(
+        0,
+        sample.total,
+      );
+
+      expect(ring.tickCount, 20);
+      expect(
+        ring.innerDiscColor,
+        trafficDownloadColor(overviewCtx).withValues(alpha: 0.08),
+      );
+      expect(ring.segments.length, 2);
+      expect(ring.segments[0].value, sample.proxyTotal.toDouble());
+      expect(ring.segments[0].color, trafficDownloadColor(overviewCtx));
+      expect(ring.segments[1].value, directTotal.toDouble());
+      expect(ring.segments[1].color, trafficUploadColor(overviewCtx));
+      expect(
+        find.descendant(of: ringFinder, matching: find.text('75%')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: ringFinder, matching: find.text(l.proxies)),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: overview, matching: find.text('75%')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: overview, matching: find.text('25%')),
+        findsNothing,
+      );
+      final proxyValueFinder = find.descendant(
+        of: overview,
+        matching: find.text(trafficStatsFormatBytes(sample.proxyTotal)),
+      );
+      final directValueFinder = find.descendant(
+        of: overview,
+        matching: find.text(trafficStatsFormatBytes(directTotal)),
+      );
+      expect(proxyValueFinder, findsOneWidget);
+      expect(directValueFinder, findsOneWidget);
+      final proxyRowFinder = find
+          .ancestor(of: proxyValueFinder, matching: find.byType(Row))
+          .first;
+      final proxyLabelFinder = find.descendant(
+        of: proxyRowFinder,
+        matching: find.text(l.proxies),
+      );
+      expect(proxyLabelFinder, findsOneWidget);
+      expect(
+        tester.getTopLeft(proxyValueFinder).dx,
+        greaterThan(tester.getTopRight(proxyLabelFinder).dx),
+      );
+      expect(
+        find.descendant(
+          of: overview,
+          matching: find.byWidgetPredicate(
+            (w) =>
+                w is GlyphIcon &&
+                w.glyph == AppGlyphs.dataUsage &&
+                w.size == 18,
+          ),
+        ),
+        findsOneWidget,
+      );
+      final insetTiles = find.descendant(
+        of: overview,
+        matching: find.byWidgetPredicate(
+          (w) =>
+              w is Container &&
+              w.decoration is ShapeDecoration &&
+              (w.decoration as ShapeDecoration).shape == app_ui.AppShape.lg,
+        ),
+      );
+      expect(insetTiles, findsNothing);
+      final legendDots = tester
+          .widgetList<DecoratedBox>(
+            find.descendant(
+              of: overview,
+              matching: find.byWidgetPredicate(
+                (w) =>
+                    w is DecoratedBox &&
+                    w.decoration is ShapeDecoration &&
+                    (w.decoration as ShapeDecoration).shape ==
+                        app_ui.AppShape.circle,
+              ),
+            ),
+          )
+          .toList();
+      expect(legendDots, hasLength(2));
+      expect(
+        (legendDots[0].decoration as ShapeDecoration).color,
+        trafficDownloadColor(overviewCtx),
+      );
+      expect(
+        (legendDots[1].decoration as ShapeDecoration).color,
+        trafficUploadColor(overviewCtx),
+      );
+      final overviewRing = tester.widget<RingChart>(
+        find.descendant(of: overview, matching: find.byType(RingChart)),
+      );
+      expect(overviewRing.trackColor, DashboardColors.of(overviewCtx).track);
+      expect(overviewRing.size, lessThanOrEqualTo(86));
+      final overviewDividerFinder = find.descendant(
+        of: overview,
+        matching: find.byType(app_ui.Divider),
+      );
+      expect(overviewDividerFinder, findsOneWidget);
+      expect(
+        tester.widget<app_ui.Divider>(overviewDividerFinder).thickness,
+        app_ui.Divider.separatorThicknessOf(overviewCtx),
+      );
+      expect(
+        tester.getBottomLeft(overviewDividerFinder).dy,
+        lessThanOrEqualTo(tester.getTopLeft(proxyRowFinder).dy),
+      );
+      expect(
+        tester.widget<Text>(proxyLabelFinder).style?.fontSize,
+        app_ui.AppTextStyle.subheadline.size,
+      );
+      expect(
+        tester.widget<Text>(proxyValueFinder).style?.fontSize,
+        app_ui.AppTextStyle.subheadline.size,
+      );
+      for (final pillText in [
+        '\u2193 ${trafficStatsFormatBytes(sample.down)}',
+        '\u2191 ${trafficStatsFormatBytes(sample.up)}',
+      ]) {
+        final pillTextFinder = find.descendant(
+          of: overview,
+          matching: find.text(pillText),
+        );
+        expect(pillTextFinder, findsOneWidget);
+        final pillBox = tester.widget<DecoratedBox>(
+          find
+              .ancestor(of: pillTextFinder, matching: find.byType(DecoratedBox))
+              .first,
+        );
+        expect(
+          (pillBox.decoration as ShapeDecoration).color,
+          DashboardColors.of(overviewCtx).tone,
+        );
+      }
+      expect(tester.takeException(), isNull);
+
+      const directHeavy = TrafficStatsResult(
+        up: 200 * 1024 * 1024,
+        down: 800 * 1024 * 1024,
+        proxyUp: 50 * 1024 * 1024,
+        proxyDown: 200 * 1024 * 1024,
+      );
+      await tester.pumpWidget(
+        _app(
+          client,
+          page: const TrafficStatsScope(
+            child: app_ui.Scaffold(
+              title: 'Overview',
+              body: SingleChildScrollView(
+                padding: EdgeInsets.all(16),
+                child: TrafficStatsOverviewCard(result: directHeavy),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final directHeavyCtx = tester.element(overview);
+      final directHeavyRing = tester.widget<RingChart>(ringFinder);
+      expect(
+        directHeavyRing.innerDiscColor,
+        trafficUploadColor(directHeavyCtx).withValues(alpha: 0.08),
+      );
+      expect(
+        find.descendant(of: ringFinder, matching: find.text('75%')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: ringFinder, matching: find.text(l.direct)),
+        findsOneWidget,
+      );
       expect(tester.takeException(), isNull);
     },
   );

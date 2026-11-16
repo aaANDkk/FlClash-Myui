@@ -325,8 +325,8 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.byType(SkeletonPill), findsOneWidget);
-      expect(find.byType(SkeletonText), findsOneWidget);
+      expect(find.byType(SkeletonPill), findsNWidgets(2));
+      expect(find.byType(SkeletonText), findsNWidgets(2));
       expect(tester.widget<PressRegion>(_clover()).onTap, isNull);
       final turn = _cloverTurn(tester);
       await tester.pump(const Duration(milliseconds: 300));
@@ -380,6 +380,36 @@ void main() {
 
       expect(find.text('AS64500'), findsNothing);
     });
+
+    testWidgets(
+      'shows country below IP and full country-region-city tooltip from ipRiskProvider',
+      (tester) async {
+        const located = IpRisk(
+          ip: _ip,
+          score: 10,
+          level: IpRiskLevel.low,
+          country: 'China',
+          countryCode: 'CN',
+          region: 'Shanghai',
+          city: 'Hongkou (Hongkou Qu)',
+        );
+        await tester.pumpWidget(_app((_, _) async => located));
+        await tester.pump();
+
+        expect(
+          find.byWidgetPredicate(
+            (w) => w is EmojiText && w.text == '\u{1F1E8}\u{1F1F3} China',
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.byTooltip(
+            '\u{1F1E8}\u{1F1F3} China \u00b7 Shanghai \u00b7 Hongkou (Hongkou Qu)',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
 
     testWidgets('fits a phone', (tester) async {
       await tester.pumpWidget(
@@ -500,7 +530,7 @@ void main() {
       await tester.pump(probeSettleDuration);
       expect(phaseOf(tester), ProbePhase.failed);
       expect(find.text('Check failed'), findsNothing);
-      expect(find.byType(SkeletonText), findsNWidgets(2));
+      expect(find.byType(SkeletonText), findsNWidgets(3));
 
       epoch = 2;
       containerOf(tester)

@@ -21,65 +21,82 @@ class ProxiesIconStyleView extends ConsumerStatefulWidget {
 class _ProxiesIconStyleViewState extends ConsumerState<ProxiesIconStyleView> {
   var _selected = <int>{};
   var _sorting = false;
+  var _confirming = false;
   var _refreshing = false;
 
   Future<void> _handleRefreshIcons() async {
-    if (_refreshing) {
+    if (_confirming || _refreshing) {
       return;
     }
     final l10n = context.appLocalizations;
     final container = ProviderScope.containerOf(context, listen: false);
-    setState(() => _refreshing = true);
+    _confirming = true;
+    final bool? confirmed;
     try {
-      final confirmed = await dialogs.showMessage(
+      confirmed = await dialogs.showMessage(
         context: context,
         title: l10n.refreshGroupIcons,
         message: TextSpan(text: l10n.refreshGroupIconsTip),
         confirmText: l10n.confirm,
       );
-      if (confirmed != true || !mounted) {
-        return;
-      }
+    } finally {
+      _confirming = false;
+    }
+    if (confirmed != true || !mounted) {
+      return;
+    }
+    final startedAt = DateTime.now();
+    setState(() => _refreshing = true);
+    var succeeded = false;
+    try {
       await refreshTargetIcons(
         const [],
         reloadSources: () async {
-          final sets = await container.read(iconSetsProvider.future);
-          final actions = container.read(iconSetsActionProvider.notifier);
-          final updatedSets = await Future.wait([
-            for (final set in sets)
-              if (set.isRemote)
-                actions.sync(set, fresh: true).catchError((e) {
-                  commonPrint.log('Failed to sync icon set ${set.name}: $e');
-                  return set;
-                })
-              else
-                Future.value(set),
-          ]);
-          final List<IconSet> allSets =
-              container.read(iconSetsProvider).value ?? updatedSets;
-          return [
-            for (final group in container.read(groupsProvider))
-              container.read(proxyGroupIconProvider(group.name)),
-            for (final rule in container.read(iconRulesProvider)) rule.icon,
-            for (final IconSet set in allSets)
-              if (set.cover.isNotEmpty) set.cover,
-          ];
+          // Keep the StreamNotifier subscription unpaused across .future in
+          // Riverpod 3 when no widget is currently watching iconSetsProvider.
+          final iconSetsSub = container.listen(iconSetsProvider, (_, _) {});
+          try {
+            final sets = await container.read(iconSetsProvider.future);
+            final actions = container.read(iconSetsActionProvider.notifier);
+            final updatedSets = await Future.wait([
+              for (final set in sets)
+                if (set.isRemote)
+                  actions.sync(set, fresh: true).catchError((e) {
+                    commonPrint.log('Failed to sync icon set ${set.name}: $e');
+                    return set;
+                  })
+                else
+                  Future.value(set),
+            ]);
+            final List<IconSet> allSets =
+                container.read(iconSetsProvider).value ?? updatedSets;
+            return [
+              for (final group in container.read(groupsProvider))
+                container.read(proxyGroupIconProvider(group.name)),
+              for (final rule in container.read(iconRulesProvider)) rule.icon,
+              for (final IconSet set in allSets)
+                if (set.cover.isNotEmpty) set.cover,
+            ];
+          } finally {
+            iconSetsSub.close();
+          }
         },
       );
-      if (mounted) {
-        dialogs.showBanner(
-          l10n.groupIconsRefreshed,
-          level: BannerLevel.success,
-        );
-      }
+      succeeded = true;
     } catch (error) {
       commonPrint.log('Failed to refresh group icons: $error');
-      if (mounted) {
-        dialogs.showBanner(l10n.updateFailed, level: BannerLevel.error);
-      }
     } finally {
+      final elapsed = DateTime.now().difference(startedAt);
+      const minSpin = Duration(milliseconds: 350);
+      if (elapsed < minSpin && mounted) {
+        await Future<void>.delayed(minSpin - elapsed);
+      }
       if (mounted) {
         setState(() => _refreshing = false);
+        dialogs.showBanner(
+          succeeded ? l10n.groupIconsRefreshed : l10n.updateFailed,
+          level: succeeded ? BannerLevel.success : BannerLevel.error,
+        );
       }
     }
   }
@@ -314,6 +331,7 @@ class _ProxiesIconStyleViewState extends ConsumerState<ProxiesIconStyleView> {
           IconButtonData(
             glyph: AppGlyphs.refresh,
             tooltip: appLocalizations.refreshGroupIcons,
+            isLoading: _refreshing,
             onPressed: _refreshing ? null : _handleRefreshIcons,
           ),
         ],

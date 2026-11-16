@@ -200,10 +200,7 @@ class _RenderListRowSeparator extends RenderProxyBox {
     markNeedsPaint();
   }
 
-  double get _thickness {
-    final pixels = (_devicePixelRatio * 0.75).round();
-    return (pixels < 1 ? 1 : pixels) / _devicePixelRatio;
-  }
+  double get _thickness => Divider.separatorThicknessFor(_devicePixelRatio);
 
   bool _resolveHighlighted() {
     if (_emphasized) {

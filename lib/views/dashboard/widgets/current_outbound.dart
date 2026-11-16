@@ -181,6 +181,7 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard>
                         SizedBox(height: metrics.ipTop),
                       _ExitRow(
                         info: ipInfo,
+                        quality: quality,
                         failed: failed,
                         loading: loading,
                         checking: phase == ProbePhase.probing || qualityLoading,
@@ -294,6 +295,7 @@ class _OutboundMetrics {
 class _ExitRow extends StatelessWidget {
   const _ExitRow({
     required this.info,
+    required this.quality,
     required this.failed,
     required this.loading,
     required this.checking,
@@ -303,6 +305,7 @@ class _ExitRow extends StatelessWidget {
   });
 
   final IpInfo? info;
+  final IpRisk? quality;
   final bool failed;
   final bool loading;
   final bool checking;
@@ -372,7 +375,11 @@ class _ExitRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 2),
-              _ProxyNodeSubText(active: active),
+              _IpLocationSubText(
+                quality: quality,
+                loading: loading,
+                active: active,
+              ),
             ],
           ),
         ),
@@ -405,36 +412,19 @@ class _IpText extends ConsumerWidget {
   }
 }
 
-String? _parseNodeFromExit(String? exit) {
-  if (exit == null || exit.isEmpty) return null;
-  if (exit.startsWith('"')) {
-    final buffer = StringBuffer();
-    var escaped = false;
-    for (var i = 1; i < exit.length; i++) {
-      final char = exit[i];
-      if (escaped) {
-        buffer.write(char);
-        escaped = false;
-      } else if (char == r'\') {
-        escaped = true;
-      } else if (char == '"') {
-        return buffer.toString();
-      } else {
-        buffer.write(char);
-      }
-    }
-    return buffer.toString();
-  }
-  return exit;
-}
+class _IpLocationSubText extends StatelessWidget {
+  const _IpLocationSubText({
+    required this.quality,
+    required this.loading,
+    required this.active,
+  });
 
-class _ProxyNodeSubText extends ConsumerWidget {
-  const _ProxyNodeSubText({required this.active});
-
+  final IpRisk? quality;
+  final bool loading;
   final bool active;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final style = _cellStyle(context).copyWith(
       fontSize: 14,
       height: 1.1,
@@ -447,61 +437,32 @@ class _ProxyNodeSubText extends ConsumerWidget {
       height: subHeight,
       child: Align(
         alignment: AlignmentDirectional.centerStart,
-        child: _buildContent(context, ref, style),
+        child: _buildContent(context, style),
       ),
     );
   }
 
-  Widget _buildContent(BuildContext context, WidgetRef ref, TextStyle style) {
-    if (!active) {
-      return Text('—', maxLines: 1, style: style);
-    }
-    final entry = ref.watch(
-      outboundIpProbeProvider.select((state) => state.entryOf(routedOutbound)),
-    );
-    if (entry.isLoading) {
+  Widget _buildContent(BuildContext context, TextStyle style) {
+    if (loading) {
       return SkeletonText(width: 80, style: style);
     }
-    final hit = entry.stamp?.hits.firstOrNull;
-    final nodeName =
-        _parseNodeFromExit(hit?.exit) ??
-        (hit?.proxy.isNotEmpty ?? false ? hit?.proxy : null);
-    if (nodeName != null && nodeName.isNotEmpty) {
-      return _buildNode(context, nodeName, style);
+    final display = quality?.countryLabel ?? quality?.placeLabel;
+    final tooltip = quality?.fullLocationLabel;
+    if (display == null || display.isEmpty) {
+      return Text('\u2014', maxLines: 1, style: style);
     }
-    final groups = ref.watch(currentGroupsStateProvider).value;
-    final currentGroupName = ref.watch(
-      currentProfileProvider.select((state) => state?.currentGroupName),
-    );
-    final group =
-        groups.where((g) => g.name == currentGroupName).firstOrNull ??
-        groups.firstOrNull;
-    if (group != null) {
-      final selected = ref.watch(
-        realSelectedProxyStateProvider(
-          group.name,
-        ).select((state) => state.proxyName),
-      );
-      if (selected.isNotEmpty) {
-        return _buildNode(context, selected, style);
-      }
-    }
-    return Text('—', maxLines: 1, style: style);
-  }
-
-  Widget _buildNode(BuildContext context, String name, TextStyle style) {
-    final nodeStyle = isBuiltinOutbound(name)
-        ? style.copyWith(color: context.colorScheme.onSurfaceVariant)
-        : style.copyWith(color: context.colorScheme.onSurface);
-    return Tooltip(
-      message: name,
-      child: EmojiText(
-        name,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: nodeStyle,
+    final text = EmojiText(
+      display,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: style.copyWith(
+        color: active
+            ? context.colorScheme.onSurface
+            : context.colorScheme.onSurfaceVariant,
       ),
     );
+    if (tooltip == null || tooltip.isEmpty) return text;
+    return Tooltip(message: tooltip, child: text);
   }
 }
 

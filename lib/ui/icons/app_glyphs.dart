@@ -1892,6 +1892,22 @@ abstract final class AppGlyphs {
     GlyphCircle(15.2, 8.8, 1.5, role: GlyphRole.detail, solid: true),
   ]);
 
+  static const ranking = Glyph([
+    GlyphPath(
+      'M3.5 11.4 Q3.5 10 4.9 10 H9 V5.9 Q9 4.5 10.4 4.5 H13.6 '
+      'Q15 4.5 15 5.9 V13.5 H19.1 Q20.5 13.5 20.5 14.9 V18.1 '
+      'Q20.5 19.5 19.1 19.5 H4.9 Q3.5 19.5 3.5 18.1 Z',
+    ),
+    GlyphPolyline([
+      GlyphVertex(9, 10),
+      GlyphVertex(9, 19.5),
+    ], role: GlyphRole.detail),
+    GlyphPolyline([
+      GlyphVertex(15, 13.5),
+      GlyphVertex(15, 19.5),
+    ], role: GlyphRole.detail),
+  ]);
+
   static Glyph sidebar(double progress) => Glyphs.sidebar(progress);
 
   /// Play at 0, pause at 1; past either end it keeps turning, so it bounces.

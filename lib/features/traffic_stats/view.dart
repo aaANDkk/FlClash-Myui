@@ -165,7 +165,7 @@ class _TrafficStatsViewState extends ConsumerState<TrafficStatsView>
         groupIconActions: false,
         iconActions: [
           IconButtonData(
-            glyph: AppGlyphs.refresh,
+            glyph: AppGlyphs.sync,
             tooltip: l.trafficStatsRefresh,
             isLoading: _refreshing,
             onPressed: _refreshing ? null : () => unawaited(_refresh(manual: true)),
@@ -229,28 +229,28 @@ class _TrafficStatsViewState extends ConsumerState<TrafficStatsView>
                     const SizedBox(height: 12),
                     if (isWide)
                       padded(
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              flex: 5,
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(minHeight: 238),
-                                child: TrafficStatsOverviewCard(result: result),
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                flex: 5,
+                                child: TrafficStatsOverviewCard(
+                                  result: result,
+                                  fillHeight: true,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              flex: 6,
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(minHeight: 238),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                flex: 6,
                                 child: TrafficStatsTrendCard(
                                   points: result.series,
                                   period: _period,
+                                  fillHeight: true,
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       )
                     else ...[

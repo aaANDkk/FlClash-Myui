@@ -11,6 +11,123 @@ import 'gauge.dart';
 Color speedUploadColor(BuildContext context) =>
     DashboardColors.of(context).complement;
 
+class SpeedTestPhaseBar extends StatelessWidget {
+  const SpeedTestPhaseBar({super.key, this.phase});
+
+  final SpeedTestPhase? phase;
+
+  int get _currentStep => switch (phase) {
+    SpeedTestPhase.latency => 0,
+    SpeedTestPhase.download => 1,
+    SpeedTestPhase.upload => 2,
+    SpeedTestPhase.done => 3,
+    SpeedTestPhase.connecting || null => -1,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.appLocalizations;
+    final cs = context.colorScheme;
+    final downColor = cs.primary;
+    final upColor = speedUploadColor(context);
+    final current = _currentStep;
+    final steps = [
+      (l.delay, downColor),
+      (l.download, downColor),
+      (l.upload, upColor),
+    ];
+    final track = DashboardColors.of(context).track;
+    final idleDot = track;
+    final idleLine = track;
+    final idleText = cs.onSurfaceVariant.withValues(alpha: 0.72);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final lineWidth = ((constraints.maxWidth - 210) / 2).clamp(20.0, 56.0);
+        final height = 22 * MediaQuery.textScalerOf(context).scale(1);
+        return SizedBox(
+          height: height,
+          width: double.infinity,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.center,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < steps.length; i++) ...[
+                  if (i > 0)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        width: lineWidth,
+                        height: 2,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(1),
+                          color: current > i - 1 && i - 1 == 0
+                              ? downColor.withValues(alpha: 0.65)
+                              : current <= i - 1
+                              ? idleLine
+                              : null,
+                          gradient: current > i - 1 && i - 1 == 1
+                              ? LinearGradient(
+                                  colors: [
+                                    downColor.withValues(alpha: 0.65),
+                                    upColor.withValues(alpha: 0.65),
+                                  ],
+                                )
+                              : null,
+                        ),
+                      ),
+                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: current >= i ? steps[i].$2 : idleDot,
+                          boxShadow: current == i
+                              ? [
+                                  BoxShadow(
+                                    color: steps[i].$2.withValues(alpha: 0.24),
+                                    spreadRadius: 3,
+                                  ),
+                                ]
+                              : null,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        steps[i].$1,
+                        maxLines: 1,
+                        style: AppTextStyle.footnote
+                            .of(context, emphasized: current == i)
+                            .copyWith(
+                              color: current == i
+                                  ? cs.onSurface
+                                  : current > i
+                                  ? cs.onSurface.withValues(alpha: 0.78)
+                                  : idleText,
+                            ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class SpeedTestScope extends StatelessWidget {
   const SpeedTestScope({super.key, required this.child});
   final Widget child;
@@ -65,7 +182,7 @@ class SpeedTestMetrics extends StatelessWidget {
     final color = up ? speedUploadColor(context) : context.colorScheme.primary;
     return DecoratedBox(
       decoration: ShapeDecoration(
-        color: context.colorScheme.onSurface.withValues(alpha: 0.04),
+        color: DashboardColors.of(context).tone,
         shape: AppShape.lg,
       ),
       child: Padding(
@@ -179,7 +296,7 @@ class SpeedTestMetrics extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 20),
-        const Divider(),
+        Divider(thickness: Divider.separatorThicknessOf(context)),
         const SizedBox(height: 16),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -372,64 +489,60 @@ class SpeedTestStatGrid extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                label,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTextStyle.footnote
-                                    .of(context)
-                                    .copyWith(
-                                      color: context
-                                          .colorScheme
-                                          .onSurfaceVariant,
-                                    ),
+                        Text(
+                          label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyle.footnote
+                              .of(context)
+                              .copyWith(
+                                color: context.colorScheme.onSurfaceVariant,
                               ),
-                            ),
-                            SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: active
-                                  ? const ActivityIndicator(size: 12)
-                                  : null,
-                            ),
-                          ],
                         ),
                         const SizedBox(height: 6),
                         SizedBox(
                           height: 28 * MediaQuery.textScalerOf(context).scale(1),
                           width: double.infinity,
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
+                          child: FadeBox(
                             alignment: AlignmentDirectional.centerStart,
-                            child: Text.rich(
-                              TextSpan(
-                                children: [
-                                  TextSpan(
-                                    text: value,
-                                    style: AppTextStyle.title2
-                                        .of(context, emphasized: true)
-                                        .toTabular
-                                        .copyWith(
-                                          color: context.colorScheme.onSurface,
-                                        ),
+                            child: active
+                                ? const ActivityIndicator(
+                                    key: ValueKey('loading'),
+                                    size: 18,
+                                  )
+                                : FittedBox(
+                                    key: const ValueKey('value'),
+                                    fit: BoxFit.scaleDown,
+                                    alignment: AlignmentDirectional.centerStart,
+                                    child: Text.rich(
+                                      TextSpan(
+                                        children: [
+                                          TextSpan(
+                                            text: value,
+                                            style: AppTextStyle.title2
+                                                .of(context, emphasized: true)
+                                                .toTabular
+                                                .copyWith(
+                                                  color: context
+                                                      .colorScheme
+                                                      .onSurface,
+                                                ),
+                                          ),
+                                          TextSpan(
+                                            text: ' $unit',
+                                            style: AppTextStyle.caption1
+                                                .of(context)
+                                                .copyWith(
+                                                  color: context
+                                                      .colorScheme
+                                                      .onSurfaceVariant,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                      maxLines: 1,
+                                    ),
                                   ),
-                                  TextSpan(
-                                    text: ' $unit',
-                                    style: AppTextStyle.caption1
-                                        .of(context)
-                                        .copyWith(
-                                          color: context
-                                              .colorScheme
-                                              .onSurfaceVariant,
-                                        ),
-                                  ),
-                                ],
-                              ),
-                              maxLines: 1,
-                            ),
                           ),
                         ),
                       ],

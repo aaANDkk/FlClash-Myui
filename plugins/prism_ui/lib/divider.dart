@@ -11,6 +11,16 @@ class Divider extends StatelessWidget {
   static Color colorOf(BuildContext context) =>
       context.colorScheme.onSurface.withValues(alpha: 0.14);
 
+  /// Pixel-snapped separator thickness used by grouped list rows.
+  static double separatorThicknessFor(double devicePixelRatio) {
+    final pixels = (devicePixelRatio * 0.75).round();
+    return (pixels < 1 ? 1 : pixels) / devicePixelRatio;
+  }
+
+  /// Resolves [separatorThicknessFor] using [context]'s device pixel ratio.
+  static double separatorThicknessOf(BuildContext context) =>
+      separatorThicknessFor(MediaQuery.devicePixelRatioOf(context));
+
   static BorderSide createBorderSide(BuildContext context) =>
       BorderSide(color: colorOf(context), width: 0);
 

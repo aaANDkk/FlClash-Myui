@@ -4,18 +4,23 @@ import 'dart:ui' as ui;
 
 import 'package:file/memory.dart';
 import 'package:fl_clash/models/models.dart' hide FileInfo;
+import 'package:fl_clash/providers/providers.dart';
+import 'package:fl_clash/state.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
+import 'package:fl_clash/views/proxies/icon_style.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../helpers/glyph_finders.dart';
 import '../helpers/test_app.dart';
+import '../helpers/test_database_providers.dart';
 
 class _MockIconCache extends Mock implements CacheManager {}
 
@@ -143,6 +148,74 @@ void main() {
     );
     await refreshTargetIcons([]);
     verify(manager.emptyCache).called(2);
+  });
+
+  testWidgets('icon style refresh button spins like traffic stats instead of '
+      'greying out while refreshing', (tester) async {
+    final container = ProviderContainer(
+      overrides: [iconSetsProvider.overrideWith(TestIconSets.new)],
+    );
+    addTearDown(container.dispose);
+    globalState.container = container;
+
+    final manager = _MockIconCache();
+    final refreshGate = Completer<void>();
+    when(manager.emptyCache).thenAnswer((_) => refreshGate.future);
+    targetIconCacheManager = manager;
+    addTearDown(() => targetIconCacheManager = null);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const TestApp(
+          locale: Locale('en'),
+          child: ProxiesIconStyleView(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final refreshButton = find.byWidgetPredicate(
+      (widget) =>
+          widget is AppBarActionButton &&
+          widget.data.glyph == AppGlyphs.refresh,
+    );
+    expect(refreshButton, findsOneWidget);
+    expect(
+      tester.widget<AppBarActionButton>(refreshButton).data.isLoading,
+      isFalse,
+    );
+    expect(find.byType(ActivityIndicator), findsNothing);
+
+    await tester.tap(refreshButton);
+    await tester.pumpAndSettle();
+
+    final buttonDuringDialog = tester.widget<AppBarActionButton>(refreshButton);
+    expect(buttonDuringDialog.data.isLoading, isFalse);
+    expect(buttonDuringDialog.data.onPressed, isNotNull);
+    expect(find.byType(ActivityIndicator), findsNothing);
+
+    await tester.tap(find.text('Confirm'));
+    await tester.pump();
+    await tester.pump();
+
+    final buttonRefreshing = tester.widget<AppBarActionButton>(refreshButton);
+    expect(buttonRefreshing.data.isLoading, isTrue);
+    expect(buttonRefreshing.data.onPressed, isNull);
+    expect(find.byType(ActivityIndicator), findsOneWidget);
+
+    refreshGate.complete();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    verify(manager.emptyCache).called(1);
+    final buttonDone = tester.widget<AppBarActionButton>(refreshButton);
+    expect(buttonDone.data.isLoading, isFalse);
+    expect(buttonDone.data.onPressed, isNotNull);
+    expect(find.byType(ActivityIndicator), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 5));
   });
 
   testWidgets('a group without an icon shows the first letter of its name, '

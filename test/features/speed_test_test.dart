@@ -17,6 +17,7 @@ import 'package:fl_clash/widgets/record.dart';
 import 'package:fl_clash/widgets/traffic_chart.dart';
 import 'package:fl_clash/ui/ui.dart' as app_ui;
 import 'package:fl_clash/ui/icons/icons.dart';
+import 'package:fl_clash/views/dashboard/style.dart';
 import 'package:fl_clash/views/tools.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -63,9 +64,11 @@ class _Client implements SpeedTestClient {
   final queries = <String>[];
   final probed = <String>[];
   SpeedTestSettings? lastSettings;
+  Completer<SpeedTestState>? probeCompleter;
   Completer<SpeedTestState>? run;
   String runId = '';
   bool fail = false;
+  bool probeFail = false;
   @override
   Stream<SpeedTestState> get updates => events.stream;
   @override
@@ -76,6 +79,12 @@ class _Client implements SpeedTestClient {
   ) async {
     probed.add(proxy);
     lastSettings = settings;
+    if (probeCompleter != null && !probeCompleter!.isCompleted) {
+      return probeCompleter!.future;
+    }
+    if (probeFail) {
+      return SpeedTestState(id: id, error: 'unavailable');
+    }
     return SpeedTestState(
       id: id,
       server: const SpeedTestServer(
@@ -125,10 +134,11 @@ class _Client implements SpeedTestClient {
     ];
   }
 
-  void finish() => run!.complete(
+  void finish({int streams = 8}) => run!.complete(
     SpeedTestState(
       id: runId,
       phase: SpeedTestPhase.done,
+      streams: streams,
       download: 240e6,
       upload: 80e6,
       latency: 12,
@@ -350,7 +360,9 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('a Core failure releases the start action', (tester) async {
+  testWidgets('a Core failure disables start and shows gauge placeholder', (
+    tester,
+  ) async {
     _size(tester, 430);
     final client = _Client()..fail = true;
     addTearDown(client.dispose);
@@ -360,6 +372,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Start Test'), findsOneWidget);
     expect(find.text('Stop Test'), findsNothing);
+    expect(
+      tester.widget<app_ui.FilledButton>(find.byType(app_ui.FilledButton)).onPressed,
+      isNull,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(SpeedTestGauge),
+        matching: find.text('\u2014'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(SpeedTestGauge),
+        matching: find.text('Ready'),
+      ),
+      findsNothing,
+    );
     final banner = tester
         .widgetList<app_ui.Card>(find.byType(app_ui.Card))
         .where((card) => card.isError);
@@ -575,6 +605,8 @@ void main() {
           protocol: 'h1',
         ),
       );
+      await tester.pump();
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(tester.getSize(hero).height, heroHeight);
       expect(tester.getSize(route).height, routeHeight);
@@ -583,6 +615,31 @@ void main() {
         matching: find.byType(app_ui.ActivityIndicator),
       );
       expect(indicators, findsNWidgets(2));
+      if (phase == SpeedTestPhase.latency) {
+        final delayCard = find
+            .descendant(
+              of: find.byType(SpeedTestStatGrid),
+              matching: find.byType(app_ui.Card),
+            )
+            .first;
+        final delayTitle = find.descendant(
+          of: delayCard,
+          matching: find.text(tester.element(find.byType(SpeedTestView)).appLocalizations.delay),
+        );
+        final cardSpinner = find.descendant(
+          of: delayCard,
+          matching: find.byType(app_ui.ActivityIndicator),
+        );
+        expect(cardSpinner, findsOneWidget);
+        expect(
+          tester.getTopLeft(cardSpinner).dy,
+          greaterThan(tester.getBottomLeft(delayTitle).dy),
+        );
+        expect(
+          tester.getTopLeft(cardSpinner).dx,
+          closeTo(tester.getTopLeft(delayTitle).dx, 1.0),
+        );
+      }
       final statCards = tester.widgetList<app_ui.Card>(
         find.descendant(
           of: find.byType(SpeedTestStatGrid),
@@ -594,13 +651,80 @@ void main() {
         expect(card.side, BorderSide.none);
         expect(card.selectionTint, isNull);
       }
+      if (phase == SpeedTestPhase.download) {
+        final viewCtx = tester.element(find.byType(SpeedTestView));
+        final idlePhaseDecorations = tester
+            .widgetList<DecoratedBox>(
+              find.descendant(
+                of: find.byType(SpeedTestPhaseBar),
+                matching: find.byWidgetPredicate(
+                  (w) =>
+                      w is DecoratedBox &&
+                      w.decoration is BoxDecoration &&
+                      (w.decoration as BoxDecoration).color ==
+                          DashboardColors.of(viewCtx).track,
+                ),
+              ),
+            )
+            .toList();
+        expect(idlePhaseDecorations, hasLength(2));
+      }
       expect(tester.takeException(), isNull);
+    }
+    final phaseBar = find.byType(SpeedTestPhaseBar);
+    expect(phaseBar, findsOneWidget);
+    final l = tester.element(find.byType(SpeedTestView)).appLocalizations;
+    expect(
+      tester.getTopLeft(phaseBar).dy,
+      greaterThan(tester.getBottomLeft(find.byType(SpeedTestGauge)).dy),
+    );
+    expect(
+      tester.getBottomLeft(phaseBar).dy,
+      lessThan(tester.getTopLeft(find.text(l.speedTestStop)).dy),
+    );
+    for (final step in [
+      l.delay,
+      l.download,
+      l.upload,
+    ]) {
+      expect(
+        find.descendant(of: phaseBar, matching: find.text(step)),
+        findsOneWidget,
+      );
     }
     final protocol = tester.widget<Text>(find.text('HTTP/2 → HTTP/1.1'));
     expect(protocol.maxLines, 2);
     expect(protocol.overflow, isNot(TextOverflow.ellipsis));
+    final speedTiles = tester.widgetList<DecoratedBox>(
+      find.descendant(
+        of: find.byType(SpeedTestMetrics),
+        matching: find.byWidgetPredicate(
+          (w) =>
+              w is DecoratedBox &&
+              w.decoration is ShapeDecoration &&
+              (w.decoration as ShapeDecoration).shape == app_ui.AppShape.lg,
+        ),
+      ),
+    );
+    expect(speedTiles, hasLength(2));
+    final viewCtx = tester.element(find.byType(SpeedTestView));
+    for (final tile in speedTiles) {
+      expect(
+        (tile.decoration as ShapeDecoration).color,
+        DashboardColors.of(viewCtx).tone,
+      );
+    }
+    final heroDivider = tester.widget<app_ui.Divider>(
+      find.descendant(of: hero, matching: find.byType(app_ui.Divider)),
+    );
+    expect(
+      heroDivider.thickness,
+      app_ui.Divider.separatorThicknessOf(viewCtx),
+    );
     client.finish();
     await tester.pumpAndSettle();
+    expect(tester.getSize(hero).height, heroHeight);
+    expect(tester.takeException(), isNull);
     await _snapshot(tester, '.dart_tool/speed-test-long-node.png');
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -790,11 +914,15 @@ void main() {
       ];
       expect(heights.toSet(), hasLength(1));
       expect(heights.first, lessThan(100));
+      final delayLabel = find.descendant(
+        of: statCards.at(0),
+        matching: find.text(l.delay),
+      );
       expect(
-        tester.getTopLeft(find.text(l.delay)).dy -
+        tester.getTopLeft(delayLabel).dy -
             tester.getTopLeft(statCards.at(0)).dy,
         closeTo(
-          tester.getTopLeft(find.text(l.delay)).dx -
+          tester.getTopLeft(delayLabel).dx -
               tester.getTopLeft(statCards.at(0)).dx,
           .01,
         ),
@@ -832,16 +960,64 @@ void main() {
       );
       await tester.tap(find.textContaining('240.0').last);
       await tester.pumpAndSettle();
+      final details = find.byKey(const ValueKey('speed-record-details'));
       expect(
         find.descendant(
-          of: find.byKey(const ValueKey('speed-record-details')),
+          of: details,
           matching: find.byType(DetailRow),
         ),
-        findsNWidgets(4),
+        findsNWidgets(5),
+      );
+      final connectionsLabel = find.descendant(
+        of: details,
+        matching: find.text(l.speedTestConnections),
+      );
+      final protocolLabel = find.descendant(
+        of: details,
+        matching: find.text(l.speedTestProtocol),
+      );
+      expect(connectionsLabel, findsOneWidget);
+      expect(
+        find.descendant(
+          of: details,
+          matching: find.text(l.speedTestMultiThread),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        tester.getTopLeft(connectionsLabel).dy,
+        lessThan(tester.getTopLeft(protocolLabel).dy),
       );
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );
+
+  testWidgets('record details distinguish single-thread runs', (tester) async {
+    _size(tester, 430, 1500);
+    final client = _Client();
+    addTearDown(client.dispose);
+    await tester.pumpWidget(_app(client, running: true));
+    await tester.pumpAndSettle();
+    final l = tester.element(find.byType(SpeedTestView)).appLocalizations;
+    await tester.tap(find.text(l.speedTestStart));
+    await tester.pump();
+    client.finish(streams: 1);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip(l.speedTestHistory));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('240.0').last);
+    await tester.pumpAndSettle();
+    final details = find.byKey(const ValueKey('speed-record-details'));
+    expect(
+      find.descendant(
+        of: details,
+        matching: find.text(l.speedTestSingleThread),
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 
   testWidgets(
     'gauge zeros before probing, restores download progress, and clears needle',
@@ -900,6 +1076,162 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('240.0'), findsOneWidget);
       expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets(
+    'start button stays disabled while settling or probing and gauge shows placeholder before probing',
+    (tester) async {
+      _size(tester, 430, 800);
+      final client = _Client()..probeCompleter = Completer<SpeedTestState>();
+      addTearDown(client.dispose);
+      final showView = ValueNotifier(false);
+      addTearDown(showView.dispose);
+      await tester.pumpWidget(
+        _app(
+          client,
+          page: Consumer(
+            builder: (context, ref, _) {
+              ref.watch(speedTestStoreProvider);
+              return ValueListenableBuilder<bool>(
+                valueListenable: showView,
+                builder: (_, visible, _) =>
+                    visible ? const SpeedTestView() : const SizedBox.shrink(),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Store is already cached when entering SpeedTestView.
+      showView.value = true;
+      await tester.pump();
+      final l = tester.element(find.byType(SpeedTestView)).appLocalizations;
+      final initialButton = tester.widget<app_ui.FilledButton>(
+        find.byType(app_ui.FilledButton),
+      );
+      expect(initialButton.onPressed, isNull);
+      expect(
+        find.descendant(
+          of: find.byType(SpeedTestGauge),
+          matching: find.text('\u2014'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(SpeedTestGauge),
+          matching: find.text(l.speedTestReady),
+        ),
+        findsNothing,
+      );
+
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump(const Duration(milliseconds: 50));
+
+      final probingButton = tester.widget<app_ui.FilledButton>(
+        find.byType(app_ui.FilledButton),
+      );
+      expect(probingButton.onPressed, isNull);
+      expect(
+        find.descendant(
+          of: find.byType(SpeedTestGauge),
+          matching: find.text(l.speedTestProbing),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(SpeedTestGauge),
+          matching: find.byType(app_ui.ActivityIndicator),
+        ),
+        findsOneWidget,
+      );
+
+      client.probeCompleter!.complete(const SpeedTestState(id: 'probe'));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<app_ui.FilledButton>(find.byType(app_ui.FilledButton)).onPressed,
+        isNotNull,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(SpeedTestGauge),
+          matching: find.text(l.speedTestReady),
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text(l.speedTestStart));
+      await tester.pump();
+      client.events.add(
+        SpeedTestState(id: client.runId, phase: SpeedTestPhase.connecting),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(
+        find.descendant(
+          of: find.byType(SpeedTestGauge),
+          matching: find.text(l.speedTestConnecting),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(SpeedTestGauge),
+          matching: find.byType(app_ui.ActivityIndicator),
+        ),
+        findsOneWidget,
+      );
+
+      client.finish();
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets(
+    'unavailable probe disables start button, keeps placeholder, and prevents card bounce',
+    (tester) async {
+      _size(tester, 430, 800);
+      final client = _Client()..probeFail = true;
+      addTearDown(client.dispose);
+      await tester.pumpWidget(_app(client));
+      await tester.pumpAndSettle();
+
+      final l = tester.element(find.byType(SpeedTestView)).appLocalizations;
+      expect(find.text(l.speedTestErrorUnavailable), findsOneWidget);
+      final button = tester.widget<app_ui.FilledButton>(
+        find.byType(app_ui.FilledButton),
+      );
+      expect(button.onPressed, isNull);
+      expect(
+        find.descendant(
+          of: find.byType(SpeedTestGauge),
+          matching: find.text('\u2014'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(SpeedTestGauge),
+          matching: find.text(l.speedTestReady),
+        ),
+        findsNothing,
+      );
+
+      final beforeDy = tester.getTopLeft(find.byType(SpeedTestGauge)).dy;
+      await tester.tap(
+        find.byType(app_ui.FilledButton),
+        warnIfMissed: false,
+      );
+      await tester.pump();
+      expect(tester.getTopLeft(find.byType(SpeedTestGauge)).dy, beforeDy);
+      expect(find.text(l.speedTestErrorUnavailable), findsOneWidget);
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );

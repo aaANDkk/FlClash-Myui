@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/models/models.dart';
+import 'package:fl_clash/views/dashboard/style.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 
@@ -29,11 +30,13 @@ class SpeedTestGauge extends StatefulWidget {
     super.key,
     this.state,
     required this.waiting,
+    this.standby = false,
     required this.color,
     required this.otherColor,
   });
   final SpeedTestState? state;
   final bool waiting;
+  final bool standby;
   final Color color;
   final Color otherColor;
   @override
@@ -96,6 +99,7 @@ class _SpeedTestGaugeState extends State<SpeedTestGauge>
   }
 
   bool get _measured {
+    if (widget.standby) return false;
     final phase = _phase;
     return phase == SpeedTestPhase.download ||
         phase == SpeedTestPhase.upload ||
@@ -103,7 +107,7 @@ class _SpeedTestGaugeState extends State<SpeedTestGauge>
   }
 
   double get _desiredSpeed {
-    if (widget.waiting) return 0;
+    if (widget.waiting || widget.standby) return 0;
     final state = widget.state;
     final phase = _phase;
     final raw = phase == SpeedTestPhase.done
@@ -256,16 +260,17 @@ class _SpeedTestGaugeState extends State<SpeedTestGauge>
     final l = context.appLocalizations;
     final phase = _phase;
     final waiting = widget.waiting;
-    final probing =
-        waiting &&
-        phase != SpeedTestPhase.connecting &&
-        phase != SpeedTestPhase.latency;
+    final standby = widget.standby && !waiting;
+    final showSpinner =
+        waiting && phase != SpeedTestPhase.latency;
     final label = waiting
         ? switch (phase) {
             SpeedTestPhase.connecting => l.speedTestConnecting,
             SpeedTestPhase.latency => l.delay,
             _ => l.speedTestProbing,
           }
+        : standby
+        ? '\u2014'
         : switch (phase) {
             SpeedTestPhase.download || SpeedTestPhase.done => l.download,
             SpeedTestPhase.upload => l.upload,
@@ -303,9 +308,7 @@ class _SpeedTestGaugeState extends State<SpeedTestGauge>
                       fraction: fraction,
                       color: widget.color,
                       startColor: widget.otherColor,
-                      trackColor: context.colorScheme.onSurface.withValues(
-                        alpha: .06,
-                      ),
+                      trackColor: DashboardColors.of(context).track,
                       needleColor: const Color(0xff8e8e93),
                       labelStyle: AppTextStyle.body
                           .of(context)
@@ -326,25 +329,31 @@ class _SpeedTestGaugeState extends State<SpeedTestGauge>
                         children: [
                           ConstrainedBox(
                             constraints: BoxConstraints(maxWidth: width * .62),
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                spacing: 5,
-                                children: [
-                                  if (probing) const ActivityIndicator(size: 12),
-                                  Text(
-                                    label,
-                                    maxLines: 1,
-                                    style: AppTextStyle.footnote
-                                        .of(context)
-                                        .copyWith(
-                                          color: context
-                                              .colorScheme
-                                              .onSurfaceVariant,
-                                        ),
+                            child: FadeBox(
+                              child: KeyedSubtree(
+                                key: ValueKey((standby, showSpinner, label)),
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    spacing: 5,
+                                    children: [
+                                      if (showSpinner)
+                                        const ActivityIndicator(size: 12),
+                                      Text(
+                                        label,
+                                        maxLines: 1,
+                                        style: AppTextStyle.footnote
+                                            .of(context)
+                                            .copyWith(
+                                              color: context
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
+                                      ),
+                                    ],
                                   ),
-                                ],
+                                ),
                               ),
                             ),
                           ),

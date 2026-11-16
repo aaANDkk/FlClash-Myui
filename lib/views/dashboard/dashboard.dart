@@ -65,6 +65,8 @@ class _DashboardViewState extends ConsumerState<DashboardView> {
       _editing = false;
     }
     final editing = _editing;
+    final showUpdateStatus =
+        !editable && ref.watch(updateDownloadStateProvider) != null;
     final gap = cardSpacingOf(context, ref.watch(viewModeProvider));
     final appLocalizations = context.appLocalizations;
     return Scaffold(
@@ -73,7 +75,7 @@ class _DashboardViewState extends ConsumerState<DashboardView> {
           ? appLocalizations.editDashboard
           : appLocalizations.dashboard,
       actions: [
-        if (!editable) const UpdateStatusButton(),
+        if (showUpdateStatus) const UpdateStatusButton(),
         if (!editing && coreLib == null) const CoreStatusButton(),
       ],
       confirmationAction: editing

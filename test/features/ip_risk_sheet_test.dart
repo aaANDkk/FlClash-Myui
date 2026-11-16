@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -11,6 +12,7 @@ import 'package:fl_clash/features/ip_quality/risk_view.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/ui/ui.dart' as app_ui;
 import 'package:fl_clash/ui/icons/icons.dart';
+import 'package:fl_clash/views/dashboard/style.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
@@ -335,6 +337,19 @@ void main() {
       expect(find.byType(app_ui.NullStatusSwitcher), findsOneWidget);
       expect(find.text('28'), findsOneWidget);
       expect(find.text('数据中心'), findsOneWidget);
+      final sheetCtx = tester.element(find.byType(RiskChecksCard));
+      final fireholPill = tester.widget<Container>(
+        find
+            .ancestor(
+              of: find.text('Firehol'),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      expect(
+        (fireholPill.decoration as ShapeDecoration).color,
+        DashboardColors.of(sheetCtx).tone,
+      );
       expect(tester.widget<Text>(find.text('服务器')).style!.color, isNotNull);
       expect(find.byType(RiskScoreCard), findsOneWidget);
       final col = tester.widget<Column>(
@@ -346,6 +361,30 @@ void main() {
             .first,
       );
       expect(col.crossAxisAlignment, CrossAxisAlignment.stretch);
+      if (scale == 1.0) {
+        final badgeFinder = find.byType(RiskLevelBadge);
+        final badgeTextFinder = find.descendant(
+          of: badgeFinder,
+          matching: find.byType(Text),
+        );
+        expect(
+          (tester.getCenter(badgeTextFinder).dy -
+                  tester.getCenter(badgeFinder).dy)
+              .abs(),
+          lessThanOrEqualTo(0.5),
+        );
+        final datacenterText = find.text('数据中心');
+        final datacenterBox = find.ancestor(
+          of: datacenterText,
+          matching: find.byType(Container),
+        );
+        expect(
+          (tester.getCenter(datacenterText).dy -
+                  tester.getCenter(datacenterBox.first).dy)
+              .abs(),
+          lessThanOrEqualTo(0.5),
+        );
+      }
       final checkTopLeft = tester.getTopLeft(find.text('机房或代理'));
       final cardTopLeft = tester.getTopLeft(find.byType(RiskChecksCard));
       expect(checkTopLeft.dx, cardTopLeft.dx + 20);
@@ -381,4 +420,171 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     });
   }
+
+  testWidgets(
+    'failed risk card retries inline with loading and card transition',
+    (tester) async {
+      var attempts = 0;
+      Completer<IpRisk>? retryCompleter;
+      await tester.pumpWidget(
+        TestApp(
+          locale: const Locale('en'),
+          overrides: [
+            ipRiskProvider(sampleRisk.ip).overrideWith((_) async {
+              attempts++;
+              if (attempts == 1) {
+                throw const FormatException('unavailable');
+              }
+              return retryCompleter!.future;
+            }),
+          ],
+          child: const IpRiskSheet(ip: '158.247.202.50'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l = tester.element(find.byType(IpRiskSheet)).appLocalizations;
+      expect(find.text(l.ipRiskFailed), findsOneWidget);
+      expect(find.byGlyph(AppGlyphs.error), findsOneWidget);
+      expect(
+        find.widgetWithText(app_ui.FilledButton, l.retry),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(app_ui.FilledButton),
+          matching: find.byGlyph(AppGlyphs.refresh),
+        ),
+        findsOneWidget,
+      );
+
+      final errorCardFinder = find.ancestor(
+        of: find.text(l.ipRiskFailed),
+        matching: find.byType(app_ui.Card),
+      );
+      final beforeCardRect = tester.getRect(errorCardFinder);
+
+      retryCompleter = Completer<IpRisk>();
+      await tester.tap(find.widgetWithText(app_ui.FilledButton, l.retry));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(find.text('158.247.202.50'), findsOneWidget);
+      expect(tester.getRect(errorCardFinder), beforeCardRect);
+      expect(find.byType(app_ui.ActivityIndicator), findsOneWidget);
+
+      retryCompleter.complete(sampleRisk);
+      await tester.pumpAndSettle();
+
+      expect(attempts, 2);
+      expect(find.text(l.ipRiskFailed), findsNothing);
+      expect(find.byType(RiskScoreCard), findsOneWidget);
+      expect(find.text('28'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets(
+    'instant retry failure holds spinner briefly without flashing or bouncing card',
+    (tester) async {
+      var attempts = 0;
+      await tester.pumpWidget(
+        TestApp(
+          locale: const Locale('en'),
+          overrides: [
+            ipRiskProvider(sampleRisk.ip).overrideWith((_) async {
+              attempts++;
+              throw const FormatException('offline');
+            }),
+          ],
+          child: const IpRiskSheet(ip: '158.247.202.50'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l = tester.element(find.byType(IpRiskSheet)).appLocalizations;
+      final errorCardFinder = find.ancestor(
+        of: find.text(l.ipRiskFailed),
+        matching: find.byType(app_ui.Card),
+      );
+      final beforeCardRect = tester.getRect(errorCardFinder);
+
+      await tester.tap(find.widgetWithText(app_ui.FilledButton, l.retry));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(attempts, 2);
+      expect(tester.getRect(errorCardFinder), beforeCardRect);
+      expect(find.byType(app_ui.ActivityIndicator), findsOneWidget);
+
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+
+      expect(tester.getRect(errorCardFinder), beforeCardRect);
+      expect(find.widgetWithText(app_ui.FilledButton, l.retry), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets(
+    'location card stacks country and region cleanly with standalone ASN pill',
+    (tester) async {
+      const longRisk = IpRisk(
+        ip: '58.247.1.2',
+        score: 10,
+        level: IpRiskLevel.low,
+        country: 'China',
+        countryCode: 'CN',
+        region: 'Shanghai',
+        city: 'Hongkou (Hongkou Qu)',
+        organization: 'Shanghai Information Network Co., Ltd.',
+        asn: 'AS4811',
+        isp: 'China Unicom CHINA169 Zhejiang Province network',
+      );
+      await tester.pumpWidget(
+        TestApp(
+          locale: const Locale('en'),
+          overrides: [
+            ipRiskProvider(longRisk.ip).overrideWith((_) async => longRisk),
+          ],
+          child: const IpRiskSheet(ip: '58.247.1.2'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final sheetCtx = tester.element(find.byType(IpRiskSheet));
+      final l = sheetCtx.appLocalizations;
+      expect(find.text('Shanghai · Hongkou (Hongkou Qu)'), findsOneWidget);
+      expect(find.text('AS4811'), findsOneWidget);
+      expect(find.text(l.ipOrganization), findsOneWidget);
+      expect(find.text(l.operatorOrAsn), findsNothing);
+      expect(
+        find.text('Shanghai Information Network Co., Ltd.'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('· AS4811'), findsNothing);
+      final asnBox = tester.widget<DecoratedBox>(
+        find
+            .ancestor(
+              of: find.text('AS4811'),
+              matching: find.byType(DecoratedBox),
+            )
+            .first,
+      );
+      expect(
+        (asnBox.decoration as ShapeDecoration).color,
+        DashboardColors.of(sheetCtx).tone,
+      );
+      final countryFinder = find.byWidgetPredicate(
+        (w) => w is app_ui.EmojiText && w.text == '🇨🇳 China',
+      );
+      expect(countryFinder, findsOneWidget);
+      expect(find.byType(app_ui.Divider), findsNWidgets(2));
+      expect(
+        tester.getTopLeft(find.text('Shanghai · Hongkou (Hongkou Qu)')).dy,
+        greaterThan(tester.getTopLeft(countryFinder).dy),
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 }

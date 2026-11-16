@@ -145,6 +145,12 @@ class SpeedTestRecordView extends StatelessWidget {
                       value: serverText,
                     ),
                   DetailRow.text(
+                    title: l.speedTestConnections,
+                    value: result.streams == 1
+                        ? l.speedTestSingleThread
+                        : l.speedTestMultiThread,
+                  ),
+                  DetailRow.text(
                     title: l.speedTestProtocol,
                     value: speedProtocolLabel(result.protocol),
                   ),

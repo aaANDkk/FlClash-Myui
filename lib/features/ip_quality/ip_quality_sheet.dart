@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/ip.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
+import 'package:fl_clash/views/dashboard/style.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -33,6 +36,15 @@ class IpRiskSheet extends ConsumerStatefulWidget {
 
 class _IpRiskSheetState extends ConsumerState<IpRiskSheet> {
   late String _ip = widget.ip;
+  bool _retrying = false;
+  bool _retryHold = false;
+  Timer? _retryTimer;
+
+  @override
+  void dispose() {
+    _retryTimer?.cancel();
+    super.dispose();
+  }
 
   Future<void> _editIp() async {
     final l = context.appLocalizations;
@@ -47,14 +59,34 @@ class _IpRiskSheetState extends ConsumerState<IpRiskSheet> {
     if (!mounted || value == null) return;
     final ip = publicIpOf(value);
     if (ip != null && ip != _ip) {
-      setState(() => _ip = ip);
+      _retryTimer?.cancel();
+      setState(() {
+        _ip = ip;
+        _retrying = false;
+        _retryHold = false;
+      });
     }
+  }
+
+  void _retry() {
+    if (_retryHold) return;
+    _retryTimer?.cancel();
+    setState(() {
+      _retrying = true;
+      _retryHold = true;
+    });
+    _retryTimer = Timer(const Duration(milliseconds: 350), () {
+      if (!mounted) return;
+      setState(() => _retryHold = false);
+    });
+    ref.invalidate(ipRiskProvider(_ip));
   }
 
   @override
   Widget build(BuildContext context) {
     final l = context.appLocalizations;
     final state = ref.watch(ipRiskProvider(_ip));
+    final isLoading = state.isLoading && !state.hasValue;
     final risk = state.hasError ? null : state.value;
     final hidden = ref.watch(appSettingProvider.select((s) => s.hideIp));
     return Theme(
@@ -73,7 +105,7 @@ class _IpRiskSheetState extends ConsumerState<IpRiskSheet> {
         body: Builder(
           builder: (context) => NullStatusSwitcher(
             key: ValueKey(_ip),
-            isLoading: state.isLoading && !state.hasValue,
+            isLoading: !_retrying && isLoading,
             holdsArrival: false,
             loadingStatus: const Center(child: ActivityIndicator.page()),
             child: ListView(
@@ -124,29 +156,110 @@ class _IpRiskSheetState extends ConsumerState<IpRiskSheet> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                if (risk != null) ...[
-                  RiskScoreCard(risk: risk),
-                  const SizedBox(height: 12),
-                  if (risk.checks.isNotEmpty) ...[
-                    RiskChecksCard(risk: risk),
-                    const SizedBox(height: 12),
-                  ],
-                  _LocationCard(risk: risk, hidden: hidden),
-                  ListFooter(text: '${l.ipRiskSource} Scamalytics'),
-                ] else
-                  Card(
-                    radius: AppCorner.xl,
-                    padding: const EdgeInsets.all(24),
-                    child: Text(
-                      l.ipRiskFailed,
-                      style: AppTextStyle.body
-                          .of(context)
-                          .copyWith(color: context.colorScheme.error),
+                AnimatedSwitcher(
+                  duration: context.motionDuration(commonDuration),
+                  reverseDuration: context.motionDuration(
+                    const Duration(milliseconds: 150),
+                  ),
+                  switchInCurve: Easing.emphasizedDecelerate,
+                  switchOutCurve: Curves.easeIn,
+                  layoutBuilder: (currentChild, previousChildren) => Align(
+                    alignment: Alignment.topCenter,
+                    child: Stack(
+                      alignment: Alignment.topCenter,
+                      children: <Widget>[...previousChildren, ?currentChild],
                     ),
                   ),
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: child.key == const ValueKey('data')
+                        ? ScaleTransition(
+                            scale: animation.drive(
+                              Tween(begin: 0.92, end: 1.0),
+                            ),
+                            child: child,
+                          )
+                        : child,
+                  ),
+                  child: _buildBody(
+                    context,
+                    isLoading: isLoading,
+                    risk: risk,
+                    hidden: hidden,
+                  ),
+                ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody(
+    BuildContext context, {
+    required bool isLoading,
+    required IpRisk? risk,
+    required bool hidden,
+  }) {
+    final l = context.appLocalizations;
+    if (!isLoading && risk != null) {
+      return Column(
+        key: const ValueKey('data'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          RiskScoreCard(risk: risk),
+          const SizedBox(height: 12),
+          if (risk.checks.isNotEmpty) ...[
+            RiskChecksCard(risk: risk),
+            const SizedBox(height: 12),
+          ],
+          _LocationCard(risk: risk, hidden: hidden),
+          ListFooter(text: '${l.ipRiskSource} Scamalytics'),
+        ],
+      );
+    }
+    return SizedBox(
+      key: const ValueKey('error'),
+      width: double.infinity,
+      child: Card(
+        radius: AppCorner.xl,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            GlyphIcon(
+              AppGlyphs.error,
+              size: 28,
+              color: context.colorScheme.error,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              l.ipRiskFailed,
+              textAlign: TextAlign.center,
+              style: AppTextStyle.body
+                  .of(context)
+                  .copyWith(color: context.colorScheme.error),
+            ),
+            const SizedBox(height: 16),
+            ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: FadeBox(
+                child: isLoading || _retryHold
+                    ? const SizedBox(
+                        key: ValueKey('spinner'),
+                        height: 48,
+                        child: Center(child: ActivityIndicator(size: 20)),
+                      )
+                    : FilledButton.icon(
+                        key: const ValueKey('retry'),
+                        onPressed: _retry,
+                        icon: const GlyphIcon(AppGlyphs.refresh, size: 18),
+                        label: Text(l.retry),
+                      ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -188,44 +301,86 @@ class _LocationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = context.appLocalizations;
-    final country = [
-      if (risk.countryCode.isNotEmpty) risk.countryCode.countryFlagEmoji,
-      risk.country.isNotEmpty ? risk.country : risk.countryCode,
-    ].where((s) => s.isNotEmpty).join(' ');
-    final place = [
-      risk.region,
-      risk.city,
-    ].where((s) => s.isNotEmpty).toSet().join(' · ');
-    final owner = [
-      risk.organization,
-      risk.asn,
-    ].where((s) => s.isNotEmpty).join(' · ');
+    final cs = context.colorScheme;
+    final country = risk.countryLabel ?? '';
+    final place = risk.placeLabel ?? '';
+    final hasLocation = country.isNotEmpty || place.isNotEmpty;
+    final showAsnPill = hasLocation && risk.asn.isNotEmpty;
+    final owner = showAsnPill
+        ? risk.organization
+        : [
+            risk.organization,
+            risk.asn,
+          ].where((s) => s.isNotEmpty).join(' \u00b7 ');
     final rows = <Widget>[
-      if (country.isNotEmpty || place.isNotEmpty)
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final a = _value(context, l.ipRiskLocation, country, emoji: true);
-            final b = _value(context, l.ipRiskCity, place);
-            if (country.isEmpty) return b;
-            if (place.isEmpty) return a;
-            if (constraints.maxWidth < 320 ||
-                MediaQuery.textScalerOf(context).scale(16) > 22) {
-              return Column(
+      if (hasLocation)
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [a, const SizedBox(height: 18), b],
-              );
-            }
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: a),
-                const SizedBox(width: 20),
-                Expanded(child: b),
-              ],
-            );
-          },
+                children: [
+                  Text(
+                    country.isNotEmpty ? l.ipRiskLocation : l.ipRiskCity,
+                    style: AppTextStyle.footnote
+                        .of(context)
+                        .copyWith(color: cs.onSurfaceVariant),
+                  ),
+                  if (country.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    EmojiText(
+                      country,
+                      style: AppTextStyle.headline.of(
+                        context,
+                        emphasized: true,
+                      ),
+                    ),
+                  ],
+                  if (place.isNotEmpty) ...[
+                    SizedBox(height: country.isNotEmpty ? 4 : 6),
+                    SelectableText(
+                      place,
+                      style: country.isNotEmpty
+                          ? AppTextStyle.subheadline
+                                .of(context)
+                                .copyWith(color: cs.onSurfaceVariant)
+                          : AppTextStyle.body.of(context, emphasized: true),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (showAsnPill) ...[
+              const SizedBox(width: 12),
+              DecoratedBox(
+                decoration: ShapeDecoration(
+                  color: DashboardColors.of(context).tone,
+                  shape: AppShape.full,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 3,
+                  ),
+                  child: Text(
+                    risk.asn,
+                    style: AppTextStyle.footnote
+                        .of(context, emphasized: true)
+                        .toTabular
+                        .copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
-      if (owner.isNotEmpty) _value(context, l.operatorOrAsn, owner),
+      if (owner.isNotEmpty)
+        _value(
+          context,
+          showAsnPill ? l.ipOrganization : l.operatorOrAsn,
+          owner,
+        ),
       if (risk.isp.isNotEmpty && risk.isp != risk.organization)
         _value(context, l.isp, risk.isp),
       if (!hidden && risk.hostname.isNotEmpty)
@@ -239,7 +394,14 @@ class _LocationCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (final (index, row) in rows.indexed) ...[
-            if (index > 0) const SizedBox(height: 20),
+            if (index > 0) ...[
+              const SizedBox(height: 14),
+              Divider(
+                height: 1,
+                thickness: Divider.separatorThicknessOf(context),
+              ),
+              const SizedBox(height: 14),
+            ],
             row,
           ],
         ],

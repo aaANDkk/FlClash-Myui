@@ -7,11 +7,14 @@ import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/dashboard/dashboard.dart';
 import 'package:fl_clash/views/dashboard/layout.dart';
 import 'package:fl_clash/views/dashboard/widgets/card.dart';
+import 'package:fl_clash/views/dashboard/widgets/core_status_button.dart';
+import 'package:fl_clash/views/dashboard/widgets/update_status.dart';
 import 'package:fl_clash/views/dashboard/widgets/widgets.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:prism_ui/prism_ui.dart';
 
 import '../../helpers/glyph_finders.dart';
 import '../../helpers/test_app.dart';
@@ -463,6 +466,52 @@ void main() {
       expect(find.byType(NetworkSpeedCard), findsNothing);
       expect(tester.takeException(), isNull);
     }
+
+    await teardown(tester);
+  });
+
+  testWidgets('desktop app bar keeps standard gap between wakelock and core '
+      'when no update is downloading', (tester) async {
+    await pumpDashboard(
+      tester,
+      const Size(1220, 824),
+      platform: SupportPlatform.Windows,
+    );
+
+    final wakelockFinder = find.widgetWithGlyph(
+      AppBarActionButton,
+      AppGlyphs.sun,
+    );
+    expect(find.byType(UpdateStatusButton), findsNothing);
+    final wakelockRect = tester.getRect(wakelockFinder);
+    final coreRect = tester.getRect(find.byType(CoreStatusButton));
+    expect(coreRect.left - wakelockRect.right, closeTo(barButtonGap, 0.01));
+
+    final download = container.read(updateDownloadStateProvider.notifier);
+    download.value = const UpdateDownloading('v0.9.3', received: 1, total: 2);
+    await tester.pump();
+
+    expect(find.byType(UpdateStatusButton), findsOneWidget);
+    final updateRect = tester.getRect(find.byType(UpdateStatusButton));
+    final wakelockRectWithUpdate = tester.getRect(wakelockFinder);
+    final coreRectWithUpdate = tester.getRect(find.byType(CoreStatusButton));
+    expect(
+      updateRect.left - wakelockRectWithUpdate.right,
+      closeTo(barButtonGap, 0.01),
+    );
+    expect(
+      coreRectWithUpdate.left - updateRect.right,
+      closeTo(barButtonGap, 0.01),
+    );
+
+    download.value = null;
+    await tester.pump();
+    expect(find.byType(UpdateStatusButton), findsNothing);
+    expect(
+      tester.getRect(find.byType(CoreStatusButton)).left -
+          tester.getRect(wakelockFinder).right,
+      closeTo(barButtonGap, 0.01),
+    );
 
     await teardown(tester);
   });

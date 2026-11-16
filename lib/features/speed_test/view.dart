@@ -7,6 +7,7 @@ import 'package:fl_clash/features/form/selection_sheet.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
+import 'package:fl_clash/views/dashboard/style.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,6 +38,7 @@ class _SpeedTestViewState extends ConsumerState<SpeedTestView>
   String _proxy = '';
   String? _request;
   bool _loaded = false;
+  bool _pendingInitialProbe = true;
   bool _probing = false;
   bool _testing = false;
   bool _confirming = false;
@@ -76,6 +78,7 @@ class _SpeedTestViewState extends ConsumerState<SpeedTestView>
       if (!mounted) return;
       setState(() {
         _loaded = true;
+        _pendingInitialProbe = false;
         _error = 'unavailable';
       });
     }
@@ -89,6 +92,7 @@ class _SpeedTestViewState extends ConsumerState<SpeedTestView>
     final id = _id();
     _request = id;
     setState(() {
+      _pendingInitialProbe = false;
       _probing = true;
       _error = null;
     });
@@ -318,8 +322,8 @@ class _SpeedTestViewState extends ConsumerState<SpeedTestView>
         : context.colorScheme.primary;
     final gauge = SpeedTestGauge(
       state: _state,
+      standby: (_pendingInitialProbe || _error != null) && !_probing && !_testing,
       waiting:
-          !_loaded ||
           _probing ||
           (_testing &&
               (phase == SpeedTestPhase.connecting ||
@@ -327,21 +331,35 @@ class _SpeedTestViewState extends ConsumerState<SpeedTestView>
       color: Color.lerp(color, const Color(0xffffffff), .14)!,
       otherColor: Color.lerp(context.colorScheme.surface, color, .28)!,
     );
+    final phaseBar = SpeedTestPhaseBar(
+      phase:
+          _state != null &&
+              _state!.error.isEmpty &&
+              (_testing || _state!.completed)
+          ? _state!.phase
+          : null,
+    );
     final panel = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        phaseBar,
+        const SizedBox(height: 14),
         FilledButton(
-          onPressed: !_loaded || _confirming
-              ? null
-              : _testing
+          onPressed: _testing
               ? _stop
+              : !_loaded ||
+                    _pendingInitialProbe ||
+                    _probing ||
+                    _confirming ||
+                    _error != null
+              ? null
               : _start,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Text(
               _testing
                   ? l.speedTestStop
-                  : _state?.completed == true
+                  : _error == null && _state?.completed == true
                   ? l.speedTestAgain
                   : l.speedTestStart,
             ),
@@ -393,9 +411,7 @@ class _SpeedTestViewState extends ConsumerState<SpeedTestView>
                     alignment: Alignment.centerRight,
                     child: DecoratedBox(
                       decoration: ShapeDecoration(
-                        color: context.colorScheme.onSurface.withValues(
-                          alpha: 0.055,
-                        ),
+                        color: DashboardColors.of(context).tone,
                         shape: AppShape.full,
                       ),
                       child: Padding(
@@ -420,7 +436,7 @@ class _SpeedTestViewState extends ConsumerState<SpeedTestView>
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 18),
           LayoutBuilder(
             builder: (context, constraints) => constraints.maxWidth >= 640
                 ? Row(
@@ -432,16 +448,11 @@ class _SpeedTestViewState extends ConsumerState<SpeedTestView>
                   )
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [gauge, const SizedBox(height: 12), panel],
+                    children: [gauge, const SizedBox(height: 10), panel],
                   ),
           ),
           const SizedBox(height: 16),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: context.colorScheme.outlineVariant.withValues(alpha: 0.4),
-            ),
-            child: const SizedBox(height: 0.5),
-          ),
+          Divider(height: 1, thickness: Divider.separatorThicknessOf(context)),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -531,7 +542,7 @@ class _SpeedTestViewState extends ConsumerState<SpeedTestView>
             if (mounted) unawaited(_detect());
           }),
         );
-      } else if (_loaded) {
+      } else if (_loaded && routeSettled) {
         unawaited(_detect());
       }
     });
