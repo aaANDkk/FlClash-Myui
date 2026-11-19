@@ -81,10 +81,6 @@ String updateAssetName(String tag, SelfUpdateAsset asset) {
   );
 }
 
-String updateChecksumsName(String tag) {
-  return releaseChecksumsName(appReleaseLine, releaseVersionOfTag(tag));
-}
-
 Uri releaseAssetUri(String tag, String name) {
   return Uri.https('github.com', '/$repository/releases/download/$tag/$name');
 }

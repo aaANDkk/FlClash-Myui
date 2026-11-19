@@ -64,10 +64,6 @@ void main() {
       updateAssetName('v0.9.4-pre.1+2', asset),
       'FlClash-dev-0.9.4-pre.1.2-android-arm64.apk',
     );
-    expect(
-      updateChecksumsName('v0.9.4-pre.1+2'),
-      'FlClash-dev-0.9.4-pre.1.2-SHA256SUMS',
-    );
   });
 
   test('updates from the line tool/package.dart names this build', () {

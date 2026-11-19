@@ -69,75 +69,90 @@ class _HomeShell extends ConsumerWidget {
     final floating = ref.watch(
       appSettingProvider.select((state) => state.floatingNavigationBar),
     );
-    return Surface(
-      color: SurfaceLevel.page.colorOf(context.colorScheme),
-      child: Column(
-        children: [
-          Expanded(
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: FocusTraversalGroup(
-                    policy: PageTraversalPolicy(),
-                    child: BottomInsetScope(
-                      inset: isMobile && floating
-                          ? NavigationDock.insetOf(context)
-                          : 0,
-                      child: _BodyPadding(isMobile: isMobile, child: child),
-                    ),
-                  ),
-                ),
-                PositionedDirectional(
-                  start: 0,
-                  end: 0,
-                  bottom: 0,
-                  child: AnimatedVisibility.bottomNavigation(
-                    visible: isMobile && floating,
-                    child: BarItemPresence.held(
-                      child: _NavigationPadding(
-                        child: NavigationDock(
-                          destinations: [
-                            for (final item in navigationItems)
-                              NavigationDockDestination(
-                                glyph: item.glyph,
-                                label: item.label.label,
-                              ),
-                          ],
-                          selectedIndex: state.currentIndex,
-                          onSelected: (index) {
-                            _handleToPage(navigationItems[index].label, ref);
-                          },
+    return Stack(
+      fit: StackFit.expand,
+      clipBehavior: Clip.none,
+      children: [
+        // Glass can retain this picture while the content animates above it.
+        RepaintBoundary(
+          child: ColoredBox(
+            color: SurfaceLevel.page.colorOf(context.colorScheme),
+          ),
+        ),
+        Surface(
+          color: null,
+          child: Column(
+            children: [
+              Expanded(
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: FocusTraversalGroup(
+                        policy: PageTraversalPolicy(),
+                        child: BottomInsetScope(
+                          inset: isMobile && floating
+                              ? NavigationDock.insetOf(context)
+                              : 0,
+                          child: _BodyPadding(isMobile: isMobile, child: child),
                         ),
                       ),
                     ),
+                    PositionedDirectional(
+                      start: 0,
+                      end: 0,
+                      bottom: 0,
+                      child: AnimatedVisibility.bottomNavigation(
+                        visible: isMobile && floating,
+                        child: BarItemPresence.held(
+                          child: _NavigationPadding(
+                            child: NavigationDock(
+                              destinations: [
+                                for (final item in navigationItems)
+                                  NavigationDockDestination(
+                                    glyph: item.glyph,
+                                    label: item.label.label,
+                                  ),
+                              ],
+                              selectedIndex: state.currentIndex,
+                              onSelected: (index) {
+                                _handleToPage(
+                                  navigationItems[index].label,
+                                  ref,
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              AnimatedVisibility.bottomNavigation(
+                visible: isMobile && !floating,
+                child: _NavigationPadding(
+                  child: NavigationBar(
+                    destinations: [
+                      for (final (index, item) in navigationItems.indexed)
+                        NavigationDestination(
+                          icon: AnimatedGlyph(
+                            glyph: item.glyph,
+                            filled: index == state.currentIndex,
+                          ),
+                          label: item.label.label,
+                        ),
+                    ],
+                    selectedIndex: state.currentIndex,
+                    onDestinationSelected: (index) {
+                      _handleToPage(navigationItems[index].label, ref);
+                    },
                   ),
                 ),
-              ],
-            ),
-          ),
-          AnimatedVisibility.bottomNavigation(
-            visible: isMobile && !floating,
-            child: _NavigationPadding(
-              child: NavigationBar(
-                destinations: [
-                  for (final (index, item) in navigationItems.indexed)
-                    NavigationDestination(
-                      icon: AnimatedGlyph(
-                        glyph: item.glyph,
-                        filled: index == state.currentIndex,
-                      ),
-                      label: item.label.label,
-                    ),
-                ],
-                selectedIndex: state.currentIndex,
-                onDestinationSelected: (index) {
-                  _handleToPage(navigationItems[index].label, ref);
-                },
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -375,7 +390,7 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
           controller: _pageController,
           position: index,
           label: widget.navigationItems[_order?[index] ?? index].label,
-          enabled: fade,
+          fade: fade,
           child: page,
         );
       },
@@ -393,14 +408,14 @@ class _FadeTabPage extends ConsumerStatefulWidget {
     required this.controller,
     required this.position,
     required this.label,
-    required this.enabled,
+    required this.fade,
     required this.child,
   });
 
   final PageController controller;
   final int position;
   final PageLabel label;
-  final bool enabled;
+  final bool fade;
   final Widget child;
 
   @override
@@ -433,15 +448,18 @@ class _FadeTabPageState extends ConsumerState<_FadeTabPage> {
 
   @override
   Widget build(BuildContext context) {
-    final arriving = ref.watch(
-      shownPageLabelProvider.select((label) => label == widget.label),
-    );
+    final liveArrival =
+        widget.fade &&
+        ref.watch(
+          shownPageLabelProvider.select((label) => label == widget.label),
+        );
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (_, child) {
         final offset = _delta;
-        _snapshot.allowSnapshotting = !arriving && offset.abs() > _restingDelta;
-        final delta = widget.enabled ? offset : 0.0;
+        _snapshot.allowSnapshotting =
+            !liveArrival && offset.abs() > _restingDelta;
+        final delta = widget.fade ? offset : 0.0;
         return FractionalTranslation(
           translation: Offset(-delta, 0),
           child: Opacity(opacity: 1 - delta.abs(), child: child),

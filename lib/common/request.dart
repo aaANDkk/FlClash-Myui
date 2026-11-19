@@ -188,7 +188,7 @@ class Request {
     CancelToken? cancelToken,
   }) async {
     final sums = await releaseDio.getUri<String>(
-      releaseAssetUri(tag, updateChecksumsName(tag)),
+      releaseAssetUri(tag, 'SHA256SUMS'),
       options: Options(responseType: ResponseType.plain),
       cancelToken: cancelToken,
     );

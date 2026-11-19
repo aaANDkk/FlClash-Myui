@@ -33,7 +33,7 @@ class _ReleaseAdapter implements HttpClientAdapter {
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
-    if (options.uri.path.endsWith('/${updateChecksumsName('v0.8.96')}')) {
+    if (options.uri.path.endsWith('/SHA256SUMS')) {
       return ResponseBody.fromString(sums, 200);
     }
     return asset();

@@ -149,7 +149,7 @@ class _PressRegionState extends State<PressRegion> {
     // so subtree states such as AnimatedGlyph preserve their animation controllers.
     return DecoratedBox(
       decoration: ShapeDecoration(
-        color: widget.fill ?? const Color(0x00000000),
+        color: widget.fill,
         shape: shape,
       ),
       child: content,

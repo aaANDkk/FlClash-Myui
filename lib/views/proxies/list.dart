@@ -733,6 +733,7 @@ class _GroupIcon extends ConsumerWidget {
                   child: CommonTargetIcon(
                     src: src,
                     fallback: GroupMonogram(name),
+                    rasterizeSvg: true,
                   ),
                 ),
               ),
@@ -749,7 +750,11 @@ class _GroupIcon extends ConsumerWidget {
                 size: constraints.maxHeight,
                 color: context.colorScheme.primary,
               ),
-              child: CommonTargetIcon(src: src, fallback: GroupMonogram(name)),
+              child: CommonTargetIcon(
+                src: src,
+                fallback: GroupMonogram(name),
+                rasterizeSvg: true,
+              ),
             );
           },
         ),
@@ -823,6 +828,7 @@ class _SelectedProxyLine extends ConsumerWidget {
                   child: CommonTargetIcon(
                     src: icon,
                     fallback: GroupMonogram(proxyName),
+                    rasterizeSvg: true,
                   ),
                 ),
               ),

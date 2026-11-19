@@ -90,6 +90,7 @@ class _GroupIcon extends StatelessWidget {
             builder: (_, ref, _) => CommonTargetIcon(
               src: ref.watch(proxyGroupIconProvider(group.name)),
               fallback: GroupMonogram(group.name),
+              rasterizeSvg: true,
             ),
           ),
         ),
@@ -343,13 +344,25 @@ class _GroupsFigure extends StatelessWidget {
       ),
       maxLines: 1,
     );
-    return DashboardCappedRow(
-      start: count,
-      end: _IconStack(
-        groups: groups,
-        size: metrics.icon,
-        ring: DashboardColors.of(context).card,
-      ),
+    return Row(
+      spacing: 8,
+      children: [
+        count,
+        Expanded(
+          child: Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: AlignmentDirectional.centerEnd,
+              child: _IconStack(
+                groups: groups,
+                size: metrics.icon,
+                ring: DashboardColors.of(context).card,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

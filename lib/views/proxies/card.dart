@@ -191,6 +191,7 @@ class ProxyCard extends ConsumerWidget {
               child: CommonTargetIcon(
                 src: icon,
                 fallback: GroupMonogram(proxy.name),
+                rasterizeSvg: true,
               ),
             ),
           ),

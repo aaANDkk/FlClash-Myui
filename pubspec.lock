@@ -320,7 +320,7 @@ packages:
     source: hosted
     version: "0.1.2"
   file:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: file
       sha256: a3b4f84adafef897088c160faf7dfffb7696046cb13ae90b508c2cbc95d3b8d4
@@ -1421,7 +1421,7 @@ packages:
     source: hosted
     version: "4.6.0"
   vector_graphics:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: vector_graphics
       sha256: "9d0e3b9cb16542ad660daee871e726a10d13a93b7b5391677c3160e8f5e83935"

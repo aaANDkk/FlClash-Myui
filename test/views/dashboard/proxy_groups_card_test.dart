@@ -163,6 +163,28 @@ void main() {
     expect(inSheet(name('HK-01')), findsOneWidget);
   });
 
+  testWidgets('the phone card keeps 5 stacked icons and +N badge at full size', (
+    tester,
+  ) async {
+    container.read(groupsProvider.notifier).value = [
+      for (var i = 0; i < 8; i++) _group('G$i', ['N$i'], now: 'N$i'),
+    ];
+    await pumpCard(
+      tester,
+      density: DashboardDensity.mobile,
+      width: 328,
+      card: const ProxyGroupsSummaryCard(),
+    );
+
+    expect(find.text('+3'), findsOneWidget);
+    final stackBox = tester.getRect(
+      find.ancestor(of: find.text('+3'), matching: find.byType(Stack)).first,
+    );
+    expect(stackBox.height, closeTo(40, 0.5));
+    expect(stackBox.width, closeTo(200, 0.5));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('a stopped Core is named instead of an empty list', (
     tester,
   ) async {
