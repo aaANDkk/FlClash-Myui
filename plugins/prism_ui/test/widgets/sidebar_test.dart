@@ -148,6 +148,12 @@ void main() {
     expect(_fillOf(tester, Glyphs.sort), 0);
 
     await tester.pumpWidget(_sidebar(selectedIndex: 2));
+    await tester.pump(const Duration(milliseconds: 175));
+    expect(_fillOf(tester, Glyphs.pin), greaterThan(0));
+    expect(_fillOf(tester, Glyphs.pin), lessThan(1));
+    expect(_fillOf(tester, Glyphs.sort), greaterThan(0));
+    expect(_fillOf(tester, Glyphs.sort), lessThan(1));
+
     await tester.pumpAndSettle();
     expect(_fillOf(tester, Glyphs.pin), 0);
     expect(_fillOf(tester, Glyphs.sort), 1);

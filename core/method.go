@@ -244,6 +244,8 @@ var methodHandlers = map[CoreMethod]methodHandler{
 	probeOutboundIPMethod:  withArguments(handleOutboundIp),
 	probeServicesMethod:    withArguments(handleServiceCheck),
 	ipCountryMethod:        withArguments(handleIPCountry),
+	ipCacheGetMethod: withArguments(handleIPCacheGet),
+	ipCacheSetMethod: command(handleIPCacheSet),
 }
 
 func watchRouteHandler(call *MethodCall) (any, error) {

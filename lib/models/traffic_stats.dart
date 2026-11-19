@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
-const trafficStatsRetentionOptions = [7, 14, 30];
+const trafficStatsRetentionOptions = [3, 6, 12];
+const _defaultRetentionMonths = 3;
 
 Map<String, Object?> trafficStatsMap(Object? value) =>
     value is Map ? Map<String, Object?>.from(value) : const {};
@@ -13,22 +14,24 @@ class TrafficStatsSettings {
   final bool enable;
   final bool detail;
   final bool siteIcon;
-  final int retentionDays;
+  final int retentionMonths;
 
   const TrafficStatsSettings({
     this.enable = false,
     this.detail = true,
     this.siteIcon = true,
-    this.retentionDays = 30,
+    this.retentionMonths = _defaultRetentionMonths,
   });
 
   factory TrafficStatsSettings.fromJson(Map<String, Object?> json) {
-    final days = _intValue(json['retentionDays'], 30).clamp(7, 30);
+    final months = _intValue(json['retentionMonths']);
     return TrafficStatsSettings(
       enable: json['enable'] == true,
       detail: json['detail'] != false,
       siteIcon: json['siteIcon'] != false,
-      retentionDays: days,
+      retentionMonths: trafficStatsRetentionOptions.contains(months)
+          ? months
+          : _defaultRetentionMonths,
     );
   }
 
@@ -36,19 +39,19 @@ class TrafficStatsSettings {
     'enable': enable,
     'detail': detail,
     'siteIcon': siteIcon,
-    'retentionDays': retentionDays,
+    'retentionMonths': retentionMonths,
   };
 
   TrafficStatsSettings copyWith({
     bool? enable,
     bool? detail,
     bool? siteIcon,
-    int? retentionDays,
+    int? retentionMonths,
   }) => TrafficStatsSettings(
     enable: enable ?? this.enable,
     detail: detail ?? this.detail,
     siteIcon: siteIcon ?? this.siteIcon,
-    retentionDays: retentionDays ?? this.retentionDays,
+    retentionMonths: retentionMonths ?? this.retentionMonths,
   );
 
   @override
@@ -58,10 +61,10 @@ class TrafficStatsSettings {
           enable == other.enable &&
           detail == other.detail &&
           siteIcon == other.siteIcon &&
-          retentionDays == other.retentionDays;
+          retentionMonths == other.retentionMonths;
 
   @override
-  int get hashCode => Object.hash(enable, detail, siteIcon, retentionDays);
+  int get hashCode => Object.hash(enable, detail, siteIcon, retentionMonths);
 }
 
 @immutable
@@ -129,6 +132,7 @@ class TrafficStatsPoint {
 
 @immutable
 class TrafficStatsResult {
+  final int runningSeconds;
   final int up;
   final int down;
   final int proxyUp;
@@ -143,6 +147,7 @@ class TrafficStatsResult {
   final String since;
 
   const TrafficStatsResult({
+    this.runningSeconds = 0,
     this.up = 0,
     this.down = 0,
     this.proxyUp = 0,
@@ -162,6 +167,7 @@ class TrafficStatsResult {
 
   factory TrafficStatsResult.fromJson(Map<String, Object?> json) =>
       TrafficStatsResult(
+        runningSeconds: _intValue(json['running-seconds']).clamp(0, 1 << 53),
         up: _intValue(json['up']),
         down: _intValue(json['down']),
         proxyUp: _intValue(json['proxy-up']),
@@ -199,6 +205,7 @@ class TrafficStatsResult {
     'down': down,
     'proxy-up': proxyUp,
     'proxy-down': proxyDown,
+    'running-seconds': runningSeconds,
     'series': [for (final item in series) item.toJson()],
     'hosts': [for (final item in hosts) item.toJson()],
     'processes': [for (final item in processes) item.toJson()],

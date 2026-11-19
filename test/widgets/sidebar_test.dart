@@ -148,6 +148,12 @@ void main() {
     expect(_fillOf(tester, AppGlyphs.profiles), 0);
 
     await tester.pumpWidget(_sidebar(selectedIndex: 2));
+    await tester.pump(const Duration(milliseconds: 175));
+    expect(_fillOf(tester, AppGlyphs.dashboard), greaterThan(0));
+    expect(_fillOf(tester, AppGlyphs.dashboard), lessThan(1));
+    expect(_fillOf(tester, AppGlyphs.profiles), greaterThan(0));
+    expect(_fillOf(tester, AppGlyphs.profiles), lessThan(1));
+
     await tester.pumpAndSettle();
     expect(_fillOf(tester, AppGlyphs.dashboard), 0);
     expect(_fillOf(tester, AppGlyphs.profiles), 1);

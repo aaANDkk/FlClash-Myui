@@ -32,9 +32,10 @@ class _AddedRulesViewState extends ConsumerState<AddedRulesView> {
   }
 
   Future<void> _handleAddOrUpdate([Rule? rule]) async {
+    final exits = customExitsOf(ref.read(globalRulesProvider).value ?? []);
     final res = await showFormSheet<Rule>(
       context: context,
-      builder: (_) => RuleForm(rule: rule),
+      builder: (_) => RuleForm(rule: rule, exits: exits),
     );
     if (res == null || !mounted) {
       return;
@@ -43,8 +44,8 @@ class _AddedRulesViewState extends ConsumerState<AddedRulesView> {
   }
 
   void _handleQuickActions() {
-    showSheet<void>(
-      context: context,
+    showNestedSheet<void>(
+      context,
       builder: (_) => RulePresetSheet(
         onAdd: (rules) => ref.read(globalRulesProvider.notifier).putAll(rules),
       ),
@@ -193,7 +194,6 @@ class _AddedRulesViewState extends ConsumerState<AddedRulesView> {
       key: ObjectKey(rule),
       position: ItemPosition.get(index, rules.length),
       child: RuleItem(
-        hasMatch: true,
         isEditing: selected.isNotEmpty,
         rule: rule,
         isSelected: selected.contains(rule.id),

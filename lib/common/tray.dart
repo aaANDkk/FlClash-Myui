@@ -1,11 +1,10 @@
+import 'dart:io';
+
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
-import 'dart:io';
-
 import 'package:flutter/widgets.dart';
-import 'package:tray/tray.dart';
-import 'package:win32_registry/win32_registry.dart';
+import 'package:rust_api/tray.dart';
 
 import 'app_localizations.dart';
 import 'l10n_labels.dart';
@@ -27,21 +26,26 @@ bool isWindowsTaskbarDark() {
     return false;
   }
   try {
-    final key = CURRENT_USER.open(
-      r'Software\Microsoft\Windows\CurrentVersion\Themes\Personalize',
-    );
-    try {
-      return key.getInt('SystemUsesLightTheme') == 0;
-    } finally {
-      key.close();
+    final result = Process.runSync('reg', const [
+      'query',
+      r'HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize',
+      '/v',
+      'SystemUsesLightTheme',
+    ]);
+    if (result.exitCode == 0) {
+      final output = result.stdout.toString();
+      final match = RegExp(r'SystemUsesLightTheme\s+REG_DWORD\s+0x([0-9a-fA-F]+)')
+          .firstMatch(output);
+      if (match != null) {
+        return int.tryParse(match.group(1)!, radix: 16) == 0;
+      }
     }
+  } catch (_) {}
+  try {
+    return WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+        Brightness.dark;
   } catch (_) {
-    try {
-      return WidgetsBinding.instance.platformDispatcher.platformBrightness ==
-          Brightness.dark;
-    } catch (_) {
-      return false;
-    }
+    return false;
   }
 }
 

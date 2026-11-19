@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:collection/collection.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
@@ -27,12 +28,12 @@ Future<void> syncProfile(WidgetRef ref, Profile profile) async {
 }
 
 void showProfileDetailSheet(BuildContext context) {
-  showSheet<void>(context: context, builder: (_) => const ProfileDetailSheet());
+  showNestedSheet<void>(context, builder: (_) => const ProfileDetailSheet());
 }
 
 void showProfilesSheet(BuildContext context) {
-  showSheet<void>(
-    context: context,
+  showNestedSheet<void>(
+    context,
     builder: (_) => const ProfilesView(picker: true),
   );
 }
@@ -242,7 +243,7 @@ class _ProfileDetailSheetState extends ConsumerState<ProfileDetailSheet>
     with ConfigCountsWatch<ProfileDetailSheet> {
   void _handlePreview(Profile profile) {
     unawaited(
-      BaseNavigator.push<String>(context, PreviewProfileView(profile: profile)),
+      pushNestedPage<void>(context, PreviewProfileView(profile: profile)),
     );
   }
 
@@ -255,6 +256,13 @@ class _ProfileDetailSheetState extends ConsumerState<ProfileDetailSheet>
     }
     final providers = ref.watch(providersProvider);
     final isUpdating = ref.watch(isUpdatingProvider(profile.updatingKey));
+    final scriptLabel = ref.watch(
+      scriptsProvider.select(
+        (state) => state.value
+            ?.firstWhereOrNull((item) => item.id == profile.scriptId)
+            ?.label,
+      ),
+    );
     final appLocalizations = context.appLocalizations;
     final subscriptionInfo = profile.subscriptionInfo;
     return Scaffold(
@@ -313,10 +321,8 @@ class _ProfileDetailSheetState extends ConsumerState<ProfileDetailSheet>
                         ),
                         if (profile.type != ProfileType.custom)
                           _InfoRow(
-                            label: appLocalizations.extendMode,
-                            value: Text(
-                              _extendLabel(context, profile.extendType),
-                            ),
+                            label: appLocalizations.extendScript,
+                            value: Text(scriptLabel ?? appLocalizations.none),
                           ),
                       ],
                     ),
@@ -331,13 +337,6 @@ class _ProfileDetailSheetState extends ConsumerState<ProfileDetailSheet>
       ),
     );
   }
-}
-
-String _extendLabel(BuildContext context, ExtendType type) {
-  return switch (type) {
-    ExtendType.standard => context.appLocalizations.standard,
-    ExtendType.script => context.appLocalizations.script,
-  };
 }
 
 class _StatsGrid extends StatelessWidget {

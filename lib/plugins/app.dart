@@ -8,6 +8,7 @@ import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
+import 'package:rust_api/rust_api.dart' show NetworkState;
 
 const _platformProbeTimeout = Duration(seconds: 2);
 
@@ -27,6 +28,12 @@ class App {
   Function()? onExit;
   Function()? onPackagesChanged;
   final floatingKeyboard = ValueNotifier(false);
+  late final _networkChanges = StreamController<NetworkState>.broadcast(
+    onListen: () => methodChannel.invokeMethod<bool>('watchNetwork', true),
+    onCancel: () => methodChannel.invokeMethod<bool>('watchNetwork', false),
+  );
+
+  Stream<NetworkState> get networkChanges => _networkChanges.stream;
 
   App._internal() {
     methodChannel = const MethodChannel('$packageName/app');
@@ -40,6 +47,14 @@ class App {
           onPackagesChanged?.call();
         case 'floatingImeChanged':
           floatingKeyboard.value = call.arguments as bool;
+        case 'networkChanged':
+          final state = call.arguments as Map;
+          _networkChanges.add(
+            NetworkState(
+              wifi: state['wifi'] as bool,
+              vpn: state['vpn'] as bool,
+            ),
+          );
         default:
           throw MissingPluginException();
       }
@@ -49,6 +64,16 @@ class App {
   factory App() {
     _instance ??= App._internal();
     return _instance!;
+  }
+
+  Future<({int sdkInt, bool isTelevision})> getDeviceInfo() async {
+    final info = await methodChannel.invokeMapMethod<String, Object?>(
+      'getDeviceInfo',
+    );
+    return (
+      sdkInt: info!['sdkInt'] as int,
+      isTelevision: info['isTelevision'] as bool,
+    );
   }
 
   Future<bool?> moveTaskToBack() async {
@@ -111,6 +136,40 @@ class App {
     return _packageIconTasks[packageName] ??= _loadPackageIcon(packageName);
   }
 
+  final Map<String, ImageProvider?> _ownPackageIcons = {};
+  final Map<String, Future<ImageProvider?>> _ownPackageIconTasks = {};
+
+  ({ImageProvider? icon})? getCachedOwnPackageIcon(String packageName) {
+    if (!_ownPackageIcons.containsKey(packageName)) {
+      return null;
+    }
+    return (icon: _ownPackageIcons[packageName]);
+  }
+
+  Future<ImageProvider?> getOwnPackageIcon(String packageName) {
+    if (_ownPackageIcons.containsKey(packageName)) {
+      return Future.value(_ownPackageIcons[packageName]);
+    }
+    return _ownPackageIconTasks[packageName] ??= _loadOwnPackageIcon(
+      packageName,
+    );
+  }
+
+  // getPackageIconPath answers a package without an icon as it answers ''.
+  Future<ImageProvider?> _loadOwnPackageIcon(String packageName) async {
+    ImageProvider? own;
+    if (packageName.isNotEmpty) {
+      final (icon, fallback) = await (
+        getPackageIcon(packageName),
+        getPackageIcon(''),
+      ).wait;
+      own = icon == fallback ? null : icon;
+    }
+    _ownPackageIcons[packageName] = own;
+    unawaited(_ownPackageIconTasks.remove(packageName));
+    return own;
+  }
+
   Future<ImageProvider?> _loadPackageIcon(String packageName) async {
     var icon = await _requestPackageIcon(packageName);
     if (icon == null && packageName.isNotEmpty) {
@@ -142,6 +201,8 @@ class App {
   void clearPackageIconCache() {
     _packageIcons.clear();
     _packageIconTasks.clear();
+    _ownPackageIcons.clear();
+    _ownPackageIconTasks.clear();
   }
 
   Future<bool?> tip(String? message) async {

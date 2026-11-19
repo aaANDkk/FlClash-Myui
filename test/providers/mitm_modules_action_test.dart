@@ -4,11 +4,11 @@ import 'package:drift/native.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_module.dart';
 import 'package:fl_clash/database/database.dart' as db;
-import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/action.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/database.dart';
+import 'package:fl_clash/providers/mitm.dart';
 import 'package:fl_clash/state.dart';
 import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_test/flutter_test.dart';
@@ -21,11 +21,6 @@ import '../helpers/app_paths.dart';
 /// Real downloads over loopback: the test binding answers every request with a
 /// 400, so its override is lifted while a test runs.
 void main() {
-  setUp(() {
-    mitmFeature = true;
-    addTearDown(() => mitmFeature = false);
-  });
-
   late HttpServer server;
   late Map<String, String> bodies;
   late Directory home;
@@ -33,7 +28,7 @@ void main() {
   late ProviderContainer container;
 
   setUpAll(() async {
-    await AppLocalizations.load(const Locale('en'));
+    loadAppLocalizations(const Locale('en'));
     globalState.packageInfo = PackageInfo(
       appName: 'FlClash',
       packageName: 'com.follow.clash',
@@ -118,6 +113,35 @@ hostname = %APPEND% example.com
     );
   });
 
+  test('a script a module carries in its text is written out', () async {
+    bodies = {
+      '/inline.stoverride': r'''
+name: Inline
+http:
+  script:
+    - match: ^https?://a\.com
+      name: inline
+      type: response
+script-providers:
+  inline:
+    payload: $done({})
+''',
+    };
+
+    await action().addFromUrl(urlOf('/inline.stoverride'));
+
+    final saved = (await stored()).single;
+    final MapEntry(:key, :value) = saved.resources.entries.single;
+    expect(key, startsWith('inline:'));
+    expect(
+      await File(
+        join(await appPath.mitmResourcesDirPath, value),
+      ).readAsString(),
+      r'$done({})',
+    );
+    expect(saved.scripts, 1);
+  });
+
   test('a resource that fails to download keeps its last copy', () async {
     bodies = {'/ads.sgmodule': module('Ads'), '/blank.json': '{}'};
     await action().addFromUrl(urlOf('/ads.sgmodule'));
@@ -161,6 +185,18 @@ hostname = %APPEND% example.com
     );
   });
 
+  test('cleanings that overlap remove each stale file once', () async {
+    final resources = await appPath.mitmResourcesDirPath;
+    await Directory(resources).create(recursive: true);
+    for (var index = 0; index < 32; index++) {
+      await File(join(resources, 'stale$index.json')).writeAsString('{}');
+    }
+
+    await Future.wait([action().clean(), action().clean(), action().clean()]);
+
+    expect(await files(appPath.mitmResourcesDirPath), isEmpty);
+  });
+
   test(
     'a module with scripts is added off and keeps the user choice',
     () async {
@@ -183,7 +219,7 @@ Extra = type=http-response,pattern=^https://b,script-path=${urlOf('/extra.js')},
       expect(added.scripts, 2);
       expect(added.resources.keys, [urlOf('/ads.js')]);
 
-      action().putModule(added.copyWith(enabled: true));
+      action().putModule(added.copyWith(enabled: true, accepted: true));
       await action().setArguments((await stored()).single, const {
         'Extra': 'true',
       });
@@ -196,22 +232,161 @@ Extra = type=http-response,pattern=^https://b,script-path=${urlOf('/extra.js')},
     },
   );
 
-  test('an update that brings more scripts turns the module off', () async {
+  test('a module that changes network settings is added off', () async {
+    bodies = {'/dns.sgmodule': '[General]\ndns-server = 223.5.5.5\n'};
+    await action().addFromUrl(urlOf('/dns.sgmodule'));
+    expect((await stored()).single.enabled, isFalse);
+  });
+
+  test(
+    'a module that skips verifying or limits clients is added off',
+    () async {
+      bodies = {
+        '/cert.sgmodule':
+            '[MITM]\nhostname = %APPEND% api.example.com\n'
+            'skip-server-cert-verify = true\n',
+        '/lan.sgmodule':
+            '[MITM]\nclient-source-address = %APPEND% 192.168.1.0/24\n',
+      };
+      await action().addFromUrl(urlOf('/cert.sgmodule'));
+      await action().addFromUrl(urlOf('/lan.sgmodule'));
+      expect(
+        [for (final module in await stored()) module.enabled],
+        [false, false],
+      );
+    },
+  );
+
+  test('a module added with scripts waits until the user answers', () async {
+    bodies = {
+      '/ads.sgmodule':
+          '${module('Ads')}[Script]\n'
+          'Ads = type=cron,cronexp="0 * * * *",script-path=${urlOf('/a.js')}\n',
+      '/a.js': r'$done({})',
+      '/blank.json': '{}',
+    };
+    final added = await action().addFromUrl(urlOf('/ads.sgmodule'));
+    expect(added.enabled, isFalse);
+    expect(container.read(mitmModulesToAgreeProvider).single.id, added.id);
+
+    action().putModule(added.copyWith(accepted: false));
+
+    expect(container.read(mitmModulesToAgreeProvider), isEmpty);
+  });
+
+  test('a restore reads what each module asks from its own file', () async {
     bodies = {'/ads.sgmodule': module('Ads'), '/blank.json': '{}'};
-    await action().addFromUrl(urlOf('/ads.sgmodule'));
-    expect((await stored()).single.enabled, isTrue);
-    bodies['/ads.sgmodule'] =
+    final added = await action().addFromUrl(urlOf('/ads.sgmodule'));
+    action().putModule(added.copyWith(id: added.id + 1));
+    await File(
+      join(await appPath.mitmModulesDirPath, added.fileName),
+    ).writeAsString('[General]\ndns-server = 223.5.5.5\n');
+    expect(
+      [for (final item in await stored()) item.asksConsent],
+      [false, false],
+    );
+
+    await action().recheckConsent();
+
+    expect([for (final item in await stored()) item.asksConsent], [true, true]);
+  });
+
+  group('an update that brings scripts', () {
+    String withScript() =>
         '''
 ${module('Ads')}[Script]
 Ads = type=http-response,pattern=^https://a,script-path=${urlOf('/ads.js')}
 ''';
-    bodies['/ads.js'] = r'$done({})';
 
-    final updated = await action().updateModule((await stored()).single);
+    Future<MitmModule> bringScripts() async {
+      bodies['/ads.sgmodule'] = withScript();
+      bodies['/ads.js'] = r'$done({})';
+      return action().updateModule((await stored()).single);
+    }
 
-    expect(updated.enabled, isFalse);
-    expect((await stored()).single.scripts, 1);
+    Set<int> awaitingConsent() => {
+      for (final module in container.read(mitmModulesToAgreeProvider))
+        module.id,
+    };
+
+    setUp(() async {
+      bodies = {'/ads.sgmodule': module('Ads'), '/blank.json': '{}'};
+      await action().addFromUrl(urlOf('/ads.sgmodule'));
+    });
+
+    test('turns off a module never agreed to and asks', () async {
+      final added = (await stored()).single;
+      expect(added.enabled, isTrue);
+      expect(added.accepted, isNull);
+
+      final updated = await bringScripts();
+
+      expect(updated.enabled, isFalse);
+      expect((await stored()).single.enabled, isFalse);
+      expect((await stored()).single.scripts, 1);
+      expect(awaitingConsent(), {updated.id});
+    });
+
+    test('keeps a module agreed to on', () async {
+      action().putModule((await stored()).single.copyWith(accepted: true));
+
+      final updated = await bringScripts();
+
+      expect(updated.enabled, isTrue);
+      expect((await stored()).single.scripts, 1);
+      expect(awaitingConsent(), isEmpty);
+    });
+
+    test('leaves a module the user turned off alone', () async {
+      action().putModule(
+        (await stored()).single.copyWith(enabled: false, accepted: false),
+      );
+
+      await bringScripts();
+
+      expect((await stored()).single.enabled, isFalse);
+      expect(awaitingConsent(), isEmpty);
+    });
+
+    test('asks again about a module the user once declined', () async {
+      action().putModule((await stored()).single.copyWith(accepted: false));
+
+      final updated = await bringScripts();
+
+      expect(updated.enabled, isFalse);
+      expect(updated.accepted, isNull);
+      expect(awaitingConsent(), {updated.id});
+    });
+
+    test('is told apart from one that only widens the hosts', () async {
+      bodies['/ads.sgmodule'] = module(
+        'Ads',
+      ).replaceFirst('example.com', 'example.com, *.example.org');
+
+      final updated = await action().updateModule((await stored()).single);
+
+      expect(updated.enabled, isTrue);
+      expect(awaitingConsent(), isEmpty);
+    });
   });
+
+  test(
+    'an edit that brings scripts turns off a module never agreed to',
+    () async {
+      final local = await action().create(
+        '[URL Rewrite]\n^https://a - reject\n',
+      );
+      action().putModule(local.copyWith(enabled: true));
+
+      final edited = await action().edit(
+        (await stored()).single,
+        '[Script]\nA = type=cron,cronexp="0 * * * *",script-path=a.js\n',
+      );
+
+      expect(edited.enabled, isFalse);
+      expect(container.read(mitmModulesToAgreeProvider).single.id, edited.id);
+    },
+  );
 
   group('an accepted module', () {
     String scripted(String pattern) =>
@@ -226,88 +401,110 @@ Ads = type=http-response,pattern=$pattern,script-path=${urlOf('/ads.js')}
     Future<MitmModule> accepted() async {
       bodies = {'/ads.sgmodule': scripted('^https://a'), '/ads.js': 'one'};
       await action().addFromUrl(urlOf('/ads.sgmodule'));
-      action().putModule((await stored()).single.copyWith(enabled: true));
+      action().putModule(
+        (await stored()).single.copyWith(enabled: true, accepted: true),
+      );
       return (await stored()).single;
     }
 
     // The sweep a save leaves running must end before the test's directory goes.
     tearDown(() => Future<void>.delayed(const Duration(milliseconds: 50)));
 
-    Future<bool> enabledAfterUpdate(MitmModule ads) async {
-      await action().updateModule(ads);
-      return (await stored()).single.enabled;
-    }
-
-    test('stays on through an update that changes no script', () async {
-      final ads = await accepted();
-
-      expect(await enabledAfterUpdate(ads), isTrue);
-    });
-
-    test('turns off when an update replaces a script\'s content', () async {
-      final ads = await accepted();
-      bodies['/ads.js'] = 'two';
-
-      expect(await enabledAfterUpdate(ads), isFalse);
-    });
-
-    test('turns off when an update changes a script line', () async {
+    test('stays on through an update that changes its scripts', () async {
       final ads = await accepted();
       bodies['/ads.sgmodule'] = scripted('.*');
-
-      expect(await enabledAfterUpdate(ads), isFalse);
-    });
-
-    test('stays on when an update drops a script', () async {
-      final ads = await accepted();
-      bodies['/ads.sgmodule'] = module('Ads');
-      bodies['/blank.json'] = '{}';
-
-      expect(await enabledAfterUpdate(ads), isTrue);
-    });
-
-    test('stays on through an update with no text to compare', () async {
-      final ads = await accepted();
-      await File(join(await appPath.mitmModulesDirPath, ads.fileName)).delete();
-
-      expect(await enabledAfterUpdate(ads), isTrue);
-    });
-
-    test('an auto update that turns it off leaves it off', () async {
-      final ads = await accepted();
       bodies['/ads.js'] = 'two';
-      action().putModule(ads.copyWith(lastUpdateTime: DateTime.utc(2000)));
-      container.read(patchClashConfigProvider.notifier).value =
-          const PatchClashConfig(mitm: Mitm(enable: true), geoAutoUpdate: true);
 
-      await action().autoUpdate();
+      await action().updateModule(ads);
 
-      expect((await stored()).single.enabled, isFalse);
+      expect((await stored()).single.enabled, isTrue);
     });
+
+    if (rsFeature) {
+      test(
+        'stays on through an auto update that changes its scripts',
+        () async {
+          final ads = await accepted();
+          bodies['/ads.js'] = 'two';
+          action().putModule(ads.copyWith(lastUpdateTime: DateTime.utc(2000)));
+          container
+              .read(patchClashConfigProvider.notifier)
+              .value = const PatchClashConfig(
+            mitm: Mitm(enable: true),
+            geoAutoUpdate: true,
+          );
+
+          await action().autoUpdate();
+
+          final updated = (await stored()).single;
+          expect(updated.enabled, isTrue);
+          expect(updated.lastUpdateTime.isAfter(DateTime.utc(2000)), isTrue);
+        },
+      );
+    }
   });
 
-  test('values that declare a new script turn a module off to offer', () async {
-    bodies = {
-      '/q.snippet': '''
+  group('values that declare a new script', () {
+    setUp(() async {
+      bodies = {
+        '/q.snippet': '''
 #!arguments=Line:
 [rewrite_local]
 {{{Line}}}
 ^https://a url reject
 ''',
-    };
-    await action().addFromUrl(urlOf('/q.snippet'));
-    final module = (await stored()).single;
-    expect(module.enabled, isTrue);
-    bodies['/a.js'] = 'one';
-
-    final turnedOff = await action().setArguments(module, {
-      'Line': '^https://b url script-response-body ${urlOf('/a.js')}',
+        '/a.js': 'one',
+      };
+      await action().addFromUrl(urlOf('/q.snippet'));
     });
 
-    expect(turnedOff?.enabled, isFalse);
-    expect((await stored()).single.enabled, isFalse);
-    expect((await stored()).single.scripts, 1);
-    expect((await stored()).single.resources.keys, [urlOf('/a.js')]);
+    Future<MitmModule?> declare(MitmModule module) => action().setArguments(
+      module,
+      {'Line': '^https://b url script-response-body ${urlOf('/a.js')}'},
+    );
+
+    test('turn off a module never agreed to', () async {
+      final module = (await stored()).single;
+      expect(module.enabled, isTrue);
+
+      final returned = await declare(module);
+
+      final changed = (await stored()).single;
+      expect(returned, changed);
+      expect(changed.enabled, isFalse);
+      expect(changed.scripts, 1);
+      expect(changed.resources.keys, [urlOf('/a.js')]);
+      expect(container.read(mitmModulesToAgreeProvider).single.id, changed.id);
+    });
+
+    test('never leave a module never agreed to on with them', () async {
+      final module = (await stored()).single;
+      final seen = <MitmModule>[];
+      container.listen(
+        mitmModulesProvider,
+        (_, next) => seen.addAll(next.value ?? const []),
+      );
+
+      await declare(module);
+
+      expect(seen, isNotEmpty);
+      expect(
+        seen.where(
+          (item) => item.enabled && item.arguments.containsKey('Line'),
+        ),
+        isEmpty,
+      );
+    });
+
+    test('keep a module agreed to on', () async {
+      action().putModule((await stored()).single.copyWith(accepted: true));
+
+      await declare((await stored()).single);
+
+      final changed = (await stored()).single;
+      expect(changed.enabled, isTrue);
+      expect(changed.scripts, 1);
+    });
   });
 
   test('an update keeps what the user changed while it ran', () async {
@@ -351,7 +548,6 @@ Ads = type=http-response,pattern=$pattern,script-path=${urlOf('/ads.js')}
     final edited = (await stored()).single;
     expect(mitmAttachments(edited).keys, ['own.js']);
     expect(edited.scripts, 1);
-    expect(edited.enabled, isFalse);
 
     await action().detach(edited, 'own.js');
     await action().clean();
@@ -420,13 +616,15 @@ Ads = type=http-response,pattern=$pattern,script-path=${urlOf('/ads.js')}
     bool recent(DateTime time) =>
         DateTime.now().difference(time) < const Duration(minutes: 1);
 
-    test('a module past the interval updates', () async {
-      final time = await updatedAfter(
-        autoUpdate: true,
-        age: const Duration(hours: 25),
-      );
-      expect(recent(time), isTrue);
-    });
+    if (rsFeature) {
+      test('a module past the interval updates', () async {
+        final time = await updatedAfter(
+          autoUpdate: true,
+          age: const Duration(hours: 25),
+        );
+        expect(recent(time), isTrue);
+      });
+    }
 
     test('a module within the interval waits', () async {
       final time = await updatedAfter(
@@ -444,23 +642,27 @@ Ads = type=http-response,pattern=$pattern,script-path=${urlOf('/ads.js')}
       expect(recent(time), isFalse);
     });
 
-    test('auto update off still brings back missing content', () async {
-      bodies = {'/ads.sgmodule': module('Ads'), '/blank.json': '{}'};
-      final added = await action().addFromUrl(urlOf('/ads.sgmodule'));
-      await stored();
-      container
-          .read(patchClashConfigProvider.notifier)
-          .update(
-            (state) => state.copyWith(
-              geoAutoUpdate: false,
-              mitm: state.mitm.copyWith(enable: true),
-            ),
-          );
-      final file = File(join(await appPath.mitmModulesDirPath, added.fileName));
-      await file.delete();
-      await action().autoUpdate();
-      expect(await file.exists(), isTrue);
-    });
+    if (rsFeature) {
+      test('auto update off still brings back missing content', () async {
+        bodies = {'/ads.sgmodule': module('Ads'), '/blank.json': '{}'};
+        final added = await action().addFromUrl(urlOf('/ads.sgmodule'));
+        await stored();
+        container
+            .read(patchClashConfigProvider.notifier)
+            .update(
+              (state) => state.copyWith(
+                geoAutoUpdate: false,
+                mitm: state.mitm.copyWith(enable: true),
+              ),
+            );
+        final file = File(
+          join(await appPath.mitmModulesDirPath, added.fileName),
+        );
+        await file.delete();
+        await action().autoUpdate();
+        expect(await file.exists(), isTrue);
+      });
+    }
   });
 
   test('deleting a module removes its content', () async {

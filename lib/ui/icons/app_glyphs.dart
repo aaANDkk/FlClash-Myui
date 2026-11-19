@@ -21,6 +21,27 @@ abstract final class AppGlyphs {
     ], role: GlyphRole.detail),
   ]);
 
+  static const compass = Glyph([
+    GlyphCircle(12, 12, 8.8),
+    GlyphPolyline([
+      GlyphVertex(15.7, 8.3, 0.5),
+      GlyphVertex(10.1, 10.1, 0.6),
+      GlyphVertex(8.3, 15.7, 0.5),
+      GlyphVertex(13.9, 13.9, 0.6),
+    ], closed: true, role: GlyphRole.detail),
+  ]);
+
+  static const location = Glyph([
+    GlyphPath(
+      'M12 3C15.65 3 18.6 5.95 18.6 9.6'
+      'C18.6 13.75 14.4 18.45 12.68 20.38'
+      'C12.31 20.8 11.69 20.8 11.32 20.38'
+      'C9.6 18.45 5.4 13.75 5.4 9.6'
+      'C5.4 5.95 8.35 3 12 3Z',
+    ),
+    GlyphCircle(12, 9.6, 2.35, role: GlyphRole.detail),
+  ]);
+
   static const profiles = Glyph([
     GlyphPolyline([
       GlyphVertex(5, 3, 2.5),
@@ -763,24 +784,12 @@ abstract final class AppGlyphs {
 
   static const cloudSync = Glyph([
     GlyphPath(
-      'M7 19.4A4.2 4.2 0 0 1 5.06 11.47A6 6 0 1 1 16.95 9.83A4.8 4.8 0 0 1 16.4 19.4Z',
-    ),
-    GlyphArc(
-      11,
-      13.2,
-      3,
-      math.pi * 0.1944,
-      math.pi * 1.5,
-      role: GlyphRole.detail,
+      'M7.2 18.2H17.3A4.2 4.2 0 0 0 18.1 9.9A5.8 5.8 0 0 0 6.8 8.7A4.6 4.6 0 0 0 7.2 18.2Z',
     ),
     GlyphPolyline([
-      GlyphVertex(12.72, 10.74),
-      GlyphVertex(13.46, 11.26),
-    ], role: GlyphRole.detail),
-    GlyphPolyline([
-      GlyphVertex(13.01, 8.7),
-      GlyphVertex(13.46, 11.26, 0.4),
-      GlyphVertex(10.9, 11.71),
+      GlyphVertex(9.6, 13.1),
+      GlyphVertex(11.3, 14.8),
+      GlyphVertex(14.6, 11.4),
     ], role: GlyphRole.detail),
   ]);
 
@@ -1119,6 +1128,31 @@ abstract final class AppGlyphs {
       GlyphVertex(12, 21, 1.5),
       GlyphVertex(20.8, 16.4),
     ], role: GlyphRole.line),
+  ]);
+
+  static const radar = Glyph([
+    GlyphPath(
+      'M18.3 6.2A8.6 8.6 0 1 1 12 3.4',
+      role: GlyphRole.line,
+    ),
+    GlyphPath(
+      'M15.3 9.1A4.4 4.4 0 1 1 12 7.6',
+      role: GlyphRole.line,
+    ),
+    GlyphPolyline([
+      GlyphVertex(12, 12),
+      GlyphVertex(18.2, 5.8),
+    ], role: GlyphRole.line),
+    GlyphCircle(12, 12, 1.35, role: GlyphRole.line, solid: true),
+  ]);
+
+  static const nodeGroup = Glyph([
+    GlyphCircle(12, 5.4, 2.3),
+    GlyphCircle(4.8, 18, 2.3),
+    GlyphCircle(19.2, 18, 2.3),
+    GlyphLink(Offset(12, 5.4), Offset(4.8, 18), 2.3),
+    GlyphLink(Offset(12, 5.4), Offset(19.2, 18), 2.3),
+    GlyphLink(Offset(4.8, 18), Offset(19.2, 18), 2.3),
   ]);
 
   static const sun = Glyph([
@@ -1541,6 +1575,29 @@ abstract final class AppGlyphs {
       GlyphVertex(11, 14.1),
       GlyphVertex(15.3, 9.6),
     ], role: GlyphRole.detail),
+  ]);
+
+  static const certificate = Glyph([
+    GlyphPath(
+      'M11.95 17H5A2.5 2.5 0 0 1 2.5 14.5V6.5A2.5 2.5 0 0 1 5 4H19'
+      'A2.5 2.5 0 0 1 21.5 6.5V11.1A5.8 5.8 0 0 0 11.95 17Z',
+    ),
+    GlyphPolyline([
+      GlyphVertex(6, 8.5),
+      GlyphVertex(13, 8.5),
+    ], role: GlyphRole.detail),
+    GlyphPolyline([
+      GlyphVertex(6, 12),
+      GlyphVertex(9, 12),
+    ], role: GlyphRole.detail),
+    GlyphCircle(17.5, 15.3, 2.7),
+    GlyphPolyline([
+      GlyphVertex(16.2, 17.6),
+      GlyphVertex(16.2, 22, 0.4),
+      GlyphVertex(17.5, 21),
+      GlyphVertex(18.8, 22, 0.4),
+      GlyphVertex(18.8, 17.6),
+    ], role: GlyphRole.line),
   ]);
 
   static const swap = Glyph([

@@ -129,10 +129,10 @@ void main() {
     await _pumpView(tester, iconSets: _TestIconSets(const [_remote, _local]));
 
     expect(find.text('Qure'), findsOne);
-    expect(find.text('2'), findsOne);
+    expect(find.widgetWithText(TonalChip, '2'), findsOne);
     expect(find.text('Remote'), findsOne);
     expect(find.text('Mine'), findsOne);
-    expect(find.text('1'), findsOne);
+    expect(find.widgetWithText(TonalChip, '1'), findsOne);
     expect(find.text('Local'), findsOne);
     expect(find.byType(DisclosureIndicator), findsNWidgets(2));
   });

@@ -19,7 +19,7 @@ class Navigation implements NavigationPort {
         builder: (_) => const DashboardView(),
       ),
       NavigationItem(
-        glyph: AppGlyphs.proxies,
+        glyph: AppGlyphs.compass,
         label: PageLabel.proxies,
         builder: (_) => const ProxiesView(),
         modes: hasProxies

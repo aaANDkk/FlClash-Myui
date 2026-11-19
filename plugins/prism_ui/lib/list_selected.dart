@@ -12,6 +12,25 @@ BorderRadius listItemRadiusOf(ItemPosition? position) {
   );
 }
 
+/// Overrides the resting background fill of descendant [DecorationListItem]
+/// cards, e.g. transparent inside a shared translucent frosted card.
+class ListCardFillScope extends InheritedWidget {
+  const ListCardFillScope({
+    super.key,
+    required this.fill,
+    required super.child,
+  });
+
+  final Color fill;
+
+  static Color? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<ListCardFillScope>()?.fill;
+
+  @override
+  bool updateShouldNotify(ListCardFillScope oldWidget) =>
+      fill != oldWidget.fill;
+}
+
 class DecorationListItem extends StatefulWidget {
   final Widget title;
   final Widget? subtitle;
@@ -70,6 +89,7 @@ class _DecorationListItemState extends State<DecorationListItem> {
         shape: AppShape.of(listItemRadiusOf(position)),
         isError: widget.invalid,
         isSelected: widget.isSelected,
+        selectionTint: ListCardFillScope.maybeOf(context),
         padding: EdgeInsets.zero,
         statesController: _states,
         inert: sorting,

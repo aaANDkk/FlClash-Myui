@@ -1,7 +1,6 @@
 import 'dart:async';
 
-import 'package:fl_clash/common/constant.dart';
-import 'package:fl_clash/common/system.dart';
+import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/core.dart';
 import 'package:flutter/foundation.dart';
@@ -15,6 +14,7 @@ import 'desktop/transport.dart';
 import 'event.dart';
 import 'interface.dart';
 import 'method.dart';
+import 'spill.dart';
 
 class CoreService extends CoreHandlerInterface {
   static CoreService? _instance;
@@ -38,7 +38,7 @@ class CoreService extends CoreHandlerInterface {
     final directLauncher = DirectCoreLauncher();
 
     final lifecycle = DesktopCoreLifecycle(
-      transportFactory: () => IpcCoreTransport(address: address),
+      transport: IpcCoreTransport(address: address),
       launcherResolver: HelperLauncherResolver(
         hasHelper: system.hasHelperService && !safeModeBuild,
         directLauncher: directLauncher,
@@ -65,10 +65,14 @@ class CoreService extends CoreHandlerInterface {
   }) : _lifecycle = lifecycle,
        _rpcClient = rpcClient {
     _crashSubscription = _lifecycle.crashEvents.listen((failure) {
+      commonPrint.log(
+        'Core session lost: $failure',
+        logLevel: LogLevel.warning,
+      );
       coreEventManager.sendEvent(
         CoreEvent(
           type: CoreEventType.crash,
-          data: failure.cause?.toString() ?? 'core done',
+          data: coreSessionLostMessage(failure.cause, currentAppLocalizations),
         ),
       );
     });
@@ -102,11 +106,13 @@ class CoreService extends CoreHandlerInterface {
     required CoreMethod method,
     Object? arguments,
     Duration? timeout,
+    CoreResultModel? model,
   }) {
     return _rpcClient.invoke(
       method: method,
       arguments: arguments,
       timeout: timeout,
+      model: model,
     );
   }
 }

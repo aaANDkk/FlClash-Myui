@@ -29,6 +29,10 @@ class MitmModules extends Table {
 
   IntColumn get scripts => integer().withDefault(const Constant(0))();
 
+  BoolColumn get asksConsent => boolean().withDefault(const Constant(false))();
+
+  BoolColumn get accepted => boolean().nullable()();
+
   DateTimeColumn get lastUpdateTime => dateTime()();
 
   @override
@@ -86,6 +90,8 @@ extension RawMitmModuleExt on RawMitmModule {
       resources: resources,
       system: this.system,
       scripts: scripts,
+      asksConsent: asksConsent,
+      accepted: accepted,
       lastUpdateTime: lastUpdateTime,
     );
   }
@@ -104,6 +110,8 @@ extension MitmModulesCompanionExt on MitmModule {
       resources: Value(resources),
       system: Value(this.system),
       scripts: Value(scripts),
+      asksConsent: Value(asksConsent),
+      accepted: Value(accepted),
       lastUpdateTime: lastUpdateTime,
     );
   }

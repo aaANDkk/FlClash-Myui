@@ -76,9 +76,8 @@ abstract class Profile with _$Profile {
     @Default(true) bool autoUpdate,
     @Default({}) Map<String, String> selectedMap,
     @Default({}) Set<String> unfoldSet,
-    @Default(ExtendType.standard) ExtendType extendType,
     int? scriptId,
-    String? matchTarget,
+    @Default({}) Map<String, String> exitTargets,
     int? order,
     @Default(ProfileOverrides())
     @JsonKey(fromJson: ProfileOverrides.safeFromJson)

@@ -207,13 +207,20 @@ func beginSpeedTest(id string) (context.Context, func()) {
 	}
 }
 
+func speedTestIsDirect(proxy string) bool {
+	if proxy == "DIRECT" {
+		return true
+	}
+	return !isRunning.Load() && proxy == ""
+}
+
 func handleStartSpeedTest(params SpeedTestParams) SpeedTestState {
 	ctx, finish := beginSpeedTest(params.ID)
 	defer func() {
 		finish()
 	}()
 
-	direct := !isRunning.Load()
+	direct := speedTestIsDirect(params.Proxy)
 
 	tester := newSpeedTester(params, direct)
 	tester.run(ctx, func(state SpeedTestState) {
@@ -223,7 +230,7 @@ func handleStartSpeedTest(params SpeedTestParams) SpeedTestState {
 }
 
 func handleProbeSpeedTest(params SpeedTestParams) SpeedTestState {
-	direct := !isRunning.Load()
+	direct := speedTestIsDirect(params.Proxy)
 	ctx, finish := beginSpeedTest(params.ID)
 	defer finish()
 	tester := newSpeedTester(params, direct)
@@ -398,7 +405,6 @@ func (t *speedTester) dial(ctx context.Context, network, address string) (net.Co
 	if err := metadata.SetRemoteAddress(address); err != nil {
 		return nil, err
 	}
-	t.firstMeta.CompareAndSwap(nil, metadata)
 	if t.params.Proxy != "" {
 		proxy := lookupProxy(t.params.Proxy)
 		ok := proxy != nil
@@ -409,8 +415,13 @@ func (t *speedTester) dial(ctx context.Context, network, address string) (net.Co
 		if err != nil {
 			return nil, err
 		}
-		return statistic.NewTCPTracker(conn, statistic.DefaultManager, metadata, nil, 0, 0, true), nil
+		tracker := statistic.NewTCPTracker(conn, statistic.DefaultManager, metadata, nil, 0, 0, true)
+		if t.firstMeta.CompareAndSwap(nil, metadata) {
+			t.firstInfo.CompareAndSwap(nil, tracker.Info())
+		}
+		return tracker, nil
 	}
+	t.firstMeta.CompareAndSwap(nil, metadata)
 	conn, peer := N.Pipe()
 	go tunnel.Tunnel.HandleTCPConn(peer, metadata)
 	return conn, nil
@@ -668,7 +679,7 @@ func handleSpeedTestServers(params speedtestNetServersParams) ([]speedtestNetSer
 	defer finish()
 	ctx, cancel := context.WithTimeout(parent, 20*time.Second)
 	defer cancel()
-	tester := newSpeedTester(SpeedTestParams{Provider: "speedtest", Proxy: params.Proxy}, !isRunning.Load())
+	tester := newSpeedTester(SpeedTestParams{Provider: "speedtest", Proxy: params.Proxy}, speedTestIsDirect(params.Proxy))
 	defer tester.release()
 	servers, err := tester.fetchSpeedtestNetServers(ctx, params.Search)
 	if err != nil {

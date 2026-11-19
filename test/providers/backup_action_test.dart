@@ -8,7 +8,7 @@ import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/action.dart';
 import 'package:fl_clash/providers/config.dart';
-import 'package:fl_clash/l10n/l10n.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart';
@@ -17,12 +17,8 @@ import 'package:riverpod/riverpod.dart';
 import '../helpers/app_paths.dart';
 import '../helpers/preferences.dart';
 
-Profile _profile(int id, String label) => Profile(
-  id: id,
-  label: label,
-  autoUpdateDuration: Duration.zero,
-  extendType: ExtendType.standard,
-);
+Profile _profile(int id, String label) =>
+    Profile(id: id, label: label, autoUpdateDuration: Duration.zero);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -32,7 +28,7 @@ void main() {
 
   setUpAll(() async {
     await mockPreferences({'version': 1});
-    await AppLocalizations.load(const Locale('en'));
+    loadAppLocalizations(const Locale('en'));
     home = Directory.systemTemp.createTempSync('flclash-backup-action-');
     await useAppPaths(home);
   });
@@ -385,6 +381,38 @@ void main() {
       expect(target.read(appSettingProvider).autoLaunch, isTrue);
       expect(target.read(patchClashConfigProvider).mixedPort, 7899);
     });
+
+    test(
+      'a backup holding a mixed port of 0 restores the default and says so',
+      () async {
+        final configMap = configMapOf(buildContainer());
+        (configMap['patchClashConfig']! as Map<String, Object?>)['mixed-port'] =
+            0;
+        final banners = <String>[];
+        final print = debugPrint;
+        debugPrint = (message, {wrapWidth}) => banners.add(message ?? '');
+        addTearDown(() => debugPrint = print);
+        final target = buildContainer();
+        target
+            .read(patchClashConfigProvider.notifier)
+            .update((state) => state.copyWith(mixedPort: 7899));
+
+        await actionOf(
+          target,
+        ).applyRestore(MigrationData(configMap: configMap), RestoreOption.all);
+
+        expect(
+          target.read(patchClashConfigProvider).mixedPort,
+          defaultMixedPort,
+        );
+        expect(
+          banners,
+          contains(
+            '[APP] banner: The mixed port cannot be 0, so it was set back to 7890',
+          ),
+        );
+      },
+    );
 
     test('keeps the bound WebDAV account when the backup has none', () async {
       final configMap = configMapOf(buildContainer());

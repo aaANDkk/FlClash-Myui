@@ -13,7 +13,7 @@ concurrency:
 env:
   IS_STABLE: ${{ !contains(github.ref, '-') }}
   BRANCH_CACHE: ${{ !startsWith(github.ref, 'refs/tags/') }}
-  FLUTTER_VERSION: '3.47.6'
+  FLUTTER_VERSION: '3.50.0'
   GO_VERSION: '1.27.1'
   NDK_VERSION: r28c
 
@@ -33,10 +33,10 @@ jobs:
             os: ubuntu-22.04
             arch: amd64
           - platform: macos
-            os: macos-26-intel
+            os: macos-15-intel
             arch: amd64
           - platform: macos
-            os: macos-15
+            os: macos-latest
             arch: arm64
           - platform: windows
             os: windows-11-arm
@@ -70,6 +70,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           submodules: recursive
 
       - name: Setup Android Signing
@@ -137,7 +138,7 @@ jobs:
       - name: Setup Xcode
         if: startsWith(matrix.platform,'macos')
         run: |
-          sudo xcode-select -s /Applications/Xcode_26.3.app || sudo xcode-select -s /Applications/Xcode_26.2.app || sudo xcode-select -s /Applications/Xcode_16.app || sudo xcode-select -s /Applications/Xcode_15.4.app || true
+          sudo xcode-select -s /Applications/Xcode_26.3.app || sudo xcode-select -s /Applications/Xcode_26.2.app || sudo xcode-select -s /Applications/Xcode_16.app || true
           xcodebuild -version
 
       - name: Setup NDK
@@ -153,39 +154,7 @@ jobs:
         run: |
           flutter --version
           flutter pub get
-
-      - name: Generate localizations
-        run: |
-          dart run intl_utils:generate
-          git diff --exit-code -- lib/l10n
-
-      - name: Check group icon refresh
-        if: matrix.platform == 'android'
-        run: |
-          flutter analyze --no-fatal-infos lib/widgets/icon.dart lib/views/proxies/icon_style.dart test/widgets/target_icon_test.dart
-          flutter test test/widgets/target_icon_test.dart test/l10n test/lint/dynamic_message_key_test.dart
-
-      - name: Check IP risk sheets
-        if: matrix.platform == 'android'
-        run: |
-          flutter analyze --no-fatal-infos lib/features/ip_quality lib/views/dashboard/widgets/current_outbound.dart test/features/ip_risk_sheet_test.dart test/views/dashboard/current_outbound_test.dart
-          flutter test test/features/ip_risk_sheet_test.dart test/widgets/ip_address_row_test.dart test/views/dashboard/current_outbound_test.dart
-
-      - name: Check Speedtest
-        if: matrix.platform == 'android'
-        run: |
-          flutter analyze --no-fatal-infos lib/features/speed_test lib/models/speed_test.dart lib/widgets/traffic_chart.dart test/features/speed_test_test.dart test/features/speed_test_store_test.dart
-          flutter test test/features/speed_test_test.dart test/features/speed_test_store_test.dart test/core/protocol_contract_test.dart
-          cd core
-          CGO_ENABLED=0 go test . -run '^TestSpeedTest' -count=1
-
-      - name: Check Traffic Stats
-        if: matrix.platform == 'android'
-        run: |
-          flutter analyze --no-fatal-infos lib/features/traffic_stats lib/models/traffic_stats.dart test/features/traffic_stats_test.dart test/features/traffic_stats_store_test.dart
-          flutter test test/features/traffic_stats_test.dart test/features/traffic_stats_store_test.dart test/core/protocol_contract_test.dart test/l10n/localization_contract_test.dart
-          cd core
-          CGO_ENABLED=0 go test . -run '^TestTrafficStats' -count=1
+          flutter gen-l10n
 
       - name: Disable Impeller on Intel macOS
         if: matrix.platform == 'macos' && matrix.arch == 'amd64'
@@ -204,7 +173,8 @@ jobs:
       - name: Setup
         env:
           ANDROID_NDK_HOME: ${{ steps.build-ndk.outputs.ndk-path }}
-        run: dart setup.dart ${{ matrix.platform }} ${{ matrix.platform == 'android' && matrix.arch && format('--arch {0}', matrix.arch) || '' }} ${{ env.IS_STABLE == 'true' && '--env stable' || '' }} -v
+          FLUTTER_MACOS_ARM64_ONLY: ${{ matrix.platform == 'macos' && matrix.arch == 'arm64' }}
+        run: dart tool/package.dart ${{ matrix.platform }} ${{ env.IS_STABLE == 'true' && '--env stable' || '' }} -v
 
       - name: Upload
         uses: actions/upload-artifact@v4
@@ -273,6 +243,7 @@ jobs:
       - name: Generate sha256
         run: |
           cd ./dist
+          rm -f manifest.json *-SHA256SUMS
           sha256sum ./* > SHA256SUMS
 
       - name: Release

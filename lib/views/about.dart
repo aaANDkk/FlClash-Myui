@@ -1,13 +1,20 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/features/about/miuix_bg_effect.dart';
+import 'package:fl_clash/features/about/miuix_frosted_card.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/ui/ui.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+const _aboutShadows = [
+  BoxShadow(color: Color(0x14000000), blurRadius: 20, offset: Offset(0, 8)),
+];
 
 @immutable
 class Contributor {
@@ -24,9 +31,17 @@ class Contributor {
   });
 }
 
-class AboutView extends ConsumerWidget {
-  const AboutView({super.key});
+class AboutView extends ConsumerStatefulWidget {
+  const AboutView({super.key, this.dynamicBackground = true});
 
+  final bool dynamicBackground;
+
+  @override
+  ConsumerState<AboutView> createState() => _AboutViewState();
+}
+
+class _AboutViewState extends ConsumerState<AboutView>
+    with SingleTickerProviderStateMixin {
   static const _contributors = [
     Contributor(
       avatar: 'assets/images/avatar/aaANDkk.jpg',
@@ -37,7 +52,85 @@ class AboutView extends ConsumerWidget {
     Contributor(avatar: 'assets/images/avatar/arue.jpg', name: 'Arue'),
   ];
 
-  Future<void> _checkUpdate(BuildContext context, WidgetRef ref) async {
+  final GlobalKey _backdropKey = GlobalKey();
+  final GlobalKey _heroKey = GlobalKey();
+  final ScrollController _scrollController = ScrollController();
+  late final MiuixBgEffectController _bgController = MiuixBgEffectController(
+    vsync: this,
+  );
+
+  double _scrollOffset = 0.0;
+  double _heroExtent = 280.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncBgAnimation();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    _bgController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final next = math.max(0.0, _scrollController.offset);
+    if ((next - _scrollOffset).abs() < 0.5 &&
+        _scrollProgress == 1.0 &&
+        next >= _heroExtent) {
+      return;
+    }
+    setState(() {
+      _scrollOffset = next;
+    });
+    _syncBgAnimation();
+  }
+
+  double get _scrollProgress =>
+      (_heroExtent <= 0 ? 0.0 : (_scrollOffset / _heroExtent)).clamp(0.0, 1.0);
+
+  void _syncBgAnimation() {
+    final colorScheme = context.colorScheme;
+    final isDark = colorScheme.brightness == Brightness.dark;
+    final isWide = !context.isMobileView;
+    final preset = MiuixBgConfig.of(isWide: isWide, isDark: isDark);
+    final playing =
+        widget.dynamicBackground &&
+        !context.disableAnimations &&
+        _scrollProgress < 1.0;
+    _bgController.sync(
+      playing: playing,
+      colorInterpPeriod: preset.colorInterpPeriod,
+    );
+  }
+
+  void _measureHero() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final box = _heroKey.currentContext?.findRenderObject() as RenderBox?;
+      if (box != null && box.hasSize && box.size.height > 0) {
+        final extent = math.max(120.0, box.size.height);
+        if ((extent - _heroExtent).abs() > 2.0) {
+          setState(() {
+            _heroExtent = extent;
+          });
+          _syncBgAnimation();
+        }
+      }
+    });
+  }
+
+  Future<void> _checkUpdate(BuildContext context) async {
     if (ref.read(loadingProvider(LoadingTag.checkUpdate))) return;
     final commonAction = ref.read(commonActionProvider.notifier);
     final result = await globalState.loadingRun(
@@ -53,12 +146,13 @@ class AboutView extends ConsumerWidget {
 
   Widget _buildLinkItem({
     required Glyph glyph,
+    required Color color,
     required String title,
     required String url,
     required String label,
   }) {
     return ListItem(
-      leading: _LinkBadge(glyph: glyph),
+      leading: _LinkBadge(glyph: glyph, color: color),
       title: Text(title),
       subtitle: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
       trailing: const GlyphIcon(AppGlyphs.openExternal),
@@ -69,85 +163,155 @@ class AboutView extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final appLocalizations = context.appLocalizations;
     final isLoading = ref.watch(loadingProvider(LoadingTag.checkUpdate));
+    final colorScheme = context.colorScheme;
+    final isDark = colorScheme.brightness == Brightness.dark;
+    final isWide = !context.isMobileView;
+    final preset = MiuixBgConfig.of(isWide: isWide, isDark: isDark);
+    final progress = _scrollProgress;
+    final barBgAlpha = ((progress - 0.35) / 0.65).clamp(0.0, 1.0);
+    final collapsed = progress >= 1.0;
+
+    _bgController.sync(
+      playing:
+          widget.dynamicBackground && !context.disableAnimations && !collapsed,
+      colorInterpPeriod: preset.colorInterpPeriod,
+    );
+    _measureHero();
+
+    final barBackgroundColor = SurfaceLevel.page
+        .colorOf(colorScheme)
+        .withValues(alpha: barBgAlpha);
+
     return Scaffold(
       isLoading: isLoading,
       title: appLocalizations.about,
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(
-          top: context.contentTopPadding,
-          bottom: 32 + context.bottomInset,
-        ),
+      leadingShadows: _aboutShadows,
+      backgroundColor: collapsed ? null : barBackgroundColor,
+      body: Stack(
         children: [
-          _AboutHero(
-            isCheckingUpdate: isLoading,
-            onCheckUpdate: () {
-              _checkUpdate(context, ref);
-            },
-            onEnterDeveloperMode: () {
-              ref
-                  .read(appSettingProvider.notifier)
-                  .update((state) => state.copyWith(developerMode: true));
-              dialogs.showBanner(
-                appLocalizations.developerModeEnableTip,
-                level: BannerLevel.success,
-              );
-            },
+          Positioned.fill(
+            child: MiuixAboutBackdrop(
+              backdropKey: _backdropKey,
+              controller: _bgController,
+              preset: preset,
+              alpha: (1.0 - progress).clamp(0.0, 1.0),
+            ),
           ),
-          const SizedBox(height: 8),
-          generateSection(
-            title: appLocalizations.more,
-            items: [
-              _buildLinkItem(
-                glyph: AppGlyphs.code,
-                title: appLocalizations.project,
-                url: 'https://github.com/aaANDkk/FlClash-Myui',
-                label: 'github.com/aaANDkk/FlClash-Myui',
-              ),
-              _buildLinkItem(
-                glyph: AppGlyphs.cpu,
-                title: appLocalizations.core,
-                url: 'https://github.com/chen08209/Clash.Meta/tree/FlClash',
-                label: 'github.com/chen08209/Clash.Meta',
-              ),
-              _buildLinkItem(
-                glyph: AppGlyphs.send,
-                title: 'Telegram',
-                url: 'https://t.me/FlClash',
-                label: 't.me/FlClash',
-              ),
-            ],
-          ),
-          generateSection(
-            title: appLocalizations.otherContributors,
-            items: [
-              for (final contributor in _contributors)
-                ListItem(
-                  leading: Container(
-                    width: 40,
-                    height: 40,
-                    foregroundDecoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      image: DecorationImage(
-                        image: AssetImage(contributor.avatar),
-                        fit: BoxFit.cover,
+          Positioned.fill(
+            child: CustomScrollView(
+              controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverPadding(
+                  padding: EdgeInsets.only(top: context.contentTopPadding),
+                  sliver: SliverToBoxAdapter(
+                    child: KeyedSubtree(
+                      key: _heroKey,
+                      child: Transform.translate(
+                        offset: Offset(0, _scrollOffset * 0.65),
+                        child: _AboutHero(
+                          backdropKey: _backdropKey,
+                          controller: _bgController,
+                          preset: preset,
+                          scrollProgress: progress,
+                          isCheckingUpdate: isLoading,
+                          onCheckUpdate: () {
+                            _checkUpdate(context);
+                          },
+                          onEnterDeveloperMode: () {
+                            ref
+                                .read(appSettingProvider.notifier)
+                                .update(
+                                  (state) =>
+                                      state.copyWith(developerMode: true),
+                                );
+                            dialogs.showBanner(
+                              appLocalizations.developerModeEnableTip,
+                              level: BannerLevel.success,
+                            );
+                          },
+                        ),
                       ),
                     ),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: context.colorScheme.primaryContainer,
-                    ),
-                  ),
-                  title: Text(contributor.name),
-                  subtitle: Text(
-                    contributor.secondaryDevelopment
-                        ? appLocalizations.secondaryDevelopmentBuild
-                        : appLocalizations.appIconDesign,
                   ),
                 ),
-            ],
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      12,
+                      16,
+                      32 + context.bottomInset,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        MiuixFrostedSection(
+                          title: appLocalizations.more,
+                          items: [
+                            _buildLinkItem(
+                              glyph: AppGlyphs.code,
+                              color: colorScheme.primary,
+                              title: appLocalizations.project,
+                              url: 'https://github.com/aaANDkk/FlClash-Myui',
+                              label: 'github.com/aaANDkk/FlClash-Myui',
+                            ),
+                            _buildLinkItem(
+                              glyph: AppGlyphs.cpu,
+                              color: colorScheme.primary,
+                              title: appLocalizations.core,
+                              url:
+                                  'https://github.com/chen08209/Clash.Meta/tree/FlClash',
+                              label: 'github.com/chen08209/Clash.Meta',
+                            ),
+                            _buildLinkItem(
+                              glyph: AppGlyphs.send,
+                              color: colorScheme.primary,
+                              title: 'Telegram',
+                              url: 'https://t.me/FlClash',
+                              label: 't.me/FlClash',
+                            ),
+                          ],
+                        ),
+                        MiuixFrostedSection(
+                          title: appLocalizations.otherContributors,
+                          items: [
+                            for (final contributor in _contributors)
+                              ListItem(
+                                leading: Container(
+                                  width: 40,
+                                  height: 40,
+                                  foregroundDecoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    image: DecorationImage(
+                                      image: AssetImage(contributor.avatar),
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: colorScheme.primaryContainer,
+                                  ),
+                                ),
+                                title: Text(contributor.name),
+                                subtitle: Text(
+                                  contributor.secondaryDevelopment
+                                      ? appLocalizations
+                                            .secondaryDevelopmentBuild
+                                      : appLocalizations.appIconDesign,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -156,84 +320,125 @@ class AboutView extends ConsumerWidget {
 }
 
 class _AboutHero extends StatelessWidget {
+  final GlobalKey backdropKey;
+  final MiuixBgEffectController controller;
+  final MiuixBgConfig preset;
+  final double scrollProgress;
   final bool isCheckingUpdate;
   final VoidCallback onCheckUpdate;
   final VoidCallback onEnterDeveloperMode;
 
   const _AboutHero({
+    required this.backdropKey,
+    required this.controller,
+    required this.preset,
+    required this.scrollProgress,
     required this.isCheckingUpdate,
     required this.onCheckUpdate,
     required this.onEnterDeveloperMode,
   });
 
   static const _logoSize = 96.0;
-  static const _logoInset = 14.0;
+
+  Widget _fadeScale(double progress, Widget child) {
+    final clamped = progress.clamp(0.0, 1.0);
+    return Opacity(
+      opacity: 1.0 - clamped,
+      child: Transform.scale(scale: 1.0 - clamped * 0.05, child: child),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = context.colorScheme;
     final appLocalizations = context.appLocalizations;
+    final iconProgress = ((scrollProgress - 0.35) / 0.15).clamp(0.0, 1.0);
+    final titleProgress = ((scrollProgress - 0.20) / 0.15).clamp(0.0, 1.0);
+    final metaProgress = ((scrollProgress - 0.05) / 0.15).clamp(0.0, 1.0);
+    final headlineStyle = AppTextStyle.title1
+        .of(context, emphasized: true)
+        .copyWith(fontSize: 35, fontWeight: FontWeight.w700, height: 1.32);
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
       child: Column(
         children: [
-          _DeveloperModeDetector(
-            onEnterDeveloperMode: onEnterDeveloperMode,
-            child: DecoratedBox(
-              decoration: ShapeDecoration(
-                color: context.raisedSurfaceLevel.colorOf(colorScheme),
-                shape: AppShape.all(AppCorner.fit(_logoSize)),
+          _fadeScale(
+            iconProgress,
+            _DeveloperModeDetector(
+              onEnterDeveloperMode: onEnterDeveloperMode,
+              child: MiuixChromaticLogo(
+                assetPath: 'assets/images/logo.svg',
+                size: _logoSize,
+                backdropKey: backdropKey,
+                controller: controller,
+                preset: preset,
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(_logoInset),
-                child: Image.asset(
-                  'assets/images/icon.png',
-                  width: _logoSize - _logoInset * 2,
-                  height: _logoSize - _logoInset * 2,
+            ),
+          ),
+          _fadeScale(
+            titleProgress,
+            MiuixChromaticTitle(
+              text: appName,
+              style: headlineStyle,
+              backdropKey: backdropKey,
+              controller: controller,
+              preset: preset,
+            ),
+          ),
+          const SizedBox(height: 2),
+          _fadeScale(
+            metaProgress,
+            Column(
+              children: [
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    _Pill(
+                      label: 'v${globalState.packageInfo.version}',
+                      color: colorScheme.primary,
+                      foregroundColor: colorScheme.onPrimary,
+                    ),
+                    _Pill(
+                      label: 'GPL-3.0',
+                      color: colorScheme.brightness == Brightness.dark
+                          ? colorScheme.surfaceContainer.withValues(alpha: 0.72)
+                          : const Color(0xB8FFFFFF),
+                      foregroundColor: colorScheme.onSurfaceVariant,
+                    ),
+                  ],
                 ),
-              ),
+                const SizedBox(height: 14),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: Text(
+                    appLocalizations.desc,
+                    textAlign: TextAlign.center,
+                    style: AppTextStyle.subheadline
+                        .of(context)
+                        .copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                          height: 1.5,
+                        ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                DecoratedBox(
+                  decoration: ShapeDecoration(
+                    shape: AppShape.full,
+                    shadows: _aboutShadows,
+                  ),
+                  child: TonalButton(
+                    size: TonalButtonSize.bar,
+                    glyph: AppGlyphs.sync,
+                    label: appLocalizations.checkUpdate,
+                    onPressed: isCheckingUpdate ? null : onCheckUpdate,
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            appName,
-            style: AppTextStyle.title2.of(context, emphasized: true),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            alignment: WrapAlignment.center,
-            children: [
-              _Pill(
-                label: 'v${globalState.packageInfo.version}',
-                color: colorScheme.primary,
-                foregroundColor: colorScheme.onPrimary,
-              ),
-              _Pill(
-                label: 'GPL-3.0',
-                color: context.raisedSurfaceLevel.colorOf(colorScheme),
-                foregroundColor: colorScheme.onSurfaceVariant,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Text(
-              appLocalizations.desc,
-              textAlign: TextAlign.center,
-              style: AppTextStyle.subheadline
-                  .of(context)
-                  .copyWith(color: colorScheme.onSurfaceVariant, height: 1.5),
-            ),
-          ),
-          const SizedBox(height: 20),
-          TonalButton(
-            size: TonalButtonSize.bar,
-            glyph: AppGlyphs.sync,
-            label: appLocalizations.checkUpdate,
-            onPressed: isCheckingUpdate ? null : onCheckUpdate,
           ),
         ],
       ),
@@ -271,26 +476,20 @@ class _Pill extends StatelessWidget {
 
 class _LinkBadge extends StatelessWidget {
   final Glyph glyph;
+  final Color color;
 
-  const _LinkBadge({required this.glyph});
+  const _LinkBadge({required this.glyph, required this.color});
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = context.colorScheme;
     return DecoratedBox(
       decoration: ShapeDecoration(
-        color: context.raisedSurfaceLevel.colorOf(colorScheme),
-        shape: AppShape.md,
+        color: color.withValues(alpha: 0.12),
+        shape: AppShape.sm,
       ),
-      child: SizedBox.square(
-        dimension: 40,
-        child: Center(
-          child: GlyphIcon(
-            glyph,
-            size: 20,
-            color: colorScheme.onSurfaceVariant,
-          ),
-        ),
+      child: Padding(
+        padding: const EdgeInsets.all(6),
+        child: GlyphIcon(glyph, size: 18, color: color),
       ),
     );
   }
@@ -338,6 +537,10 @@ class _DeveloperModeDetectorState extends State<_DeveloperModeDetector> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(onTap: _handleTap, child: widget.child);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _handleTap,
+      child: widget.child,
+    );
   }
 }

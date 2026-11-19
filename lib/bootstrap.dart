@@ -10,7 +10,6 @@ import 'package:fl_clash/common/tray.dart';
 import 'package:fl_clash/common/window.dart';
 import 'package:fl_clash/database/database.dart';
 import 'package:fl_clash/enum/enum.dart';
-import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
@@ -33,6 +32,7 @@ class Bootstrap {
   }
 
   BootDecision _bootDecision = const BootDecision();
+  Object? _resetMixedPort;
 
   Future<ProviderContainer> init(int version) async {
     globalState.appEnv = const String.fromEnvironment(
@@ -92,7 +92,12 @@ class Bootstrap {
     if (appliedCounts != null) {
       globalState.lastConfigCounts = appliedCounts;
     }
+    final storedConfig = await preferences.getConfigMap();
+    _resetMixedPort = unusableMixedPort(storedConfig?['patchClashConfig']);
     var config = await migration.run();
+    if (_resetMixedPort != null) {
+      await preferences.saveConfig(config);
+    }
     _bootDecision = await bootGuard.evaluate(
       profileId: config.currentProfileId,
     );
@@ -130,7 +135,7 @@ class Bootstrap {
         );
     final profiles = await database.profilesDao.query().get();
     container.read(profilesProvider.notifier).reorder(profiles);
-    await AppLocalizations.load(
+    loadAppLocalizations(
       getLocaleForString(config.appSettingProps.locale) ??
           WidgetsBinding.instance.platformDispatcher.locale,
     );
@@ -171,6 +176,12 @@ class Bootstrap {
       return;
     }
     await _showCrashRecoveryTip();
+    if (_resetMixedPort case final value?) {
+      dialogs.showMixedPortReset(
+        value,
+        _container.read(patchClashConfigProvider).mixedPort,
+      );
+    }
     await _container.read(coreActionProvider.notifier).startCore();
     if (!_bootDecision.isDegraded) {
       await _container.read(setupActionProvider.notifier).initStatus();

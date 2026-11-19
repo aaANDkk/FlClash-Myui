@@ -80,6 +80,8 @@ const (
 	probeOutboundIPMethod CoreMethod = "probe.outboundIp"
 	probeServicesMethod   CoreMethod = "probe.services"
 	ipCountryMethod       CoreMethod = "ip.country"
+	ipCacheGetMethod CoreMethod = "ip.cacheGet"
+	ipCacheSetMethod CoreMethod = "ip.cacheSet"
 
 	mitmCertificateMethod         CoreMethod = "mitm.certificate"
 	mitmGenerateCertificateMethod CoreMethod = "mitm.generateCertificate"
@@ -264,6 +266,7 @@ type ChangeProxyResult struct {
 type RouteState struct {
 	CoreEpoch    uint64 `json:"core-epoch"`
 	RouteVersion uint64 `json:"route-version"`
+	Running      bool   `json:"running"`
 }
 
 type TestDelayParams struct {
@@ -320,13 +323,13 @@ type GeoUpdateStatus struct {
 }
 
 type TrafficStatsConfigParams struct {
-	Enable        bool   `json:"enable"`
-	Detail        bool   `json:"detail"`
-	RetentionDays int    `json:"retention-days"`
-	TzOffset      int    `json:"tz-offset"`
-	Profile       string `json:"profile"`
-	ScreenOn      *bool  `json:"screen-on,omitempty"`
-	Suspended     *bool  `json:"suspended,omitempty"`
+	Enable          bool   `json:"enable"`
+	Detail          bool   `json:"detail"`
+	RetentionMonths int    `json:"retention-months"`
+	TzOffset        int    `json:"tz-offset"`
+	Profile         string `json:"profile"`
+	ScreenOn        *bool  `json:"screen-on,omitempty"`
+	Suspended       *bool  `json:"suspended,omitempty"`
 }
 
 type TrafficStatsQuery struct {
@@ -352,16 +355,17 @@ type TrafficStatsPoint struct {
 }
 
 type TrafficStatsResult struct {
-	Up        int64               `json:"up"`
-	Down      int64               `json:"down"`
-	ProxyUp   int64               `json:"proxy-up"`
-	ProxyDown int64               `json:"proxy-down"`
-	Series    []TrafficStatsPoint `json:"series"`
-	Hosts     []TrafficStatsItem  `json:"hosts"`
-	Processes []TrafficStatsItem  `json:"processes"`
-	Nodes     []TrafficStatsItem  `json:"nodes"`
-	Profiles  []TrafficStatsItem  `json:"profiles"`
-	Rules     []TrafficStatsItem  `json:"rules"`
-	RuleHits  int64               `json:"rule-hits"`
-	Since     string              `json:"since"`
+	RunningSeconds int64               `json:"running-seconds"`
+	Up             int64               `json:"up"`
+	Down           int64               `json:"down"`
+	ProxyUp        int64               `json:"proxy-up"`
+	ProxyDown      int64               `json:"proxy-down"`
+	Series         []TrafficStatsPoint `json:"series"`
+	Hosts          []TrafficStatsItem  `json:"hosts"`
+	Processes      []TrafficStatsItem  `json:"processes"`
+	Nodes          []TrafficStatsItem  `json:"nodes"`
+	Profiles       []TrafficStatsItem  `json:"profiles"`
+	Rules          []TrafficStatsItem  `json:"rules"`
+	RuleHits       int64               `json:"rule-hits"`
+	Since          string              `json:"since"`
 }

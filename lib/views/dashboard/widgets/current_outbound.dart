@@ -12,7 +12,6 @@ import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/providers/routed_probe.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/dashboard/layout.dart';
-import 'package:fl_clash/views/dashboard/probe_start_hold.dart';
 import 'package:fl_clash/views/dashboard/style.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
@@ -42,8 +41,7 @@ class CurrentOutboundCard extends ConsumerStatefulWidget {
       _CurrentOutboundCardState();
 }
 
-class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard>
-    with ProbeStartHold<CurrentOutboundCard> {
+class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard> {
   late final OutboundIpProbe _probe;
 
   @override
@@ -74,12 +72,12 @@ class _CurrentOutboundCardState extends ConsumerState<CurrentOutboundCard>
     final isStart = ref.watch(isStartProvider);
     final suspended = isStart && ref.watch(suspendProvider);
     final rootAccess =
-        mitmFeature && (ref.watch(rootAccessProvider).value ?? false);
+        rsFeature && (ref.watch(rootAccessProvider).value ?? false);
     final entry = ref.watch(
       outboundIpProbeProvider.select((state) => state.entryOf(routedOutbound)),
     );
     final ipInfo = entry.value;
-    final phase = shownPhase(entry);
+    final phase = entry.phase;
     final failed = phase == ProbePhase.failed && ipInfo == null;
     final qualityState = ipInfo == null
         ? null

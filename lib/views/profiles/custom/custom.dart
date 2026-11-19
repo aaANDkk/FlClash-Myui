@@ -10,6 +10,7 @@ import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/config/dns.dart';
+import 'package:fl_clash/views/profiles/extend/added_rules.dart';
 import 'package:fl_clash/views/config/ntp.dart';
 import 'package:fl_clash/views/config/sniffer.dart';
 import 'package:fl_clash/views/config/tun.dart';
@@ -25,21 +26,10 @@ import 'providers.dart';
 import 'rules.dart';
 
 void showCustomProfileSheet(BuildContext context, int profileId) {
-  showSheet<void>(
-    context: context,
-    props: nestedPagedSheetProps,
-    builder: (_) => NestedPagedSheet(
-      builder: (_) => CustomProfileView(profileId: profileId),
-    ),
+  showNestedSheet<void>(
+    context,
+    builder: (_) => CustomProfileView(profileId: profileId),
   );
-}
-
-void _push(BuildContext context, Widget view) {
-  if (isSheetPage(context)) {
-    Navigator.of(context).push(PagedSheetRoute<void>(builder: (_) => view));
-    return;
-  }
-  BaseNavigator.push(context, view);
 }
 
 Widget _sectionRow(
@@ -69,7 +59,7 @@ Widget _sectionRow(
         const GlyphIcon(AppGlyphs.chevronForward),
       ],
     ),
-    onTap: () => _push(context, view),
+    onTap: () => unawaited(pushNestedPage<void>(context, view)),
   );
 }
 
@@ -246,7 +236,9 @@ class _CustomProfileViewState extends ConsumerState<CustomProfileView> {
   void _handlePreview() {
     final profile = ref.read(profileProvider(widget.profileId));
     if (profile != null) {
-      _push(context, PreviewProfileView(profile: profile));
+      unawaited(
+        pushNestedPage<void>(context, PreviewProfileView(profile: profile)),
+      );
     }
   }
 
@@ -610,6 +602,7 @@ class _MoreSectionsView extends ConsumerWidget {
                 ),
             ],
           ),
+          ExitsSection(profileId, modulesOnly: true),
         ],
       ),
     );

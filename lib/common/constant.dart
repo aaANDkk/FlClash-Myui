@@ -32,9 +32,10 @@ const watchExecution = false;
 
 const safeModeBuild = bool.fromEnvironment('SAFE_MODE');
 
-/// The bundled core has no MITM, so this stays off until one that has it ships.
-/// Not const so tests can cover both states.
-bool mitmFeature = const bool.fromEnvironment('FEATURE_MITM');
+/// Gates what only the Concord core of the rs line can serve, such as MITM.
+/// The rs line strips each check with `tool/strip_rs_feature.dart` instead of
+/// turning it on, so a check must take a form that tool reads.
+const rsFeature = false;
 
 const disclaimerVersion = 1;
 
@@ -66,18 +67,23 @@ const delayTimedOutValue = -1;
 
 const probeTimeoutDuration = Duration(seconds: 10);
 
-/// Outlasts the Core's one-second pick poll (`routePollInterval` in
-/// core/route.go), so groups re-picking on neighbouring polls cost one route
-/// check.
+/// The window a checked move opens, whose later moves are checked together
+/// when it ends. Outlasts the Core's one-second pick poll (`routePollInterval`
+/// in core/route.go), so groups re-picking on neighbouring polls cost one
+/// route check more.
 const probeSettleDuration = Duration(milliseconds: 1500);
 
 /// Spans a config load, whose providers, rule sets and url-test picks land
 /// over a few seconds, so an exit moving with each costs one probe more.
 const probeThrottleDuration = Duration(seconds: 5);
 
-/// Covers a start, which moves the route three times within about 150 ms
-/// (`proxied`, then the listeners, then the Android TUN).
+/// Covers a burst of resets: a network switch reports more than once, and a
+/// launch applies the config and starts the listeners back to back.
 const probeMoveSettleDuration = Duration(milliseconds: 300);
+
+/// How long after a failure that came back early a watched probe target is
+/// asked the once more that confirms it.
+const probeConfirmDelay = Duration(seconds: 1);
 
 const downloadTimeoutDuration = Duration(seconds: 20);
 

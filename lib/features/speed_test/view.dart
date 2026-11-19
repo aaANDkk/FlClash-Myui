@@ -19,8 +19,24 @@ import 'settings.dart';
 import 'store.dart';
 import 'widgets.dart';
 
+Future<void> showSpeedTestSheet(
+  BuildContext context, {
+  String proxyName = '',
+}) {
+  return showSheet<void>(
+    context: context,
+    props: nestedPagedSheetProps,
+    builder: (_) => NestedPagedSheet(
+      builder: (_) => SpeedTestView(initialProxy: proxyName),
+    ),
+  );
+}
+
 class SpeedTestView extends ConsumerStatefulWidget {
-  const SpeedTestView({super.key});
+  const SpeedTestView({super.key, this.initialProxy = ''});
+
+  final String initialProxy;
+
   @override
   ConsumerState<SpeedTestView> createState() => _SpeedTestViewState();
 }
@@ -35,7 +51,7 @@ class _SpeedTestViewState extends ConsumerState<SpeedTestView>
   List<Traffic> _samples = const [];
   int _downIndex = -1;
   int _upIndex = -1;
-  String _proxy = '';
+  late String _proxy = widget.initialProxy;
   String? _request;
   bool _loaded = false;
   bool _pendingInitialProbe = true;
@@ -84,7 +100,10 @@ class _SpeedTestViewState extends ConsumerState<SpeedTestView>
     }
   }
 
-  String _route() => ref.read(isStartProvider) ? _proxy : 'DIRECT';
+  String _route() {
+    if (_proxy.isNotEmpty) return _proxy;
+    return ref.read(isStartProvider) ? '' : 'DIRECT';
+  }
   String _id() => '${DateTime.now().microsecondsSinceEpoch}';
 
   Future<void> _detect() async {
@@ -174,7 +193,7 @@ class _SpeedTestViewState extends ConsumerState<SpeedTestView>
       _testing = true;
       _probing = false;
       _error = null;
-      _state = SpeedTestState(id: id, direct: !ref.read(isStartProvider));
+      _state = SpeedTestState(id: id, direct: proxy == 'DIRECT');
       _samples = List.filled(60, const Traffic());
       _downIndex = -1;
       _upIndex = -1;
@@ -251,60 +270,81 @@ class _SpeedTestViewState extends ConsumerState<SpeedTestView>
         }
       }
     }
-    final value = await showSheet<String>(
-      context: context,
-      builder: (context) => SelectionSheet<String>(
-        title: l.speedTestChangeOutbound,
-        sections: [
-          SelectionSection(items: ['', 'DIRECT', ...names]),
-        ],
-        labelBuilder: (name) => name.isEmpty
-            ? l.speedTestFollowRules
-            : name == 'DIRECT'
-            ? l.direct
-            : name,
-        selectedOf: (_) => _proxy,
-        onSelected: (name) => Navigator.of(context).pop(name),
-      ),
+    final selected = _proxy.isEmpty
+        ? ''
+        : _resolveConcreteProxy(_proxy, watch: false);
+    final selection = SelectionSheet<String>(
+      title: l.speedTestChangeOutbound,
+      sections: [
+        SelectionSection(items: ['', 'DIRECT', ...names]),
+      ],
+      labelBuilder: (name) => name.isEmpty
+          ? l.speedTestFollowRules
+          : name == 'DIRECT'
+          ? l.direct
+          : name,
+      selectedOf: (_) => selected,
+      onSelected: (name) => Navigator.of(context).pop(name),
     );
+    final value = isSheetPage(context)
+        ? await Navigator.of(
+            context,
+          ).push(PagedSheetRoute<String>(builder: (_) => selection))
+        : await showSheet<String>(
+            context: context,
+            builder: (_) => selection,
+          );
     if (!mounted || value == null || value == _proxy) return;
     setState(() {
       _proxy = value;
       _state = null;
+      _probe = null;
     });
     await _detect();
   }
 
   Future<void> _openSettings() async {
     if (_testing || _confirming) return;
-    await showFormSheet<SpeedTestSettings>(
-      context: context,
-      props: nestedPagedSheetProps,
-      builder: (_) => NestedPagedSheet(
-        builder: (_) => SpeedTestSettingsView(
-          settings: _settings,
-          proxy: _route(),
-          onChanged: (settings) {
-            if (!mounted) return;
-            setState(() {
-              _settings = settings;
-            });
-            unawaited(
-              ref.read(speedTestStoreProvider.notifier).settings(settings),
-            );
-          },
-        ),
-      ),
+    Widget buildSettings(BuildContext _) => SpeedTestSettingsView(
+      settings: _settings,
+      proxy: _route(),
+      onChanged: (settings) {
+        if (!mounted) return;
+        setState(() {
+          _settings = settings;
+        });
+        unawaited(
+          ref.read(speedTestStoreProvider.notifier).settings(settings),
+        );
+      },
     );
+    if (isSheetPage(context)) {
+      await Navigator.of(
+        context,
+      ).push(PagedSheetRoute<void>(builder: buildSettings));
+    } else {
+      await showFormSheet<SpeedTestSettings>(
+        context: context,
+        props: nestedPagedSheetProps,
+        builder: (_) => NestedPagedSheet(builder: buildSettings),
+      );
+    }
     if (mounted) await _detect();
   }
 
-  Future<void> _openHistory() => showSheet<void>(
-    context: context,
-    props: nestedPagedSheetProps,
-    builder: (_) =>
-        NestedPagedSheet(builder: (_) => const SpeedTestHistoryView()),
-  );
+  Future<void> _openHistory() {
+    if (isSheetPage(context)) {
+      return Navigator.of(
+        context,
+      ).push(PagedSheetRoute<void>(builder: (_) => const SpeedTestHistoryView()));
+    }
+    return showSheet<void>(
+      context: context,
+      props: nestedPagedSheetProps,
+      builder: (_) =>
+          NestedPagedSheet(builder: (_) => const SpeedTestHistoryView()),
+    );
+  }
 
   @override
   void dispose() {
@@ -485,13 +525,31 @@ class _SpeedTestViewState extends ConsumerState<SpeedTestView>
     );
   }
 
+  String _resolveConcreteProxy(String proxyName, {bool watch = true}) {
+    if (proxyName.isEmpty || proxyName == 'DIRECT') return proxyName;
+    final outbound =
+        (_testing ? _state?.outbound : null) ??
+        _state?.outbound ??
+        _probe?.outbound;
+    final chains = outbound?.chains ?? const <String>[];
+    if (chains.isNotEmpty) {
+      return chains.last;
+    }
+    final provider = realSelectedProxyStateProvider(proxyName);
+    final resolved = (watch ? ref.watch(provider) : ref.read(provider)).proxyName;
+    return resolved.isEmpty ? proxyName : resolved;
+  }
+
   Widget _routeCard(BuildContext context, bool running) {
     final l = context.appLocalizations;
-    final selected = !running || _proxy == 'DIRECT'
+    final resolvedNode = _resolveConcreteProxy(_proxy);
+    final selected = _proxy == 'DIRECT' || (_proxy.isEmpty && !running)
         ? l.direct
         : _proxy.isEmpty
         ? l.speedTestFollowRules
-        : _proxy;
+        : resolvedNode == 'DIRECT'
+        ? l.direct
+        : resolvedNode;
     final actual =
         (_testing ? _state?.server : null) ?? _probe?.server ?? _state?.server;
     final serverText =
@@ -506,7 +564,9 @@ class _SpeedTestViewState extends ConsumerState<SpeedTestView>
       outbound: selected,
       server: serverText.isEmpty ? l.auto : serverText,
       selectable: true,
-      onSelect: _testing || !running ? null : _chooseOutbound,
+      onSelect: _testing || (_proxy.isEmpty && !running)
+          ? null
+          : _chooseOutbound,
     );
   }
 
@@ -549,7 +609,6 @@ class _SpeedTestViewState extends ConsumerState<SpeedTestView>
     return SpeedTestScope(
       child: Scaffold(
         title: l.speedTest,
-        groupIconActions: false,
         iconActions: [
           IconButtonData(
             glyph: AppGlyphs.clock,

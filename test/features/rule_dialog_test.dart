@@ -1,6 +1,6 @@
+import 'package:fl_clash/common/app_localizations.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/form/form.dart';
-import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/ui/ui.dart';
@@ -41,7 +41,7 @@ void main() {
     );
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
-    final l10n = AppLocalizations.current;
+    final l10n = currentAppLocalizations;
 
     await tester.tap(find.widgetWithText(TextButton, l10n.save));
     await tester.pumpAndSettle();
@@ -152,7 +152,7 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('selecting MATCH target shows the label but stores MATCH', (
+  testWidgets('a custom exit is named once and marked on the rule', (
     tester,
   ) async {
     Rule? result;
@@ -168,7 +168,7 @@ void main() {
               onPressed: () async {
                 result = await showFormSheet<Rule>(
                   context: context,
-                  builder: (_) => const RuleForm(),
+                  builder: (_) => const RuleForm(exits: ['Media']),
                 );
               },
               child: const Text('open'),
@@ -179,22 +179,88 @@ void main() {
     );
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
-    final l10n = AppLocalizations.current;
+    final l10n = currentAppLocalizations;
 
     await tester.enterText(find.byType(TextFormField), 'example.com');
     await tester.tap(find.text(l10n.splitStrategy));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text(l10n.matchTarget).last);
+    expect(find.text('Media'), findsOneWidget);
+    await tester.ensureVisible(find.text(l10n.customExit).last);
     await tester.pumpAndSettle();
-    await tester.tap(find.text(l10n.matchTarget).last);
+    await tester.tap(find.text(l10n.customExit).last);
     await tester.pumpAndSettle();
-    expect(find.text(l10n.matchTarget), findsOneWidget);
+    expect(find.byType(InputDialog), findsNothing);
+    expect(find.byType(TextFormField), findsNWidgets(2));
+    expect(find.text(l10n.inputExitName), findsOneWidget);
 
+    await tester.tap(find.widgetWithText(TextButton, l10n.save));
+    await tester.pumpAndSettle();
+    expect(_banner(l10n.emptyTip(l10n.name)), findsOneWidget);
+    expect(result, isNull);
+
+    await tester.enterText(find.byType(TextFormField).last, 'DIRECT');
+    await tester.tap(find.widgetWithText(TextButton, l10n.save));
+    await tester.pumpAndSettle();
+    expect(_banner(l10n.existsTip(l10n.name)), findsOneWidget);
+    expect(result, isNull);
+
+    await tester.enterText(find.byType(TextFormField).last, ' AI ');
     await tester.tap(find.widgetWithText(TextButton, l10n.save));
     await tester.pumpAndSettle();
 
     expect(result, isNotNull);
-    expect(result!.ruleTarget, 'MATCH');
+    expect(result!.ruleTarget, 'AI');
+    expect(result!.customExit, isTrue);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('picking an existing exit hides the name row', (tester) async {
+    Rule? result;
+    await tester.pumpWidget(
+      TestApp(
+        wrapInProviderScope: true,
+        overrides: [
+          viewSizeProvider.overrideWithBuild((_, _) => const Size(1200, 800)),
+        ],
+        child: Builder(
+          builder: (context) {
+            return FilledButton(
+              onPressed: () async {
+                result = await showFormSheet<Rule>(
+                  context: context,
+                  builder: (_) => const RuleForm(exits: ['Media']),
+                );
+              },
+              child: const Text('open'),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    final l10n = currentAppLocalizations;
+
+    await tester.enterText(find.byType(TextFormField), 'example.com');
+    await tester.tap(find.text(l10n.splitStrategy));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text(l10n.customExit).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.customExit).last);
+    await tester.pumpAndSettle();
+    expect(find.byType(TextFormField), findsNWidgets(2));
+
+    await tester.tap(find.text(l10n.splitStrategy));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Media').last);
+    await tester.pumpAndSettle();
+    expect(find.byType(TextFormField), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(TextButton, l10n.save));
+    await tester.pumpAndSettle();
+    expect(result?.ruleTarget, 'Media');
+    expect(result?.customExit, isTrue);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -239,7 +305,7 @@ void main() {
 
     await tester.enterText(find.byType(TextFormField), 'US');
     await tester.tap(
-      find.widgetWithText(TextButton, AppLocalizations.current.save),
+      find.widgetWithText(TextButton, currentAppLocalizations.save),
     );
     await tester.pumpAndSettle();
 
@@ -286,7 +352,7 @@ void main() {
     );
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
-    final l10n = AppLocalizations.current;
+    final l10n = currentAppLocalizations;
 
     await tester.enterText(find.byType(TextFormField), 'https');
     await tester.tap(find.widgetWithText(TextButton, l10n.save));

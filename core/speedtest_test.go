@@ -133,3 +133,26 @@ func TestSpeedTestSpeedtestOnlyAndDirectRun(t *testing.T) {
 		t.Fatalf("bad outbound: %+v", result.Outbound)
 	}
 }
+
+func TestSpeedTestIsDirectRespectsPinnedProxyWhenStopped(t *testing.T) {
+	prev := isRunning.Swap(false)
+	t.Cleanup(func() { isRunning.Store(prev) })
+
+	if !speedTestIsDirect("") {
+		t.Fatal("empty proxy when stopped should use direct")
+	}
+	if !speedTestIsDirect("DIRECT") {
+		t.Fatal("DIRECT proxy should use direct")
+	}
+	if speedTestIsDirect("HK-01") {
+		t.Fatal("pinned proxy when stopped should dial the proxy")
+	}
+
+	isRunning.Store(true)
+	if speedTestIsDirect("") {
+		t.Fatal("empty proxy when running should follow rules")
+	}
+	if !speedTestIsDirect("DIRECT") {
+		t.Fatal("DIRECT proxy when running should use direct")
+	}
+}

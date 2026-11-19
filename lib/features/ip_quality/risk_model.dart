@@ -71,6 +71,98 @@ class IpRisk {
     this.checks = const [],
     this.note,
   });
+  factory IpRisk.fromJson(Map<String, dynamic> json) {
+    if (json['version'] != 1) {
+      throw const FormatException('Unsupported IP risk cache');
+    }
+    final note = json['note'] as Map<String, dynamic>?;
+    T? optionalEnum<T extends Enum>(List<T> values, String? name) =>
+        name == null ? null : values.byName(name);
+    return IpRisk(
+      ip: json['ip'] as String,
+      score: json['score'] as int,
+      level: IpRiskLevel.values.byName(json['level'] as String),
+      hostname: json['hostname'] as String,
+      asn: json['asn'] as String,
+      isp: json['isp'] as String,
+      organization: json['organization'] as String,
+      country: json['country'] as String,
+      countryCode: json['countryCode'] as String,
+      region: json['region'] as String,
+      city: json['city'] as String,
+      checks: [
+        for (final check in json['checks'] as List)
+          IpRiskCheck(
+            group: IpRiskGroup.values.byName(check['group'] as String),
+            name: check['name'] as String,
+            hit: check['hit'] as bool?,
+          ),
+      ],
+      note: note == null
+          ? null
+          : IpRiskNote(
+              direct: note['direct'] as bool?,
+              isp: note['isp'] as String,
+              amount: optionalEnum(
+                IpRiskAmount.values,
+                note['amount'] as String?,
+              ),
+              share: optionalEnum(IpRiskShare.values, note['share'] as String?),
+              operatorName: note['operatorName'] as String,
+              operatorLevel: optionalEnum(
+                IpRiskLevel.values,
+                note['operatorLevel'] as String?,
+              ),
+              ownerName: note['ownerName'] as String,
+              ownerLevel: optionalEnum(
+                IpRiskLevel.values,
+                note['ownerLevel'] as String?,
+              ),
+              connection: optionalEnum(
+                IpRiskConnection.values,
+                note['connection'] as String?,
+              ),
+              warning: optionalEnum(
+                IpRiskLevel.values,
+                note['warning'] as String?,
+              ),
+            ),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'version': 1,
+    'ip': ip,
+    'score': score,
+    'level': level.name,
+    'hostname': hostname,
+    'asn': asn,
+    'isp': isp,
+    'organization': organization,
+    'country': country,
+    'countryCode': countryCode,
+    'region': region,
+    'city': city,
+    'checks': [
+      for (final check in checks)
+        {'group': check.group.name, 'name': check.name, 'hit': check.hit},
+    ],
+    'note': note == null
+        ? null
+        : {
+            'direct': note!.direct,
+            'isp': note!.isp,
+            'amount': note!.amount?.name,
+            'share': note!.share?.name,
+            'operatorName': note!.operatorName,
+            'operatorLevel': note!.operatorLevel?.name,
+            'ownerName': note!.ownerName,
+            'ownerLevel': note!.ownerLevel?.name,
+            'connection': note!.connection?.name,
+            'warning': note!.warning?.name,
+          },
+  };
+
   IpRisk copyWith({int? score}) => IpRisk(
     ip: ip,
     score: score ?? this.score,

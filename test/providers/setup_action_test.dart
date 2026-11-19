@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:fl_clash/common/common.dart';
@@ -7,7 +8,6 @@ import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/core/method.dart';
 import 'package:fl_clash/core/spill.dart';
 import 'package:fl_clash/enum/enum.dart';
-import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/action.dart';
 import 'package:fl_clash/providers/app.dart';
@@ -81,6 +81,7 @@ class TestSetupAction extends SetupAction {
   final List<bool> appliedForce = [];
   bool blockCoreCalls = false;
   Error? coreRunningError;
+  Error? applyError;
   final Set<bool> unansweredCoreCalls = {};
   int authorizeCalls = 0;
   AuthorizeCode authorizeResult = AuthorizeCode.none;
@@ -126,6 +127,9 @@ class TestSetupAction extends SetupAction {
   }) async {
     applyProfileCalls++;
     appliedForce.add(force);
+    if (applyError case final error?) {
+      throw error;
+    }
     await preloadInvoke?.call();
     return true;
   }
@@ -146,7 +150,7 @@ void main() {
         tun: Tun(),
         mixedPort: 7890,
         allowLan: false,
-        findProcessMode: FindProcessMode.off,
+        findProcessMode: FindProcessMode.strict,
         mode: Mode.rule,
         logLevel: LogLevel.info,
         ipv6: false,
@@ -333,6 +337,28 @@ void main() {
         expect(container.read(runningVpnOptionsProvider), isNull);
       },
     );
+
+    test('an initial start that fails says why as it turns back', () async {
+      loadAppLocalizations(const Locale('en'));
+      final banners = <String>[];
+      final print = debugPrint;
+      debugPrint = (message, {wrapWidth}) {
+        const prefix = '[APP] banner: ';
+        if (message != null && message.startsWith(prefix)) {
+          banners.add(message.substring(prefix.length));
+        }
+      };
+      addTearDown(() => debugPrint = print);
+      action.applyError = StateError('authorization helper failed');
+
+      final applied = await container
+          .read(setupActionProvider.notifier)
+          .setRunning(true, initialize: true);
+
+      expect(applied, isFalse);
+      expect(container.read(isStartProvider), isFalse);
+      expect(banners, ['Bad state: authorization helper failed']);
+    });
   });
 
   group('stop cleanup', () {
@@ -407,6 +433,20 @@ void main() {
       expect(trafficUpdates(), 5);
 
       await setup.setRunning(false);
+    });
+
+    testWidgets('a lost Core session stops the clock for good', (tester) async {
+      final setup = buildScoped();
+      await setup.setRunning(true);
+      await tester.pump(const Duration(seconds: 2));
+
+      setup.onCoreLost();
+      final updates = trafficUpdates();
+      await tester.pump(const Duration(seconds: 3));
+
+      expect(scoped.read(runTimeProvider), isNull);
+      expect(trafficUpdates(), updates);
+      expect(scoped.read(isStartProvider), isFalse);
     });
 
     testWidgets('a start while hidden waits for the app to be shown', (
@@ -657,6 +697,60 @@ void main() {
     });
   });
 
+  group('a lost Core session', () {
+    test('ends the run here without a stop and keeps it to resume', () async {
+      markInitialized();
+      final setup = container.read(setupActionProvider.notifier);
+      await setup.setRunning(true);
+
+      setup.onCoreLost();
+
+      expect(action.coreRunningCalls, [true]);
+      expect(container.read(isStartProvider), isFalse);
+      expect(container.read(runTimeProvider), isNull);
+      expect(container.read(runningVpnOptionsProvider), isNull);
+      expect(setup.wantsRunning, isTrue);
+    });
+
+    test('a start it cut off cannot bring the run back', () async {
+      markInitialized();
+      final setup = container.read(setupActionProvider.notifier);
+      action.blockCoreCalls = true;
+      action.unansweredCoreCalls.add(true);
+
+      final starting = setup.setRunning(true);
+      while (action.pendingCoreCalls.isEmpty) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      setup.onCoreLost();
+      action.pendingCoreCalls.single.complete();
+
+      expect(await starting, isTrue);
+      expect(container.read(isStartProvider), isFalse);
+      expect(container.read(runningVpnOptionsProvider), isNull);
+      expect(setup.wantsRunning, isTrue);
+    });
+
+    test('a later stop is the run a restart keeps', () async {
+      markInitialized();
+      final setup = container.read(setupActionProvider.notifier);
+      await setup.setRunning(true);
+      setup.onCoreLost();
+
+      await setup.setRunning(false);
+
+      expect(setup.wantsRunning, isFalse);
+    });
+
+    test('leaves nothing to resume when no run was on', () {
+      final setup = container.read(setupActionProvider.notifier);
+
+      setup.onCoreLost();
+
+      expect(setup.wantsRunning, isFalse);
+    });
+  });
+
   group('initStatus', () {
     test('is a no-op once the status has already been initialized', () async {
       globalState.needInitStatus = false;
@@ -770,7 +864,7 @@ void main() {
 
     test('a failed authorization turns tun off and asks again on the next '
         'enable', () async {
-      await AppLocalizations.load(const Locale('en'));
+      loadAppLocalizations(const Locale('en'));
       container
           .read(patchClashConfigProvider.notifier)
           .update((state) => state.copyWith.tun(enable: true));
@@ -1038,11 +1132,11 @@ void main() {
 
   group('applyIfGlobalRulesUsed', () {
     for (final (name, profile, applies) in [
-      ('a standard extension', Profile.normal(label: 'p'), true),
+      ('a profile without a script', Profile.normal(label: 'p'), true),
       (
-        'a script extension',
-        Profile.normal(label: 'p').copyWith(extendType: ExtendType.script),
-        false,
+        'a profile running a script',
+        Profile.normal(label: 'p').copyWith(scriptId: 1),
+        true,
       ),
       ('a custom profile', Profile.custom(label: 'p'), false),
     ]) {
@@ -1072,7 +1166,7 @@ void main() {
     setUpAll(() async {
       tempDir = Directory.systemTemp.createTempSync('setup_action_test');
       await useAppPaths(tempDir);
-      await AppLocalizations.load(const Locale('en'));
+      loadAppLocalizations(const Locale('en'));
       originalLastConfigMd5 = globalState.lastConfigMd5;
       globalState.packageInfo = PackageInfo(
         appName: 'FlClash',
@@ -1098,7 +1192,6 @@ void main() {
       profileId: null,
       profileLastUpdateDate: null,
       profileType: ProfileType.file,
-      extendType: ExtendType.standard,
       rules: [],
       proxyGroups: [],
       addedRules: [],
@@ -1325,7 +1418,7 @@ void main() {
       await leaveEditor();
       verifyNever(() => core.getProfileBase(any()));
 
-      setupState = setupState.copyWith(matchTarget: 'DIRECT');
+      setupState = setupState.copyWith(exitTargets: {'MATCH': 'DIRECT'});
       scoped.invalidate(setupStateProvider);
       await leaveEditor();
       verify(() => core.getProfileBase(any())).called(1);
@@ -1531,6 +1624,78 @@ void main() {
       expect(shownGroups(), ['Proxy']);
     });
 
+    test('custom exits of a merged profile read its outbounds once per '
+        'profile file', () async {
+      final profile = Profile.normal(label: 'p');
+      final core = _MockCoreHandlerInterface();
+      var digest = 'd1';
+      when(() => core.getProfileBase(any())).thenAnswer(
+        (_) async => ProfileBase(
+          config: const {},
+          digest: digest,
+          matchRules: const ['MATCH,Final'],
+        ),
+      );
+      when(() => core.getProfileOutbounds(any())).thenAnswer(
+        (_) async => {
+          'proxies': [
+            {'name': 'HK', 'type': 'ss'},
+          ],
+          'proxy-groups': [
+            {'name': 'Final', 'type': 'select'},
+          ],
+        },
+      );
+      final pushed = <SetupParams>[];
+      when(() => core.setupConfig(any())).thenAnswer((invocation) async {
+        pushed.add(invocation.positionalArguments.single as SetupParams);
+      });
+      final scoped = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(() => TestProfiles([profile])),
+          currentProfileIdProvider.overrideWithBuild((_, _) => profile.id),
+          setupStateProvider.overrideWith(
+            (_, profileId) => nullProfileSetupState.copyWith(
+              profileId: profileId,
+              addedRules: const [
+                Rule(
+                  ruleAction: RuleAction.DOMAIN,
+                  content: 'a.example',
+                  ruleTarget: 'Media',
+                  customExit: true,
+                ),
+                Rule(
+                  ruleAction: RuleAction.DOMAIN,
+                  content: 'b.example',
+                  ruleTarget: 'AI',
+                  customExit: true,
+                ),
+              ],
+              exitTargets: const {'AI': 'HK', 'Media': 'Gone'},
+            ),
+          ),
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          setupActionProvider.overrideWith(SetupAction.new),
+        ],
+      );
+      addTearDown(scoped.dispose);
+      final setupAction = scoped.read(setupActionProvider.notifier);
+      addTearDown(() => globalState.lastConfigCounts = null);
+
+      expect(await setupAction.applyProfile(force: true), isTrue);
+      final overlay = loadYaml(pushed.last.base!.overlay) as YamlMap;
+      expect(overlay['rules'], [
+        'DOMAIN,a.example,Final',
+        'DOMAIN,b.example,HK',
+      ]);
+      await setupAction.applyProfile(force: true);
+      verify(() => core.getProfileOutbounds(any())).called(1);
+
+      digest = 'd2';
+      await setupAction.applyProfile(force: true);
+      verify(() => core.getProfileOutbounds(any())).called(1);
+    });
+
     test('a profile file leaves its bulk sections in the Core and records '
         'what the Core was handed', () async {
       final profile = Profile.normal(label: 'p');
@@ -1550,6 +1715,9 @@ void main() {
       when(() => core.setupConfig(any())).thenAnswer((invocation) async {
         pushed.add(invocation.positionalArguments.single as SetupParams);
       });
+      when(
+        () => core.getProfileOutbounds(any()),
+      ).thenAnswer((_) async => const <String, dynamic>{});
       final configFile = File(await appPath.configFilePath);
       await configFile.writeAsString('previous');
       final scoped = ProviderContainer(
@@ -1559,7 +1727,11 @@ void main() {
           setupStateProvider.overrideWith(
             (_, profileId) => nullProfileSetupState.copyWith(
               profileId: profileId,
-              addedRules: [Rule.parse('DOMAIN,added.test,MATCH')],
+              addedRules: [
+                Rule.parse(
+                  'DOMAIN,added.test,MATCH',
+                ).copyWith(customExit: true),
+              ],
             ),
           ),
           coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
@@ -1931,6 +2103,31 @@ void main() {
       expect(group['include-all-providers'], isTrue);
     });
 
+    test('without a profile the Core still opens the mixed port the Android '
+        'VPN advertises as its HTTP proxy', () async {
+      final core = _MockCoreHandlerInterface();
+      final scoped = ProviderContainer(
+        overrides: [
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          setupActionProvider.overrideWith(SetupAction.new),
+        ],
+      );
+      addTearDown(scoped.dispose);
+
+      final res = await scoped
+          .read(setupActionProvider.notifier)
+          .getProfile(
+            setupState: nullProfileSetupState,
+            patchConfig: const PatchClashConfig(mixedPort: 7899),
+          );
+      final config = loadYaml(res.yaml) as YamlMap;
+
+      verifyNever(() => core.readConfig(any()));
+      expect(config['mixed-port'], 7899);
+      expect(config['skip-auth-prefixes'], isEmpty);
+      expect(res.md5, isNotEmpty);
+    });
+
     test('only a subscription profile runs its script extension', () async {
       final engine = scriptEvaluator;
       addTearDown(() => scriptEvaluator = engine);
@@ -1960,7 +2157,6 @@ void main() {
             setupState: nullProfileSetupState.copyWith(
               profileId: 5,
               profileType: type,
-              extendType: ExtendType.script,
               script: script,
             ),
             patchConfig: const PatchClashConfig(),
@@ -1973,6 +2169,58 @@ void main() {
       await build(ProfileType.file);
       expect(evaluated, hasLength(1));
       verify(() => core.readConfig(any())).called(1);
+    });
+
+    test('puts the added rules ahead of what the script returns', () async {
+      final engine = scriptEvaluator;
+      addTearDown(() => scriptEvaluator = engine);
+      scriptEvaluator =
+          ({required String script, required String config}) async =>
+              json.encode({
+                'rules': ['DOMAIN,script.com,DIRECT', 'MATCH,FromScript'],
+              });
+      final script = await Script(
+        id: 78,
+        label: 'script',
+        lastUpdateTime: DateTime(2026),
+      ).save('const main = (config) => config;');
+      final core = _MockCoreHandlerInterface();
+      when(() => core.readConfig(any())).thenAnswer(
+        (_) async => {
+          'rules': ['MATCH,FromProfile'],
+        },
+      );
+      final scoped = ProviderContainer(
+        overrides: [
+          coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+          setupActionProvider.overrideWith(SetupAction.new),
+        ],
+      );
+      addTearDown(scoped.dispose);
+
+      final res = await scoped
+          .read(setupActionProvider.notifier)
+          .getProfile(
+            setupState: nullProfileSetupState.copyWith(
+              profileId: 5,
+              script: script,
+              addedRules: [
+                Rule.parse('DOMAIN,added.com,REJECT', id: 1),
+                Rule.parse(
+                  'DOMAIN,placeholder.com,MATCH',
+                  id: 2,
+                ).copyWith(customExit: true),
+              ],
+            ),
+            patchConfig: const PatchClashConfig(),
+          );
+
+      expect((loadYaml(res.yaml) as YamlMap)['rules'], [
+        'DOMAIN,added.com,REJECT',
+        'DOMAIN,placeholder.com,FromScript',
+        'DOMAIN,script.com,DIRECT',
+        'MATCH,FromScript',
+      ]);
     });
 
     test(

@@ -3,6 +3,8 @@ import 'package:flutter/widgets.dart';
 import 'package:prism_ui/icons/icons.dart';
 import 'package:prism_ui/prism_ui.dart';
 
+import 'nested_sheet.dart';
+
 sealed class _ListItemAction {
   const _ListItemAction();
 }
@@ -30,11 +32,13 @@ final class _OpenAction extends _ListItemAction {
   final ValueChanged<dynamic>? onChanged;
 
   final bool forceFull;
+  final bool enabled;
 
   const _OpenAction({
     required this.widget,
     this.onChanged,
     required this.forceFull,
+    required this.enabled,
   });
 }
 
@@ -43,12 +47,14 @@ final class _OptionsAction<T> extends _ListItemAction {
   final T value;
   final String Function(T value) textBuilder;
   final ValueChanged<T> onChanged;
+  final Set<T> sectionStarts;
 
   const _OptionsAction({
     required this.options,
     required this.textBuilder,
     required this.value,
     required this.onChanged,
+    required this.sectionStarts,
   });
 }
 
@@ -111,6 +117,7 @@ class ListItem<T> extends StatelessWidget {
     required Widget widget,
     ValueChanged<dynamic>? onChanged,
     bool forceFull = true,
+    bool enabled = true,
     this.horizontalTitleGap,
     this.minTileHeight,
     this.minVerticalPadding = listRowVerticalPadding,
@@ -119,6 +126,7 @@ class ListItem<T> extends StatelessWidget {
          widget: widget,
          onChanged: onChanged,
          forceFull: forceFull,
+         enabled: enabled,
        ),
        onTap = null;
 
@@ -132,6 +140,7 @@ class ListItem<T> extends StatelessWidget {
     required T value,
     required String Function(T value) textBuilder,
     required ValueChanged<T> onChanged,
+    Set<T> sectionStarts = const {},
     this.horizontalTitleGap,
     this.minTileHeight,
     this.minVerticalPadding = listRowVerticalPadding,
@@ -141,6 +150,7 @@ class ListItem<T> extends StatelessWidget {
          value: value,
          textBuilder: textBuilder,
          onChanged: onChanged,
+         sectionStarts: sectionStarts,
        ),
        trailing = null,
        onTap = null;
@@ -262,13 +272,26 @@ class ListItem<T> extends StatelessWidget {
       case final _OpenAction openDelegate:
         final child = openDelegate.widget;
         final onChanged = openDelegate.onChanged;
+        if (!openDelegate.enabled) {
+          // Dimmed as a disabled Switch draws its thumb; the row's text stays as it is.
+          return _buildRow(
+            context,
+            position: position,
+            trailing:
+                trailing ??
+                GlyphIcon(
+                  Glyphs.chevronForward,
+                  color: context.colorScheme.onSurface.opacity38,
+                ),
+          );
+        }
         if (!context.isMobileView) {
           return _buildRow(
             context,
             position: position,
             trailing: _pageTrailing,
             onTap: () async {
-              final result = await showExtend<dynamic>(
+              final result = await showNestedExtend<dynamic>(
                 context,
                 props: ExtendProps(forceFull: openDelegate.forceFull),
                 builder: (_) => child,
@@ -318,6 +341,9 @@ class ListItem<T> extends StatelessWidget {
                   PopupMenuItem(
                     label: optionsDelegate.textBuilder(option),
                     checked: option == optionsDelegate.value,
+                    section: optionsDelegate.sectionStarts.contains(option)
+                        ? const PopupMenuSection()
+                        : null,
                     onPressed: () => optionsDelegate.onChanged(option),
                   ),
               ],
@@ -405,11 +431,15 @@ class _OptionsValueButton extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         spacing: 4,
         children: [
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: _optionsValueMaxWidth),
-            child: PopupValueText(
-              label,
-              alignment: AlignmentDirectional.centerEnd,
+          Flexible(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: _optionsValueMaxWidth,
+              ),
+              child: PopupValueText(
+                label,
+                alignment: AlignmentDirectional.centerEnd,
+              ),
             ),
           ),
           const GlyphIcon(Glyphs.picker),

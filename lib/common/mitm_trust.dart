@@ -25,6 +25,7 @@ class MitmTrustCheck {
   const MitmTrustCheck(
     this.trust, {
     this.missingStores = const [],
+    this.untrustedStores = const [],
     this.certutilInstall,
     this.systemStore = false,
     this.rootAvailable = false,
@@ -39,6 +40,9 @@ class MitmTrustCheck {
 
   /// Linux: the browsers whose databases still lack the CA, by name.
   final List<String> missingStores;
+
+  /// Linux: the browsers that hold the CA without trusting it for TLS.
+  final List<String> untrustedStores;
 
   /// Linux: the command that installs certutil, which those databases need.
   final String? certutilInstall;
@@ -56,9 +60,8 @@ abstract interface class MitmTrustStore {
 
   Future<MitmInstallOutcome> install(MitmCertificate ca);
 
-  /// Takes [ca] out of the store before a new CA replaces it. False where
-  /// only the user can, in the system's settings.
-  Future<bool> remove(MitmCertificate ca);
+  /// Takes [ca] out of the store; the CA itself stays with the Core.
+  Future<MitmRemoveOutcome> remove(MitmCertificate ca);
 }
 
 MitmTrustStore? mitmTrustStoreForPlatform() {
@@ -209,7 +212,7 @@ class MacOSMitmTrustStore implements MitmTrustStore {
   }
 
   @override
-  Future<bool> remove(MitmCertificate ca) async {
+  Future<MitmRemoveOutcome> remove(MitmCertificate ca) async {
     await _runChecked(run, _security, [
       'delete-certificate',
       '-Z',
@@ -217,7 +220,7 @@ class MacOSMitmTrustStore implements MitmTrustStore {
       '-t',
       _keychain,
     ]);
-    return true;
+    return MitmRemoveOutcome.removed;
   }
 }
 
@@ -256,14 +259,14 @@ class WindowsMitmTrustStore implements MitmTrustStore {
   }
 
   @override
-  Future<bool> remove(MitmCertificate ca) async {
+  Future<MitmRemoveOutcome> remove(MitmCertificate ca) async {
     await _runChecked(run, 'certutil', [
       '-user',
       '-delstore',
       'Root',
       mitmSha1Hex(ca),
     ]);
-    return true;
+    return MitmRemoveOutcome.removed;
   }
 }
 
@@ -541,6 +544,24 @@ fi
     return listed.contains(base64.encode(mitmCertificateDer(ca)));
   }
 
+  /// A CA for TLS needs `C` in the SSL field of the trust `certutil -L` lists.
+  Future<bool> _trustedForTls(String certutil, String database) async {
+    final result = await run(certutil, ['-d', 'sql:$database', '-L']);
+    if (result.exitCode != 0) {
+      return false;
+    }
+    final flags = RegExp(r'^\s+([A-Za-z]*),[A-Za-z]*,[A-Za-z]*\s*$');
+    for (final line in LineSplitter.split('${result.stdout}')) {
+      if (!line.startsWith(nickname)) {
+        continue;
+      }
+      if (flags.firstMatch(line.substring(nickname.length)) case final match?) {
+        return match.group(1)!.contains('C');
+      }
+    }
+    return false;
+  }
+
   @override
   Future<MitmTrustCheck> check(
     MitmCertificate ca,
@@ -550,20 +571,25 @@ fi
     final databases = await nssDatabases();
     final certutil = _findExecutable('certutil');
     final missing = <String>[];
+    final untrusted = <String>[];
     for (final MapEntry(key: database, value: browser) in databases.entries) {
       if (certutil == null || !await _inDatabase(certutil, database, ca)) {
         missing.add(browser);
+      } else if (!await _trustedForTls(certutil, database)) {
+        untrusted.add(browser);
       }
     }
-    final trust = switch ((system, missing.length)) {
-      (true, 0) => MitmTrust.ready,
-      (false, final count) when count == databases.length =>
-        MitmTrust.notInstalled,
-      _ => MitmTrust.untrusted,
-    };
+    final everyBrowserTrusts = missing.isEmpty && untrusted.isEmpty;
+    final noBrowserHolds = missing.length == databases.length;
+    final trust = system && everyBrowserTrusts
+        ? MitmTrust.ready
+        : !system && noBrowserHolds
+        ? MitmTrust.notInstalled
+        : MitmTrust.untrusted;
     return MitmTrustCheck(
       trust,
       missingStores: missing,
+      untrustedStores: untrusted,
       certutilInstall: certutil == null && databases.isNotEmpty
           ? certutilInstallCommand()
           : null,
@@ -607,13 +633,13 @@ fi
   }
 
   @override
-  Future<bool> remove(MitmCertificate ca) async {
+  Future<MitmRemoveOutcome> remove(MitmCertificate ca) async {
     var removed = await _removeFromDatabases(ca);
     if (await inSystemBundle(ca) &&
         !await elevate(['/bin/sh', '-c', removeScript, 'flclash'])) {
       removed = false;
     }
-    return removed;
+    return removed ? MitmRemoveOutcome.removed : MitmRemoveOutcome.failed;
   }
 
   Future<bool> _removeFromDatabases(MitmCertificate ca) async {
@@ -688,13 +714,13 @@ class AndroidMitmTrustStore implements MitmTrustStore {
 
   /// An app cannot remove a user certificate.
   @override
-  Future<bool> remove(MitmCertificate ca) async {
+  Future<MitmRemoveOutcome> remove(MitmCertificate ca) async {
     final der = mitmCertificateDer(ca);
     final found = await platform.locateCaCertificate(der);
     if (found.system &&
         (!found.root || !await platform.removeCaCertificateWithRoot(der))) {
-      return false;
+      return MitmRemoveOutcome.needsRoot;
     }
-    return !found.user;
+    return found.user ? MitmRemoveOutcome.userStore : MitmRemoveOutcome.removed;
   }
 }

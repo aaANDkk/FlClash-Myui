@@ -17,7 +17,7 @@ void main() {
   late AppLocalizations appLocalizations;
 
   setUpAll(() async {
-    appLocalizations = await AppLocalizations.load(const Locale('en'));
+    appLocalizations = loadAppLocalizations(const Locale('en'));
   });
 
   DioException dioError(
@@ -185,6 +185,32 @@ void main() {
       ),
       'proxy 0: unsupported type',
     );
+  });
+
+  group('a lost Core session', () {
+    test('says the connection is gone when it has no cause', () {
+      expect(
+        coreSessionLostMessage(null, appLocalizations),
+        'The app lost its connection to the core',
+      );
+      expect(
+        coreSessionLostMessage(
+          null,
+          lookupAppLocalizations(const Locale('zh')),
+        ),
+        '应用与核心的连接已断开',
+      );
+    });
+
+    test('adds the cause in the words used for any error', () {
+      expect(
+        coreSessionLostMessage(
+          const CoreMethodException(code: 'io', message: 'pipe reset'),
+          appLocalizations,
+        ),
+        'The app lost its connection to the core: pipe reset',
+      );
+    });
   });
 
   group('policy-blocked Core launch', () {

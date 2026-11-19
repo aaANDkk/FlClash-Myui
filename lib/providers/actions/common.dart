@@ -11,6 +11,13 @@ class CommonAction extends _$CommonAction {
 
   void toggleRunning() {
     final running = !ref.read(isStartProvider);
+    if (running && ref.read(coreStatusProvider) == CoreStatus.disconnected) {
+      ref.read(setupActionProvider.notifier).resumeOnRestart();
+      unawaited(
+        globalState.safeRun(ref.read(coreActionProvider.notifier).restartCore),
+      );
+      return;
+    }
     unawaited(
       globalState.safeRun(
         () => ref
@@ -150,20 +157,20 @@ class CommonAction extends _$CommonAction {
     if (data != null) {
       final context = globalState.navigatorKey.currentContext!;
       final tag = data['tag_name'] as String;
-      final suffix = selfUpdateSuffix;
+      final asset = selfUpdateAsset;
       final res = await dialogs.showMessage(
         title: currentAppLocalizations.discoverNewVersion,
         message: _releaseSpan(context, tag, data['body'] as String?),
-        confirmText: suffix == null
+        confirmText: asset == null
             ? currentAppLocalizations.goDownload
             : currentAppLocalizations.update,
         cancelText: isUser ? null : currentAppLocalizations.noLongerRemind,
       );
       if (res == true) {
-        if (suffix == null) {
+        if (asset == null) {
           _openReleasePage();
         } else {
-          unawaited(_downloadUpdate(tag, releaseAssetName(tag, suffix)));
+          unawaited(_downloadUpdate(tag, updateAssetName(tag, asset)));
         }
       } else if (!isUser && res == false) {
         ref
@@ -188,8 +195,8 @@ class CommonAction extends _$CommonAction {
 
   /// Downloads the latest release for this build even when it is not newer.
   Future<void> testUpdateDownload() async {
-    final suffix = selfUpdateSuffix;
-    if (suffix == null || ref.read(updateDownloadStateProvider) != null) {
+    final asset = selfUpdateAsset;
+    if (asset == null || ref.read(updateDownloadStateProvider) != null) {
       return;
     }
     final release = await globalState.loadingRun(
@@ -199,7 +206,7 @@ class CommonAction extends _$CommonAction {
     );
     if (release == null) return;
     final tag = release['tag_name'] as String;
-    await _downloadUpdate(tag, releaseAssetName(tag, suffix));
+    await _downloadUpdate(tag, updateAssetName(tag, asset));
   }
 
   Future<void> _downloadUpdate(String tag, String name) async {

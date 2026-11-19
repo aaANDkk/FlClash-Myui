@@ -1,7 +1,7 @@
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/common/common.dart';
-import 'package:fl_clash/providers/config.dart';
+import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
@@ -160,7 +160,7 @@ class TrackerInfoAnimatedList extends StatelessWidget {
         itemBuilder: (itemContext, trackerInfo) {
           final striped = positions[trackerInfo.id]?.isOdd ?? false;
           return MemoBuilder(
-            key: Key(trackerInfo.id),
+            key: ValueKey(trackerInfo.id),
             // A live row reads its age off the clock, which moves on its own.
             inputs: [
               trackerInfo,
@@ -219,6 +219,7 @@ class TrackerInfoGroupedList extends ConsumerStatefulWidget {
 class _TrackerInfoGroupedListState
     extends ConsumerState<TrackerInfoGroupedList> {
   Map<String, TrackerInfo>? _byId;
+  final _leadings = <String, Widget>{};
 
   @override
   void didUpdateWidget(TrackerInfoGroupedList oldWidget) {
@@ -226,6 +227,17 @@ class _TrackerInfoGroupedListState
     if (!identical(oldWidget.groups, widget.groups)) {
       _byId = null;
     }
+  }
+
+  Widget? _leadingOf(String packageName) {
+    if (packageName.isEmpty) {
+      return null;
+    }
+    return _leadings[packageName] ??= OwnPackageIcon(
+      packageName: packageName,
+      size: 24,
+      builder: (_, icon) => icon ?? const SizedBox.shrink(),
+    );
   }
 
   TrackerInfo _latest(TrackerInfo trackerInfo) =>
@@ -244,15 +256,9 @@ class _TrackerInfoGroupedListState
       :table,
       :onClose,
     ) = widget;
-    final showIcon =
+    final showsIcons =
         grouping == RecordGrouping.app &&
-        ref.watch(
-          patchClashConfigProvider.select(
-            (state) =>
-                state.findProcessMode == FindProcessMode.always &&
-                system.isAndroid,
-          ),
-        );
+        ref.watch(packageIconSourceProvider) != null;
     final showsTraffic = isLive || table != null;
     return RecordGroupedList<TrackerInfo>(
       groups: widget.groups,
@@ -260,14 +266,12 @@ class _TrackerInfoGroupedListState
       controller: widget.controller,
       padding: widget.padding,
       estimatedItemExtent: table?.rowHeight ?? recordListEstimatedExtent,
-      leadingOf: (group) => showIcon && group.key.isNotEmpty
-          ? PackageIcon(packageName: group.key, size: 24)
-          : null,
+      leadingOf: showsIcons ? (group) => _leadingOf(group.key) : null,
       trailingOf: isLive ? (group) => _buildSpeed(context, group.items) : null,
       itemBuilder: (_, trackerInfo, index) {
         final striped = index.isOdd;
         return MemoBuilder(
-          key: Key(trackerInfo.id),
+          key: ValueKey(trackerInfo.id),
           inputs: [
             ...showsTraffic ? [trackerInfo] : _shownInList(trackerInfo),
             detailTitle,
@@ -334,7 +338,7 @@ Widget _buildTrackerInfoItem(
 }) {
   if (table != null) {
     return TrackerInfoTableRow(
-      key: Key(trackerInfo.id),
+      key: ValueKey(trackerInfo.id),
       trackerInfo: trackerInfo,
       table: table,
       striped: striped,
@@ -343,7 +347,7 @@ Widget _buildTrackerInfoItem(
     );
   }
   return TrackerInfoItem(
-    key: Key(trackerInfo.id),
+    key: ValueKey(trackerInfo.id),
     trackerInfo: trackerInfo,
     isLive: isLive,
     onClose: onClose,

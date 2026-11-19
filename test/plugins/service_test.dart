@@ -22,9 +22,13 @@ class _RecordingListener with ServiceListener {
 
 class _RecordingStopListener with ServiceListener {
   var stops = 0;
+  final failures = <ServiceStartFailure?>[];
 
   @override
-  void onServiceStopped() => stops++;
+  void onServiceStopped([ServiceStartFailure? failure]) {
+    stops++;
+    failures.add(failure);
+  }
 }
 
 class _ThrowingListener with ServiceListener {
@@ -37,7 +41,7 @@ class _ThrowingListener with ServiceListener {
   }
 
   @override
-  void onServiceStopped() {
+  void onServiceStopped([ServiceStartFailure? failure]) {
     throw StateError('listener boom');
   }
 }
@@ -174,11 +178,13 @@ void main() {
   group('stop reports', () {
     late _RecordingStopListener listener;
 
-    Future<void> reportStopped(Object? revision) async {
+    Future<void> reportStopped(Object? revision, {String? failure}) async {
       await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .handlePlatformMessage(
             channelName,
-            codec.encodeMethodCall(MethodCall('stopped', revision)),
+            codec.encodeMethodCall(
+              MethodCall('stopped', {'revision': revision, 'failure': failure}),
+            ),
             null,
           );
     }
@@ -212,6 +218,14 @@ void main() {
         expect(listener.stops, 1);
       },
     );
+
+    test('a start the service gave up names why', () async {
+      await Service().start();
+
+      await reportStopped(lastRevision(), failure: 'vpn_permission');
+
+      expect(listener.failures, [ServiceStartFailure.vpnPermission]);
+    });
 
     test('a report older than the newest command is dropped', () async {
       await Service().start();
@@ -317,6 +331,25 @@ void main() {
 
       expect(response.result, names);
     });
+
+    test(
+      'runs the call\'s own model where it decodes a large envelope',
+      () async {
+        final names = List.generate(5000, (index) => '节点-$index');
+        mockCoreChannel(
+          (_) async => utf8.encode(
+            json.encode(CoreMethodResponse(id: '3', result: names).toJson()),
+          ),
+        );
+
+        final response = await Service().invokeMethod(
+          const CoreMethodCall(id: '3', method: CoreMethod.proxyList),
+          model: _lengthOf,
+        );
+
+        expect(response.result, 5000);
+      },
+    );
 
     test('reads an envelope the Core spilled to a file', () async {
       final home = Directory.systemTemp.createTempSync('service_spill');
@@ -511,3 +544,5 @@ void main() {
     });
   });
 }
+
+Object? _lengthOf(Object? result) => (result as List).length;

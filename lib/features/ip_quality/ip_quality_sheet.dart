@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:fl_clash/common/common.dart';
-import 'package:fl_clash/common/ip.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/dashboard/style.dart';
@@ -9,16 +8,19 @@ import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'ip_locate.dart';
 import 'risk_model.dart';
 import 'risk_provider.dart';
 import 'risk_view.dart';
 
 Future<void> showIpQualitySheet(
   BuildContext context, {
-  required String ip,
+  String ip = '',
+  String? proxyName,
   bool outbound = true,
 }) {
-  Widget page(BuildContext context) => IpRiskSheet(ip: ip, outbound: outbound);
+  Widget page(BuildContext context) =>
+      IpRiskSheet(ip: ip, proxyName: proxyName, outbound: outbound);
   if (isSheetPage(context)) {
     return Navigator.of(context).push(PagedSheetRoute(builder: page));
   }
@@ -26,8 +28,14 @@ Future<void> showIpQualitySheet(
 }
 
 class IpRiskSheet extends ConsumerStatefulWidget {
-  const IpRiskSheet({super.key, required this.ip, this.outbound = true});
+  const IpRiskSheet({
+    super.key,
+    this.ip = '',
+    this.proxyName,
+    this.outbound = true,
+  }) : assert(ip != '' || proxyName != null);
   final String ip;
+  final String? proxyName;
   final bool outbound;
 
   @override
@@ -35,7 +43,6 @@ class IpRiskSheet extends ConsumerStatefulWidget {
 }
 
 class _IpRiskSheetState extends ConsumerState<IpRiskSheet> {
-  late String _ip = widget.ip;
   bool _retrying = false;
   bool _retryHold = false;
   Timer? _retryTimer;
@@ -46,29 +53,11 @@ class _IpRiskSheetState extends ConsumerState<IpRiskSheet> {
     super.dispose();
   }
 
-  Future<void> _editIp() async {
-    final l = context.appLocalizations;
-    final value = await showFloatingDialog<String>(
-      context: context,
-      child: InputDialog(
-        title: l.ipRiskHint,
-        value: ref.read(appSettingProvider).hideIp ? '' : _ip,
-        validator: (v) => publicIpOf(v ?? '') == null ? l.ipRiskInvalid : null,
-      ),
-    );
-    if (!mounted || value == null) return;
-    final ip = publicIpOf(value);
-    if (ip != null && ip != _ip) {
-      _retryTimer?.cancel();
-      setState(() {
-        _ip = ip;
-        _retrying = false;
-        _retryHold = false;
-      });
-    }
-  }
-
-  void _retry() {
+  void _retry(
+    String effectiveIp, {
+    required bool riskFailed,
+    required bool attributionFailed,
+  }) {
     if (_retryHold) return;
     _retryTimer?.cancel();
     setState(() {
@@ -79,20 +68,57 @@ class _IpRiskSheetState extends ConsumerState<IpRiskSheet> {
       if (!mounted) return;
       setState(() => _retryHold = false);
     });
-    ref.invalidate(ipRiskProvider(_ip));
+    if (effectiveIp.isEmpty && widget.proxyName != null) {
+      ref.invalidate(proxyExitIpProvider(widget.proxyName!));
+    } else if (effectiveIp.isNotEmpty) {
+      if (riskFailed) refreshIpRisk(ref, effectiveIp);
+      if (attributionFailed) ref.invalidate(ipLocateProvider(effectiveIp));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final l = context.appLocalizations;
-    final state = ref.watch(ipRiskProvider(_ip));
-    final isLoading = state.isLoading && !state.hasValue;
-    final risk = state.hasError ? null : state.value;
+    final proxyIpState = widget.ip.isEmpty && widget.proxyName != null
+        ? ref.watch(proxyExitIpProvider(widget.proxyName!))
+        : null;
+    final resolvingIp =
+        proxyIpState != null &&
+        proxyIpState.isLoading &&
+        !proxyIpState.hasValue;
+    final resolvedIp = proxyIpState != null && !proxyIpState.hasError
+        ? (proxyIpState.value ?? '')
+        : '';
+    final effectiveIp = widget.ip.isNotEmpty ? widget.ip : resolvedIp;
+    final state = effectiveIp.isNotEmpty
+        ? ref.watch(ipRiskProvider(effectiveIp))
+        : null;
+    final attributionState = effectiveIp.isNotEmpty
+        ? ref.watch(ipLocateProvider(effectiveIp))
+        : null;
+    final risk = state == null || state.hasError ? null : state.value;
+    final attribution = attributionState == null || attributionState.hasError
+        ? null
+        : attributionState.value;
+    final riskFailed = state != null && !state.isLoading && risk == null;
+    final attributionFailed =
+        attributionState != null &&
+        !attributionState.isLoading &&
+        attribution == null;
+    final isLoading =
+        resolvingIp ||
+        (!riskFailed &&
+            !attributionFailed &&
+            ((state?.isLoading ?? false) ||
+                (attributionState?.isLoading ?? false)));
     final hidden = ref.watch(appSettingProvider.select((s) => s.hideIp));
+    final switchKey = widget.proxyName ?? effectiveIp;
     return Theme(
       data: Theme.of(context).copyWith(visualDensity: VisualDensity.standard),
       child: Scaffold(
-        title: widget.outbound ? l.outboundIp : l.ipDetails,
+        title: widget.proxyName != null
+            ? l.ipRiskCheck
+            : (widget.outbound ? l.outboundIp : l.ipDetails),
         iconActions: [
           IconButtonData(
             glyph: hidden ? AppGlyphs.eyeOff : AppGlyphs.eye,
@@ -104,7 +130,7 @@ class _IpRiskSheetState extends ConsumerState<IpRiskSheet> {
         ],
         body: Builder(
           builder: (context) => NullStatusSwitcher(
-            key: ValueKey(_ip),
+            key: ValueKey(switchKey),
             isLoading: !_retrying && isLoading,
             holdsArrival: false,
             loadingStatus: const Center(child: ActivityIndicator.page()),
@@ -119,7 +145,7 @@ class _IpRiskSheetState extends ConsumerState<IpRiskSheet> {
                 Card(
                   radius: AppCorner.xl,
                   child: ListItem(
-                    leading: const GlyphIcon(AppGlyphs.proxies),
+                    leading: const GlyphIcon(AppGlyphs.location),
                     title: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -134,7 +160,9 @@ class _IpRiskSheetState extends ConsumerState<IpRiskSheet> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          hidden ? '*****' : _ip,
+                          hidden
+                              ? '*****'
+                              : (effectiveIp.isNotEmpty ? effectiveIp : '--'),
                           style: hidden
                               ? AppTextStyle.headline
                                     .of(context, emphasized: true)
@@ -148,9 +176,12 @@ class _IpRiskSheetState extends ConsumerState<IpRiskSheet> {
                     ),
                     trailing: MinIconButtonTheme(
                       child: IconButton(
-                        tooltip: l.edit,
-                        onPressed: _editIp,
-                        icon: const GlyphIcon(AppGlyphs.edit, size: 16),
+                        tooltip: l.copy,
+                        onPressed: effectiveIp.isEmpty
+                            ? null
+                            : () =>
+                                  dialogs.copyToClipboard(context, effectiveIp),
+                        icon: const GlyphIcon(AppGlyphs.copy, size: 16),
                       ),
                     ),
                   ),
@@ -185,7 +216,13 @@ class _IpRiskSheetState extends ConsumerState<IpRiskSheet> {
                     context,
                     isLoading: isLoading,
                     risk: risk,
+                    attribution: attribution,
                     hidden: hidden,
+                    onRetry: () => _retry(
+                      effectiveIp,
+                      riskFailed: riskFailed,
+                      attributionFailed: attributionFailed,
+                    ),
                   ),
                 ),
               ],
@@ -200,10 +237,12 @@ class _IpRiskSheetState extends ConsumerState<IpRiskSheet> {
     BuildContext context, {
     required bool isLoading,
     required IpRisk? risk,
+    required IpLocateInfo? attribution,
     required bool hidden,
+    required VoidCallback onRetry,
   }) {
     final l = context.appLocalizations;
-    if (!isLoading && risk != null) {
+    if (!isLoading && risk != null && attribution != null) {
       return Column(
         key: const ValueKey('data'),
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -214,8 +253,8 @@ class _IpRiskSheetState extends ConsumerState<IpRiskSheet> {
             RiskChecksCard(risk: risk),
             const SizedBox(height: 12),
           ],
-          _LocationCard(risk: risk, hidden: hidden),
-          ListFooter(text: '${l.ipRiskSource} Scamalytics'),
+          _LocationCard(risk: risk, attribution: attribution, hidden: hidden),
+          ListFooter(text: '${l.ipRiskSource} ${l.ipRiskSources}'),
         ],
       );
     }
@@ -253,7 +292,7 @@ class _IpRiskSheetState extends ConsumerState<IpRiskSheet> {
                       )
                     : FilledButton.icon(
                         key: const ValueKey('retry'),
-                        onPressed: _retry,
+                        onPressed: onRetry,
                         icon: const GlyphIcon(AppGlyphs.refresh, size: 18),
                         label: Text(l.retry),
                       ),
@@ -267,8 +306,13 @@ class _IpRiskSheetState extends ConsumerState<IpRiskSheet> {
 }
 
 class _LocationCard extends StatelessWidget {
-  const _LocationCard({required this.risk, required this.hidden});
+  const _LocationCard({
+    required this.risk,
+    required this.attribution,
+    required this.hidden,
+  });
   final IpRisk risk;
+  final IpLocateInfo? attribution;
   final bool hidden;
 
   Widget _value(
@@ -305,84 +349,77 @@ class _LocationCard extends StatelessWidget {
     final country = risk.countryLabel ?? '';
     final place = risk.placeLabel ?? '';
     final hasLocation = country.isNotEmpty || place.isNotEmpty;
-    final showAsnPill = hasLocation && risk.asn.isNotEmpty;
-    final owner = showAsnPill
-        ? risk.organization
-        : [
-            risk.organization,
-            risk.asn,
-          ].where((s) => s.isNotEmpty).join(' \u00b7 ');
+    final info = attribution?.ip == risk.ip ? attribution : null;
+    final company = info?.company ?? '';
+    final network = info?.network ?? '';
+    final asn = info?.asn ?? '';
+    final showAsnPill = asn.isNotEmpty;
     final rows = <Widget>[
-      if (hasLocation)
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      if (hasLocation || showAsnPill)
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    country.isNotEmpty ? l.ipRiskLocation : l.ipRiskCity,
-                    style: AppTextStyle.footnote
-                        .of(context)
-                        .copyWith(color: cs.onSurfaceVariant),
-                  ),
-                  if (country.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    EmojiText(
-                      country,
-                      style: AppTextStyle.headline.of(
-                        context,
-                        emphasized: true,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (hasLocation)
+                  Expanded(
+                    child: Text(
+                      country.isNotEmpty ? l.ipRiskLocation : l.ipRiskCity,
+                      style: AppTextStyle.footnote
+                          .of(context)
+                          .copyWith(color: cs.onSurfaceVariant),
+                    ),
+                  )
+                else
+                  const Spacer(),
+                if (showAsnPill) ...[
+                  const SizedBox(width: 12),
+                  DecoratedBox(
+                    decoration: ShapeDecoration(
+                      color: DashboardColors.of(context).tone,
+                      shape: AppShape.full,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 3,
+                      ),
+                      child: Text(
+                        asn,
+                        style: AppTextStyle.footnote
+                            .of(context, emphasized: true)
+                            .toTabular
+                            .copyWith(color: cs.onSurfaceVariant),
                       ),
                     ),
-                  ],
-                  if (place.isNotEmpty) ...[
-                    SizedBox(height: country.isNotEmpty ? 4 : 6),
-                    SelectableText(
-                      place,
-                      style: country.isNotEmpty
-                          ? AppTextStyle.subheadline
-                                .of(context)
-                                .copyWith(color: cs.onSurfaceVariant)
-                          : AppTextStyle.body.of(context, emphasized: true),
-                    ),
-                  ],
+                  ),
                 ],
-              ),
+              ],
             ),
-            if (showAsnPill) ...[
-              const SizedBox(width: 12),
-              DecoratedBox(
-                decoration: ShapeDecoration(
-                  color: DashboardColors.of(context).tone,
-                  shape: AppShape.full,
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 9,
-                    vertical: 3,
-                  ),
-                  child: Text(
-                    risk.asn,
-                    style: AppTextStyle.footnote
-                        .of(context, emphasized: true)
-                        .toTabular
-                        .copyWith(color: cs.onSurfaceVariant),
-                  ),
-                ),
+            if (country.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              EmojiText(
+                country,
+                style: AppTextStyle.headline.of(context, emphasized: true),
+              ),
+            ],
+            if (place.isNotEmpty) ...[
+              SizedBox(height: country.isNotEmpty ? 4 : 6),
+              SelectableText(
+                place,
+                style: country.isNotEmpty
+                    ? AppTextStyle.subheadline
+                          .of(context)
+                          .copyWith(color: cs.onSurfaceVariant)
+                    : AppTextStyle.body.of(context, emphasized: true),
               ),
             ],
           ],
         ),
-      if (owner.isNotEmpty)
-        _value(
-          context,
-          showAsnPill ? l.ipOrganization : l.operatorOrAsn,
-          owner,
-        ),
-      if (risk.isp.isNotEmpty && risk.isp != risk.organization)
-        _value(context, l.isp, risk.isp),
+      if (company.isNotEmpty) _value(context, l.isp, company),
+      if (network.isNotEmpty && network != company)
+        _value(context, l.ipRiskAsn, network),
       if (!hidden && risk.hostname.isNotEmpty)
         _value(context, l.ipRiskHostname, risk.hostname),
     ];

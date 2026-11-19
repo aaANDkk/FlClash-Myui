@@ -11,18 +11,22 @@ import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/config/general.dart';
+import 'package:fl_clash/views/dashboard/dashboard.dart';
 import 'package:fl_clash/views/navigation.dart';
 import 'package:fl_clash/views/tools.dart';
 import 'package:fl_clash/widgets/widgets.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../helpers/fake_desktop_window.dart';
 import '../helpers/glyph_finders.dart';
 import '../helpers/test_app.dart';
 import '../helpers/host_scaffold.dart';
+import '../helpers/test_profiles.dart';
 
 Finder _glyph(Glyph glyph) => find.byGlyph(glyph);
 
@@ -433,6 +437,7 @@ void main() {
   testWidgets(
     'profile trailing controls stay valid while a maximized window restores',
     (tester) async {
+      FakeDesktopWindow().install();
       tester.view.physicalSize = const Size(1440, 900);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
@@ -1169,6 +1174,142 @@ void main() {
     });
   }
 
+  testWidgets('mobile pages scroll on controllers of their own, not the '
+      'route\'s primary one they would share', (tester) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final container = ProviderContainer(
+      overrides: [
+        profilesProvider.overrideWith(TestProfiles.new),
+        navigationItemsStateProvider.overrideWithValue(
+          NavigationItemsState(
+            value: [
+              NavigationItem(
+                glyph: AppGlyphs.dashboard,
+                label: PageLabel.dashboard,
+                builder: (_) =>
+                    const DashboardView(platform: SupportPlatform.Android),
+              ),
+              NavigationItem(
+                glyph: AppGlyphs.tools,
+                label: PageLabel.tools,
+                builder: (_) => const ToolsView(),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    globalState.container = container;
+    container.read(viewSizeProvider.notifier).value = const Size(400, 800);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const TestApp(includeNavigatorKey: false, child: HomePage()),
+      ),
+    );
+    await tester.pump();
+    container.read(currentPageLabelProvider.notifier).toPage(PageLabel.tools);
+    await tester.pumpAndSettle();
+
+    final primary = PrimaryScrollController.of(
+      tester.element(find.byType(ToolsView)),
+    );
+    expect(find.byType(DashboardView, skipOffstage: false), findsOneWidget);
+    expect(primary.hasClients, isFalse);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 5));
+  });
+
+  for (final animation in TabAnimation.values) {
+    testWidgets('tools opens at the top with fractional safe areas during a '
+        '${animation.name} tab switch and retains user scrolling', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      tester.view.physicalSize = const Size(1184, 2560);
+      tester.view.devicePixelRatio = 3;
+      tester.view.padding = const FakeViewPadding(top: 85.2, bottom: 60);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPadding);
+
+      final container = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(TestProfiles.new),
+          navigationItemsStateProvider.overrideWithValue(
+            NavigationItemsState(
+              value: navigation
+                  .getItems(openLogs: true, hasProxies: true)
+                  .map(
+                    (item) => item.label == PageLabel.tools
+                        ? item
+                        : item.copyWith(
+                            builder: (_) => const SizedBox.shrink(),
+                          ),
+                  )
+                  .toList(),
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      globalState.container = container;
+      container.read(viewSizeProvider.notifier).value = const Size(
+        1184 / 3,
+        2560 / 3,
+      );
+      container
+          .read(appSettingProvider.notifier)
+          .update((state) => state.copyWith(tabAnimation: animation));
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const TestApp(includeNavigatorKey: false, child: HomePage()),
+        ),
+      );
+      await tester.pump();
+
+      final scrollable = find.descendant(
+        of: find.byType(ToolsView),
+        matching: find.byType(Scrollable),
+      );
+      ScrollPosition position() =>
+          tester.state<ScrollableState>(scrollable).position;
+      await tester.tap(_glyph(AppGlyphs.tools));
+      await tester.pump();
+      for (var frame = 0; frame < 40; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        if (scrollable.evaluate().isNotEmpty) {
+          expect(position().pixels, 0, reason: 'frame $frame');
+        }
+      }
+      await tester.pumpAndSettle();
+      expect(scrollable, findsOneWidget);
+      expect(position().pixels, 0);
+      expect(position().maxScrollExtent, greaterThan(0));
+
+      await tester.drag(find.byType(PrismListView), const Offset(0, -80));
+      await tester.pumpAndSettle();
+      final savedOffset = position().pixels;
+      expect(savedOffset, greaterThan(0));
+      await tester.tap(_glyph(AppGlyphs.dashboard));
+      await tester.pumpAndSettle();
+      await tester.tap(_glyph(AppGlyphs.tools));
+      await tester.pumpAndSettle();
+
+      expect(position().pixels, savedOffset);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('a far mobile page switch builds no page in between', (
     tester,
   ) async {
@@ -1607,11 +1748,11 @@ class _ThemeManagedTestApp extends StatelessWidget {
     return PrismApp(
       navigatorKey: globalState.navigatorKey,
       localizationsDelegates: const [
-        AppLocalizations.delegate,
+        appLocalizationsDelegate,
         AppUiLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
       ],
-      supportedLocales: AppLocalizations.delegate.supportedLocales,
+      supportedLocales: AppLocalizations.supportedLocales,
       builder: (_, child) => ThemeManager(child: child!),
       home: const HomePage(),
     );
