@@ -10,6 +10,9 @@ class ProxyService : Service(), ManagedService {
     private val modules = ServiceModules(this)
     private val binder = LocalBinder()
 
+    @Volatile
+    private var running = false
+
     override fun onDestroy() {
         try {
             cleanup()
@@ -35,9 +38,17 @@ class ProxyService : Service(), ManagedService {
 
     override fun onBind(intent: Intent): IBinder = binder
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (!running) {
+            notifyVpnStartRequested()
+        }
+        return START_STICKY
+    }
+
     override fun start() {
         try {
             modules.start()
+            running = true
         } catch (error: Exception) {
             stop()
             throw error
@@ -52,5 +63,8 @@ class ProxyService : Service(), ManagedService {
         }
     }
 
-    private fun cleanup() = modules.stop()
+    private fun cleanup() {
+        running = false
+        modules.stop()
+    }
 }

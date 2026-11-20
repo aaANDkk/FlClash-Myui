@@ -19,6 +19,10 @@ import 'risk_model.dart';
 import 'risk_provider.dart';
 import 'risk_view.dart';
 
+const _wideLeftFlex = 9;
+const _wideRightFlex = 13;
+const _wideCardGap = 12.0;
+
 class IpLookupView extends ConsumerStatefulWidget {
   const IpLookupView({super.key, this.initialIp = ''});
 
@@ -305,9 +309,9 @@ class _IpLookupViewState extends ConsumerState<IpLookupView> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(flex: 9, child: heroCard),
-                    const SizedBox(width: 12),
-                    Expanded(flex: 13, child: flagsCard),
+                    Expanded(flex: _wideLeftFlex, child: heroCard),
+                    const SizedBox(width: _wideCardGap),
+                    Expanded(flex: _wideRightFlex, child: flagsCard),
                   ],
                 ),
               )
@@ -642,6 +646,7 @@ class _IpRiskHeroCard extends StatelessWidget {
                 painter: _RiskScaleBarPainter(
                   score: animatedScore,
                   surface: colors.card,
+                  track: colors.tone2,
                 ),
               ),
             ),
@@ -771,10 +776,15 @@ class _InlineMetric extends StatelessWidget {
 }
 
 class _RiskScaleBarPainter extends CustomPainter {
-  const _RiskScaleBarPainter({required this.score, required this.surface});
+  const _RiskScaleBarPainter({
+    required this.score,
+    required this.surface,
+    required this.track,
+  });
 
   final double score;
   final Color surface;
+  final Color track;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -782,10 +792,7 @@ class _RiskScaleBarPainter extends CustomPainter {
     final clamped = score.clamp(0.0, 100.0);
     canvas.drawRSuperellipse(
       RSuperellipse.fromRectAndRadius(rect, AppRadius.full.topLeft),
-      Paint()
-        ..shader = LinearGradient(
-          colors: riskGradient.map((c) => c.withValues(alpha: .24)).toList(),
-        ).createShader(rect),
+      Paint()..color = track,
     );
     canvas.save();
     canvas.clipRect(
@@ -816,7 +823,9 @@ class _RiskScaleBarPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_RiskScaleBarPainter oldDelegate) =>
-      score != oldDelegate.score || surface != oldDelegate.surface;
+      score != oldDelegate.score ||
+      surface != oldDelegate.surface ||
+      track != oldDelegate.track;
 }
 
 class _IpAttributionCard extends StatelessWidget {
@@ -1078,9 +1087,7 @@ class _IpAttributionCard extends StatelessWidget {
       ],
     );
 
-    const verticalPadding = EdgeInsets.symmetric(vertical: 18);
-    final left = Padding(padding: verticalPadding, child: leftZone);
-    final right = Padding(padding: verticalPadding, child: rightZone);
+    const singleZonePadding = EdgeInsets.symmetric(horizontal: 20, vertical: 18);
     return Card(
       radius: AppCorner.xl,
       padding: EdgeInsets.zero,
@@ -1105,33 +1112,58 @@ class _IpAttributionCard extends StatelessWidget {
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: specs.isEmpty
-                  ? left
-                  : !hasLocation
-                  ? right
-                  : IntrinsicHeight(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(flex: 9, child: left),
-                          SizedBox(
-                            width: 41.5,
-                            child: CustomPaint(
-                              painter: VerticalTicketPerforationPainter(
-                                notchColor: SurfaceLevel.page.colorOf(cs),
-                                dashColor: cs.outlineVariant.withValues(
-                                  alpha: isDark ? 0.55 : 0.48,
-                                ),
-                              ),
-                            ),
-                          ),
-                          Expanded(flex: 13, child: right),
-                        ],
+            if (specs.isEmpty || !hasLocation)
+              Padding(
+                padding: singleZonePadding,
+                child: specs.isEmpty ? leftZone : rightZone,
+              )
+            else
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      flex: _wideLeftFlex,
+                      child: Padding(
+                        padding: const EdgeInsetsDirectional.fromSTEB(
+                          20,
+                          18,
+                          15,
+                          18,
+                        ),
+                        child: leftZone,
                       ),
                     ),
-            ),
+                    SizedBox(
+                      width: _wideCardGap,
+                      child: OverflowBox(
+                        minWidth: 20,
+                        maxWidth: 20,
+                        child: CustomPaint(
+                          painter: VerticalTicketPerforationPainter(
+                            notchColor: SurfaceLevel.page.colorOf(cs),
+                            dashColor: cs.outlineVariant.withValues(
+                              alpha: isDark ? 0.55 : 0.48,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: _wideRightFlex,
+                      child: Padding(
+                        padding: const EdgeInsetsDirectional.fromSTEB(
+                          15,
+                          18,
+                          20,
+                          18,
+                        ),
+                        child: rightZone,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
       ),

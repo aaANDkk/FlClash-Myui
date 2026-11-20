@@ -186,7 +186,7 @@ void main() {
           tester.widget<CustomPaint>(wavyFinder).painter! as WavyProgressPainter;
       expect(
         wavyPainter.track,
-        DashboardColors.of(tester.element(wavyFinder)).tone,
+        DashboardColors.of(tester.element(wavyFinder)).tone2,
       );
       expect(
         find.byWidgetPredicate((w) => w is GlyphIcon && (w.size ?? 0) >= 80),
@@ -263,7 +263,15 @@ void main() {
       expect(tester.takeException(), isNull);
 
       // Non-active long-term remote profile still shows traffic progress ring.
-      expect(find.byType(ProfileTrafficRing), findsOneWidget);
+      final ring = find.descendant(
+        of: find.byType(ProfileTrafficRing),
+        matching: find.byType(CustomPaint),
+      );
+      expect(ring, findsOneWidget);
+      expect(
+        ring,
+        paints..circle(color: DashboardColors.of(tester.element(ring)).tone2),
+      );
     },
   );
 

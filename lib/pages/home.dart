@@ -448,8 +448,11 @@ class _FadeTabPageState extends ConsumerState<_FadeTabPage> {
 
   @override
   Widget build(BuildContext context) {
+    final glass = LiquidGlassScope.of(context);
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
     final liveArrival =
         widget.fade &&
+        !glass &&
         ref.watch(
           shownPageLabelProvider.select((label) => label == widget.label),
         );
@@ -461,7 +464,7 @@ class _FadeTabPageState extends ConsumerState<_FadeTabPage> {
             !liveArrival && offset.abs() > _restingDelta;
         final delta = widget.fade ? offset : 0.0;
         return FractionalTranslation(
-          translation: Offset(-delta, 0),
+          translation: Offset(isRtl ? delta : -delta, 0),
           child: Opacity(opacity: 1 - delta.abs(), child: child),
         );
       },
@@ -469,10 +472,7 @@ class _FadeTabPageState extends ConsumerState<_FadeTabPage> {
         controller: _snapshot,
         mode: SnapshotMode.permissive,
         autoresize: true,
-        child: LiquidGlassHost(
-          enabled: LiquidGlassScope.of(context),
-          child: widget.child,
-        ),
+        child: LiquidGlassHost(enabled: glass, child: widget.child),
       ),
     );
   }

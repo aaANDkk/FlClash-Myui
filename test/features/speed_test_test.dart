@@ -661,7 +661,7 @@ void main() {
                       w is DecoratedBox &&
                       w.decoration is BoxDecoration &&
                       (w.decoration as BoxDecoration).color ==
-                          DashboardColors.of(viewCtx).track,
+                          DashboardColors.of(viewCtx).tone2,
                 ),
               ),
             )

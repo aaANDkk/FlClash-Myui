@@ -491,7 +491,7 @@ class _ProfileBoardingPassState extends ConsumerState<ProfileBoardingPass>
             painter: WavyProgressPainter(
               value: usage.share,
               active: waveColor,
-              track: colors.tone,
+              track: colors.tone2,
             ),
           ),
         ),

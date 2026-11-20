@@ -10,6 +10,7 @@ import 'package:fl_clash/providers/routed_probe.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/ui/ui.dart' as app_ui;
 import 'package:fl_clash/ui/vertical_ticket_perforation.dart';
+import 'package:fl_clash/views/dashboard/style.dart';
 import 'package:fl_clash/views/tools.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -284,6 +285,7 @@ void main() {
 
   for (final scenario in [
     (size: const Size(360, 820), dark: false),
+    (size: const Size(800, 760), dark: false),
     (size: const Size(1080, 760), dark: false),
     (size: const Size(1080, 760), dark: true),
   ]) {
@@ -309,6 +311,16 @@ void main() {
       expect(find.text(_outboundIp), findsOneWidget);
       expect(find.text('28'), findsOneWidget);
       expect(find.text('数据中心'), findsWidgets);
+      final scale = find.descendant(
+        of: find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics &&
+              widget.properties.label?.endsWith('28 / 100') == true,
+        ),
+        matching: find.byType(CustomPaint),
+      );
+      final trackColor = DashboardColors.of(tester.element(scale)).tone2;
+      expect(scale, paints..rsuperellipse(color: trackColor));
       final perforation = find.byWidgetPredicate(
         (widget) =>
             widget is CustomPaint &&
@@ -322,6 +334,16 @@ void main() {
         );
         expect(bounds.top, card.top);
         expect(bounds.bottom, card.bottom);
+        Rect cardAround(Finder child) => tester.getRect(
+          find.ancestor(of: child, matching: find.byType(app_ui.Card)),
+        );
+        final riskCard = cardAround(find.text('28'));
+        final flagsCard = cardAround(find.byGlyph(AppGlyphs.target));
+        expect(
+          bounds.center.dx,
+          closeTo((riskCard.right + flagsCard.left) / 2, 0.01),
+        );
+
         final theme = app_ui.Theme.of(tester.element(perforation));
         final notchColor = app_ui.SurfaceLevel.page.colorOf(theme.colorScheme);
         expect(

@@ -743,7 +743,7 @@ void main() {
       final overviewRing = tester.widget<RingChart>(
         find.descendant(of: overview, matching: find.byType(RingChart)),
       );
-      expect(overviewRing.trackColor, DashboardColors.of(overviewCtx).track);
+      expect(overviewRing.trackColor, DashboardColors.of(overviewCtx).tone2);
       expect(overviewRing.size, lessThanOrEqualTo(86));
       final overviewDividerFinder = find.descendant(
         of: overview,

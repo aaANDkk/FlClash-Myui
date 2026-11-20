@@ -17,9 +17,12 @@ import io.flutter.embedding.engine.FlutterEngine
 import kotlinx.coroutines.CoroutineScope
 
 internal data class ServiceRuntime(
-    val vpn: Boolean,
+    val options: VpnOptions,
     val startedAtMillis: Long,
-)
+) {
+    val vpn: Boolean
+        get() = options.enable
+}
 
 /**
  * The machine owns the arbitration and the transitions; this is only the part that cannot run on a

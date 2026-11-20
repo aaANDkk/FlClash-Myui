@@ -75,8 +75,8 @@ internal class ServiceStateMachine(private val host: ServiceStateHost) {
         }
     }
 
-    suspend fun awaitRunTime(): Long = transitionLock.withLock {
-        host.runtime?.startedAtMillis?.takeIf { isRunRequested } ?: 0L
+    suspend fun awaitRunningService(): ServiceRuntime? = transitionLock.withLock {
+        host.runtime?.takeIf { isRunRequested }
     }
 
     fun captureRequestToken(): RunRequest = arbiter.current()

@@ -39,12 +39,15 @@ class _ToolViewState extends ConsumerState<ToolsView> {
   void initState() {
     super.initState();
     _controller = sheetScrollController(context);
-    unawaited(
-      SchedulerBinding.instance.scheduleTask<void>(
-        () => unawaited(MiuixBgEffectController.warmUp()),
-        Priority.idle,
-      ),
-    );
+    unawaited(_warmUpAboutShaders());
+  }
+
+  Future<void> _warmUpAboutShaders() async {
+    await SchedulerBinding.instance.endOfFrame;
+    await whenNothingAnimates();
+    if (mounted) {
+      await MiuixBgEffectController.warmUp();
+    }
   }
 
   @override

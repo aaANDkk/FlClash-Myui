@@ -15,6 +15,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -160,7 +161,10 @@ private class FakeHost(override val scope: CoroutineScope) : ServiceStateHost {
         if (!startSucceeds) {
             return false
         }
-        runtime = ServiceRuntime(vpn = runsAsVpn ?: options.enable, startedAtMillis = STARTED_AT)
+        runtime = ServiceRuntime(
+            options = options.copy(enable = runsAsVpn ?: options.enable),
+            startedAtMillis = STARTED_AT,
+        )
         return true
     }
 
@@ -203,18 +207,23 @@ class ServiceStateMachineTest {
     }
 
     @Test
-    fun `the run time is reported only while a run is both requested and up`() = runTest {
+    fun `the running service is reported only while a run is both requested and up`() = runTest {
         val host = FakeHost(backgroundScope)
         val machine = ServiceStateMachine(host)
         machine.syncSharedState(configuredState())
 
-        assertEquals(0L, machine.awaitRunTime())
+        assertNull(machine.awaitRunningService())
 
         machine.requestStart().await()
-        assertEquals(STARTED_AT, machine.awaitRunTime())
+        val running = machine.awaitRunningService()
+        assertEquals(STARTED_AT, running?.startedAtMillis)
+        assertEquals(host.lastStartOptions, running?.options)
+
+        machine.syncSharedState(configuredState().copy(vpnOptions = null))
+        assertEquals(running, machine.awaitRunningService())
 
         machine.requestStop().await()
-        assertEquals(0L, machine.awaitRunTime())
+        assertNull(machine.awaitRunningService())
     }
 
     @Test
@@ -227,7 +236,7 @@ class ServiceStateMachineTest {
         val stop = machine.requestStop()
 
         assertEquals(RunState.STOPPING, machine.runState.value)
-        assertEquals(0L, machine.awaitRunTime())
+        assertNull(machine.awaitRunningService())
         assertTrue(stop.await())
         assertEquals(RunState.STOPPED, machine.runState.value)
     }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -12,6 +13,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart';
 
 import '../helpers/app_paths.dart';
+
+const _vpnOptions = VpnOptions(
+  enable: true,
+  port: 7890,
+  ipv6: false,
+  dnsHijacking: true,
+  accessControlProps: AccessControlProps(),
+  allowBypass: false,
+  systemProxy: false,
+  bypassDomain: [],
+  stack: 'gvisor',
+);
 
 class _RecordingListener with ServiceListener {
   final events = <CoreEvent>[];
@@ -189,10 +202,22 @@ void main() {
           );
     }
 
-    int lastRevision() => calls.last.arguments as int;
+    int lastRevision() =>
+        calls
+                .lastWhere(
+                  (call) => call.method == 'start' || call.method == 'stop',
+                )
+                .arguments
+            as int;
+
+    final startedAt = DateTime(2026, 8, 16);
+    final runningReply = <String, Object?>{
+      'startedAt': startedAt.millisecondsSinceEpoch,
+      'options': json.encode(_vpnOptions),
+    };
 
     setUp(() {
-      mockChannel((_) async => true);
+      mockChannel((call) async => call.method != 'isRunRequested');
       listener = _RecordingStopListener();
       Service().addListener(listener);
     });
@@ -238,6 +263,88 @@ void main() {
       expect(listener.stops, 0);
     });
 
+    test('a delayed report does not stop a newer native run', () async {
+      await Service().start();
+      final revision = lastRevision();
+      var nativeRunning = true;
+      mockChannel((_) async => nativeRunning);
+
+      await reportStopped(revision);
+      expect(listener.stops, 0);
+
+      nativeRunning = false;
+      await reportStopped(revision);
+      expect(listener.stops, 1);
+    });
+
+    test('a newer Flutter start supersedes a stop being checked', () async {
+      await Service().start();
+      final revision = lastRevision();
+      final nativeState = Completer<bool>();
+      mockChannel(
+        (call) async =>
+            call.method == 'isRunRequested' ? await nativeState.future : true,
+      );
+
+      final report = reportStopped(revision);
+      await Service().start();
+      nativeState.complete(false);
+      await report;
+
+      expect(listener.stops, 0);
+    });
+
+    test(
+      'adopts the native run and receives stops without a start command',
+      () async {
+        await Service().stop();
+        final revision = lastRevision();
+        calls.clear();
+        mockChannel(
+          (call) async =>
+              call.method == 'getRunningService' ? runningReply : false,
+        );
+
+        expect(await Service().adoptRunningService(), (
+          startedAt: startedAt,
+          options: _vpnOptions,
+        ));
+        expect(calls.map((call) => call.method), ['getRunningService']);
+
+        await reportStopped(revision);
+        await reportStopped(revision);
+        expect(listener.stops, 1);
+      },
+    );
+
+    test('a stop report supersedes an outstanding adoption read', () async {
+      await Service().stop();
+      final revision = lastRevision();
+      final pending = Completer<Map<String, Object?>>();
+      mockChannel((_) => pending.future);
+
+      final adoption = Service().adoptRunningService();
+      await reportStopped(revision);
+      pending.complete(runningReply);
+
+      expect(await adoption, isNull);
+      expect(listener.stops, 0);
+    });
+
+    test('a newer command supersedes an outstanding adoption read', () async {
+      final pending = Completer<Map<String, Object?>>();
+      mockChannel(
+        (call) async =>
+            call.method == 'getRunningService' ? await pending.future : true,
+      );
+
+      final adoption = Service().adoptRunningService();
+      expect(await Service().stop(), isTrue);
+      pending.complete(runningReply);
+
+      expect(await adoption, isNull);
+    });
+
     test(
       'a report is dropped while Flutter itself asked for the stop',
       () async {
@@ -264,23 +371,10 @@ void main() {
     });
   });
 
-  group('getRunTime', () {
-    test('maps a millisecond stamp to a DateTime', () async {
-      final stamp = DateTime.utc(2026, 8, 16).millisecondsSinceEpoch;
-      mockChannel((_) async => stamp);
-
-      expect(
-        await Service().getRunTime(),
-        DateTime.fromMillisecondsSinceEpoch(stamp),
-      );
-    });
-
-    test('treats zero and a missing stamp as not running', () async {
-      mockChannel((_) async => 0);
-      expect(await Service().getRunTime(), isNull);
-
+  group('adoptRunningService', () {
+    test('treats an absent service as stopped', () async {
       mockChannel((_) async => null);
-      expect(await Service().getRunTime(), isNull);
+      expect(await Service().adoptRunningService(), isNull);
     });
   });
 

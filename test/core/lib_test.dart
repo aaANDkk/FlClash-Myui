@@ -72,9 +72,6 @@ class _FakeService implements Service {
   }
 
   @override
-  Future<DateTime?> getRunTime() async => null;
-
-  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 

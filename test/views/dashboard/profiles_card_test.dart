@@ -184,7 +184,7 @@ void main() {
     );
     final painter =
         tester.widget<CustomPaint>(wave).painter! as WavyProgressPainter;
-    expect(painter.track, DashboardColors.of(tester.element(wave)).tone);
+    expect(painter.track, DashboardColors.of(tester.element(wave)).tone2);
   });
 
   testWidgets('the desktop card puts the days left beside its update time', (

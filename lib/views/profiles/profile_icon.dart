@@ -154,7 +154,7 @@ class ProfileTrafficRing extends StatelessWidget {
         painter: _TrafficRingPainter(
           share: share.clamp(0.0, 1.0),
           active: active,
-          track: colors.tone,
+          track: colors.tone2,
           strokeWidth: strokeWidth,
         ),
       ),

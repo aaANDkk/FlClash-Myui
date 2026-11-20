@@ -390,7 +390,7 @@ class TrafficStatsOverviewCard extends StatelessWidget {
     final centerColor = routeTotal > 0
         ? (showDirectCenter ? directColor : proxyColor)
         : cs.onSurfaceVariant;
-    final trackColor = DashboardColors.of(context).track;
+    final trackColor = DashboardColors.of(context).tone2;
 
     final topRow = IntrinsicHeight(
       child: Row(
@@ -1502,7 +1502,7 @@ class TrafficStatsRuleHitsSection extends StatelessWidget {
                     hitCountText: l.trafficStatsHitCount(rules[i].hits),
                     defaultBadge: l.defaultText,
                     fallbackRuleBadge: l.rule,
-                    trackColor: DashboardColors.of(context).track,
+                    trackColor: DashboardColors.of(context).tone2,
                   ),
               ],
             ),
@@ -1822,7 +1822,7 @@ class TrafficStatsRankingSection extends StatelessWidget {
                         height: 4,
                         width: double.infinity,
                         child: ColoredBox(
-                          color: DashboardColors.of(context).track,
+                          color: DashboardColors.of(context).tone2,
                           child: Align(
                             alignment: AlignmentDirectional.centerStart,
                             child: FractionallySizedBox(

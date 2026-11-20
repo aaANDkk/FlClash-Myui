@@ -106,9 +106,15 @@ object ServiceController {
             return@withLock false
         }
 
+        runCatching {
+            GlobalState.application.startService(nextIntent)
+        }.onFailure { error ->
+            GlobalState.log("Unable to promote background service to started state: $error")
+        }
+
         Core.startListener()
         runtime = ServiceRuntime(
-            vpn = options.enable,
+            options = options,
             startedAtMillis = runtime?.startedAtMillis ?: System.currentTimeMillis(),
         )
         true

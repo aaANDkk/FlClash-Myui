@@ -9,6 +9,7 @@ import 'package:fl_clash/core/method.dart';
 import 'package:fl_clash/core/spill.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
+import 'package:fl_clash/plugins/service.dart';
 import 'package:fl_clash/providers/action.dart';
 import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/providers/config.dart';
@@ -85,10 +86,14 @@ class TestSetupAction extends SetupAction {
   final Set<bool> unansweredCoreCalls = {};
   int authorizeCalls = 0;
   AuthorizeCode authorizeResult = AuthorizeCode.none;
-  DateTime? serviceStart;
+  AndroidServiceRun? serviceRun;
+  Completer<AndroidServiceRun?>? pendingServiceRun;
 
   @override
-  Future<DateTime?> serviceStartTime() async => serviceStart;
+  Future<AndroidServiceRun?> adoptRunningService() async {
+    final pending = pendingServiceRun;
+    return pending == null ? serviceRun : await pending.future;
+  }
 
   @override
   Duration get minApplyDebounce => const Duration(milliseconds: 100);
@@ -260,6 +265,22 @@ void main() {
   });
 
   group('run failures', () {
+    test(
+      'a native stop clears the run without sending another Core command',
+      () async {
+        markInitialized();
+        await action.setRunning(true);
+        expect(container.read(runTimeProvider), isNotNull);
+
+        action.applyAndroidServiceStopped();
+
+        expect(container.read(runTimeProvider), isNull);
+        expect(container.read(runningVpnOptionsProvider), isNull);
+        expect(action.coreRunningCalls, [true]);
+        expect(action.trafficResets, 0);
+      },
+    );
+
     test('a start the core rejects stops reporting a run time', () async {
       markInitialized();
       action.coreRunningError = StateError('start failed');
@@ -783,19 +804,52 @@ void main() {
       expect(action.applyProfileCalls, 1);
     });
 
-    test('takes over a run the service already has without pushing the config '
-        'it runs again, which would make url-test groups re-pick', () async {
+    test('reattaches to a running service without applying the profile', () async {
       final lastConfigMd5 = globalState.lastConfigMd5;
-      addTearDown(() => globalState.lastConfigMd5 = lastConfigMd5);
-      await mockPreferences({appliedConfigMd5Key: 'running'});
-      action.serviceStart = DateTime.now().subtract(const Duration(minutes: 1));
+      final lastConfigCounts = globalState.lastConfigCounts;
+      addTearDown(() {
+        globalState.lastConfigMd5 = lastConfigMd5;
+        globalState.lastConfigCounts = lastConfigCounts;
+      });
+      await mockPreferences({
+        appliedConfigMd5Key: 'running',
+        'appliedConfigCounts': '{"groups":2,"proxies":3,"rules":4}',
+      });
+      final runningOptions = (await container.read(vpnOptionsProvider.future))
+          .copyWith(stack: 'gvisor', port: 17890);
+      action
+        ..serviceRun = (
+          startedAt: DateTime.now().subtract(const Duration(minutes: 1)),
+          options: runningOptions,
+        )
+        ..applyError = StateError('the saved profile cannot be applied');
 
       await container.read(setupActionProvider.notifier).initStatus();
 
-      expect(action.coreRunningCalls, [true]);
-      expect(action.appliedForce, [false]);
+      expect(action.coreRunningCalls, isEmpty);
+      expect(action.applyProfileCalls, 0);
       expect(globalState.lastConfigMd5, 'running');
+      expect(globalState.lastConfigCounts, (groups: 2, proxies: 3, rules: 4));
       expect(container.read(isStartProvider), isTrue);
+      expect(container.read(runTimeProvider), greaterThanOrEqualTo(60000));
+      expect(container.read(runningVpnOptionsProvider), runningOptions);
+    });
+
+    test('a newer stop wins over an outstanding adoption read', () async {
+      final options = await container.read(vpnOptionsProvider.future);
+      final pending = Completer<AndroidServiceRun?>();
+      action.pendingServiceRun = pending;
+      final setup = container.read(setupActionProvider.notifier);
+      final initializing = setup.initStatus();
+
+      await setup.setRunning(false);
+      pending.complete((startedAt: DateTime.now(), options: options));
+      await initializing;
+
+      expect(action.coreRunningCalls, [false]);
+      expect(action.applyProfileCalls, 0);
+      expect(container.read(isStartProvider), isFalse);
+      expect(container.read(runningVpnOptionsProvider), isNull);
     });
   });
 

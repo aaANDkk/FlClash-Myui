@@ -1095,76 +1095,109 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('the fade tab switch cross-fades the pages in place', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(500, 800);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
+  for (final (glass, direction) in [
+    (null, TextDirection.ltr),
+    (LiquidGlassQuality.ultra, TextDirection.ltr),
+    (LiquidGlassQuality.ultra, TextDirection.rtl),
+  ]) {
+    testWidgets('fade tab switches in place with $glass and $direction', (
+      tester,
+    ) async {
+      const size = Size(500, 800);
+      tester.view.physicalSize = size * 3;
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-    final container = ProviderContainer(
-      overrides: [
-        navigationItemsStateProvider.overrideWithValue(
-          NavigationItemsState(
-            value: [
-              NavigationItem(
-                glyph: AppGlyphs.dashboard,
-                label: PageLabel.dashboard,
-                builder: (_) => const Text('page:dashboard'),
-              ),
-              NavigationItem(
-                glyph: AppGlyphs.tools,
-                label: PageLabel.tools,
-                builder: (_) => const Text('page:tools'),
-              ),
-            ],
+      final container = ProviderContainer(
+        overrides: [
+          navigationItemsStateProvider.overrideWithValue(
+            NavigationItemsState(
+              value: [
+                NavigationItem(
+                  glyph: AppGlyphs.dashboard,
+                  label: PageLabel.dashboard,
+                  builder: (_) => const Text('page:dashboard'),
+                ),
+                NavigationItem(
+                  glyph: AppGlyphs.proxies,
+                  label: PageLabel.proxies,
+                  builder: (_) => const Text('page:proxies'),
+                ),
+                NavigationItem(
+                  glyph: AppGlyphs.tools,
+                  label: PageLabel.tools,
+                  builder: (_) => const Text('page:tools'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      globalState.container = container;
+      container.read(viewSizeProvider.notifier).value = size;
+      container
+          .read(appSettingProvider.notifier)
+          .update((state) => state.copyWith(tabAnimation: TabAnimation.fade));
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: TestApp(
+            includeNavigatorKey: false,
+            liquidGlass: glass,
+            child: Directionality(
+              textDirection: direction,
+              child: const HomePage(),
+            ),
           ),
         ),
-      ],
-    );
-    addTearDown(container.dispose);
-    globalState.container = container;
-    container.read(viewSizeProvider.notifier).value = const Size(500, 800);
-    container
-        .read(appSettingProvider.notifier)
-        .update((state) => state.copyWith(tabAnimation: TabAnimation.fade));
+      );
+      await tester.pumpAndSettle();
+      final page = container.read(currentPageLabelProvider.notifier);
+      final origin = tester.getTopLeft(find.text('page:dashboard')).dx;
 
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const TestApp(includeNavigatorKey: false, child: HomePage()),
-      ),
-    );
-    await tester.pump();
-    final start = tester.getTopLeft(find.text('page:dashboard')).dx;
+      double opacityOf(PageLabel label) => tester
+          .widget<Opacity>(
+            find.ancestor(
+              of: find.text('page:${label.name}'),
+              matching: find.byType(Opacity),
+            ),
+          )
+          .opacity;
 
-    container.read(currentPageLabelProvider.notifier).toPage(PageLabel.tools);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 60));
+      for (final (from, to) in [
+        (PageLabel.dashboard, PageLabel.tools),
+        (PageLabel.tools, PageLabel.dashboard),
+      ]) {
+        page.toPage(to);
+        await tester.pump();
+        for (var frame = 0; frame < 8; frame++) {
+          await tester.pump(const Duration(milliseconds: 16));
+          expect(find.text('page:proxies'), findsNothing);
+          for (final label in [from, to]) {
+            final text = find.text('page:${label.name}');
+            expect(tester.getTopLeft(text).dx, closeTo(origin, 0.01));
+          }
+          expect(opacityOf(from), inExclusiveRange(0, 1));
+          expect(opacityOf(from) + opacityOf(to), moreOrLessEquals(1));
+        }
+        await tester.pumpAndSettle();
+        expect(container.read(currentPageLabelProvider), to);
+        expect(tester.getTopLeft(find.text('page:${to.name}')).dx, origin);
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
 
-    double opacityOf(String text) => tester
-        .widget<Opacity>(
-          find.ancestor(of: find.text(text), matching: find.byType(Opacity)),
-        )
-        .opacity;
-    expect(tester.getTopLeft(find.text('page:dashboard')).dx, start);
-    expect(tester.getTopLeft(find.text('page:tools')).dx, start);
-    expect(opacityOf('page:dashboard'), inExclusiveRange(0, 1));
-    expect(
-      opacityOf('page:dashboard') + opacityOf('page:tools'),
-      moreOrLessEquals(1),
-    );
-
-    await tester.pumpAndSettle();
-    expect(container.read(currentPageLabelProvider), PageLabel.tools);
-    expect(tester.getTopLeft(find.text('page:tools')).dx, start);
-    expect(tester.takeException(), isNull);
-  });
-
-  for (final animation in TabAnimation.values) {
-    final snapshotsArrival = animation == TabAnimation.slide;
-    testWidgets('a ${animation.name} tab switch '
+  for (final (animation, glass) in [
+    (TabAnimation.slide, null),
+    (TabAnimation.fade, null),
+    (TabAnimation.fade, LiquidGlassQuality.ultra),
+  ]) {
+    final snapshotsArrival = animation == TabAnimation.slide || glass != null;
+    testWidgets('a ${animation.name} tab switch with $glass '
         '${snapshotsArrival ? 'snapshots' : 'keeps live'} the arriving page', (
       tester,
     ) async {
@@ -1214,7 +1247,11 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: const TestApp(includeNavigatorKey: false, child: HomePage()),
+          child: TestApp(
+            includeNavigatorKey: false,
+            liquidGlass: glass,
+            child: const HomePage(),
+          ),
         ),
       );
       await tester.pump();
