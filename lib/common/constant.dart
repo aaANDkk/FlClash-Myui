@@ -136,6 +136,7 @@ const bootRecordKey = 'boot_record';
 const appliedConfigMd5Key = 'applied_config_md5';
 const wakelockEnabledKey = 'wakelock_enabled';
 const iconRulesKey = 'proxies_icon_rules';
+const profileIconsKey = 'profile_icons';
 const defaultSystemDnsFallback = '223.5.5.5';
 const repository = 'aaANDkk/FlClash-Myui';
 const maxMobileWidth = 600;

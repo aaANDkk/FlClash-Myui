@@ -7,25 +7,26 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
-import 'package:fl_clash/views/profiles/custom/custom.dart';
-import 'package:fl_clash/views/profiles/extend/extend.dart';
+import 'package:fl_clash/views/dashboard/style.dart';
 import 'package:fl_clash/widgets/widgets.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'add.dart';
-import 'edit.dart';
-import 'preview.dart';
+import 'boarding_pass.dart';
+import 'profile_icon.dart';
 
-const _infoGap = 4.0;
+const _infoGap = 3.0;
+const _cardVerticalPadding = 13.0;
+const _wideBoardingPassBreakpoint = 720.0;
 
 double get _profileItemHeight {
   final measure = globalState.measure;
-  return measure.textHeight(AppTextStyle.headline) +
+  final textColumnHeight =
+      measure.textHeight(AppTextStyle.headline) +
       _infoGap +
-      measure.textHeight(AppTextStyle.footnote) +
-      2 * listRowVerticalPadding;
+      measure.textHeight(AppTextStyle.footnote);
+  return math.max(42.0, textColumnHeight) + 2 * _cardVerticalPadding;
 }
 
 class ProfilesView extends ConsumerStatefulWidget {
@@ -132,11 +133,11 @@ class _ProfilesViewState extends ConsumerState<ProfilesView> {
                 ),
               ),
             ),
-            child: _ProfilesGrid(
+            child: _ProfilesContent(
               profiles: state.profiles,
               currentProfileId: state.currentProfileId,
               spacing: spacing,
-              revealsSelected: !picker,
+              picker: picker,
             ),
           ),
         );
@@ -145,40 +146,27 @@ class _ProfilesViewState extends ConsumerState<ProfilesView> {
   }
 }
 
-class _ProfilesGrid extends ConsumerStatefulWidget {
-  const _ProfilesGrid({
+class _ProfilesContent extends ConsumerStatefulWidget {
+  const _ProfilesContent({
     required this.profiles,
     required this.currentProfileId,
     required this.spacing,
-    required this.revealsSelected,
+    required this.picker,
   });
 
   final List<Profile> profiles;
   final int? currentProfileId;
   final double spacing;
-  final bool revealsSelected;
+  final bool picker;
 
   @override
-  ConsumerState<_ProfilesGrid> createState() => _ProfilesGridState();
+  ConsumerState<_ProfilesContent> createState() => _ProfilesContentState();
 }
 
-class _ProfilesGridState extends ConsumerState<_ProfilesGrid> {
+class _ProfilesContentState extends ConsumerState<_ProfilesContent> {
   static const _horizontalPadding = 16.0;
 
   ScrollController? _controller;
-  var _revealed = false;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_revealed ||
-        !widget.revealsSelected ||
-        !PageActivityScope.isActiveOf(context)) {
-      return;
-    }
-    _revealed = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) => _revealSelected());
-  }
 
   @override
   void dispose() {
@@ -186,115 +174,135 @@ class _ProfilesGridState extends ConsumerState<_ProfilesGrid> {
     super.dispose();
   }
 
-  EdgeInsets get _padding => EdgeInsets.only(
-    left: _horizontalPadding,
-    right: _horizontalPadding,
-    top: context.contentTopPadding,
-    bottom: 16 + context.bottomInset,
-  );
-
-  int _columnsFor(double width) => getProfilesColumns(
-    width - _horizontalPadding * 2,
-    spacing: widget.spacing,
-    minItemWidth: profileItemMinWidth.ap(context),
-  );
-
-  double? _revealOffset({
-    required double width,
-    required double viewport,
-    required double pixels,
-    required double maxScrollExtent,
-  }) {
-    final index = widget.profiles.indexWhere(
-      (profile) => profile.id == widget.currentProfileId,
-    );
-    if (index == -1) {
-      return null;
+  int _columnsFor(double width) {
+    final contentWidth = width - _horizontalPadding * 2;
+    if (width < _wideBoardingPassBreakpoint) {
+      return 1;
     }
-    final height = _profileItemHeight;
-    final row = index ~/ _columnsFor(width);
-    final atTop = row * (height + widget.spacing);
-    final atBottom = atTop + _padding.vertical + height - viewport;
-    if (pixels >= atBottom && pixels <= atTop) {
-      return null;
-    }
-    return ((atTop + atBottom) / 2).clamp(0.0, maxScrollExtent);
+    return getProfilesColumns(
+      contentWidth,
+      spacing: widget.spacing,
+      minItemWidth: profileItemMinWidth.ap(context),
+    ).clamp(1, 3);
   }
 
-  /// A tab switch draws the page it brings in from a snapshot of its first
-  /// frame, so a reveal after that frame would only show once the switch ends.
-  double _initialOffset(Size size) {
-    if (!_revealed) {
-      return 0;
-    }
-    final rows = (widget.profiles.length / _columnsFor(size.width)).ceil();
-    final extent =
-        _padding.vertical +
-        rows * _profileItemHeight +
-        math.max(0, rows - 1) * widget.spacing;
-    return _revealOffset(
-          width: size.width,
-          viewport: size.height,
-          pixels: 0,
-          maxScrollExtent: math.max(0, extent - size.height),
-        ) ??
-        0;
-  }
-
-  void _revealSelected() {
-    final controller = _controller;
-    if (!mounted || controller == null || !controller.hasClients) {
-      return;
-    }
-    final position = controller.position;
-    final offset = _revealOffset(
-      width: context.size!.width,
-      viewport: position.viewportDimension,
-      pixels: position.pixels,
-      maxScrollExtent: position.maxScrollExtent,
-    );
-    if (offset != null) {
-      controller.jumpTo(offset);
-    }
+  void _selectProfile(int? profileId) {
+    ref.read(currentProfileIdProvider.notifier).value = profileId;
   }
 
   @override
   Widget build(BuildContext context) {
     final profiles = widget.profiles;
-    final grid = WidthBuilder(
-      builder: (_, width) {
-        return GridView.builder(
-          key: profilesStoreKey,
-          controller: _controller,
-          padding: _padding,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: _columnsFor(width),
-            mainAxisSpacing: widget.spacing,
-            crossAxisSpacing: widget.spacing,
-            mainAxisExtent: _profileItemHeight,
-          ),
-          itemCount: profiles.length,
-          itemBuilder: (context, index) {
-            final profile = profiles[index];
-            return ProfileItem(
-              key: ValueKey(profile.id),
-              profile: profile,
-              groupValue: widget.currentProfileId,
-              onChanged: (profileId) {
-                ref.read(currentProfileIdProvider.notifier).value = profileId;
-              },
-            );
-          },
-        );
-      },
-    );
+    final topPadding = context.contentTopPadding;
+    final bottomPadding = 16 + context.bottomInset;
+
     return LayoutBuilder(
       builder: (context, constraints) {
-        _controller ??= sheetScrollController(
-          context,
-          initialScrollOffset: _initialOffset(constraints.biggest),
+        _controller ??= sheetScrollController(context);
+        final width = constraints.maxWidth;
+        final isWide = width >= _wideBoardingPassBreakpoint;
+        final columns = _columnsFor(width);
+
+        if (widget.picker) {
+          return GridView.builder(
+            key: profilesStoreKey,
+            controller: _controller,
+            padding: EdgeInsets.fromLTRB(
+              _horizontalPadding,
+              topPadding,
+              _horizontalPadding,
+              bottomPadding,
+            ),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns,
+              mainAxisSpacing: widget.spacing,
+              crossAxisSpacing: widget.spacing,
+              mainAxisExtent: _profileItemHeight,
+            ),
+            itemCount: profiles.length,
+            itemBuilder: (context, index) {
+              final profile = profiles[index];
+              return ProfileItem(
+                key: ValueKey(profile.id),
+                profile: profile,
+                groupValue: widget.currentProfileId,
+                showSelectionBadge: true,
+                onChanged: _selectProfile,
+              );
+            },
+          );
+        }
+
+        final activeProfile = profiles.getProfile(widget.currentProfileId);
+        final otherProfiles = activeProfile == null
+            ? profiles
+            : [
+                for (final profile in profiles)
+                  if (profile.id != activeProfile.id) profile,
+              ];
+
+        return CustomScrollView(
+          key: profilesStoreKey,
+          controller: _controller,
+          slivers: [
+            if (activeProfile != null)
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(
+                  _horizontalPadding,
+                  topPadding,
+                  _horizontalPadding,
+                  otherProfiles.isEmpty ? bottomPadding : 0,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: ProfileBoardingPass(
+                    key: ValueKey('hero-${activeProfile.id}'),
+                    profile: activeProfile,
+                    isWide: isWide,
+                  ),
+                ),
+              ),
+            if (otherProfiles.isNotEmpty) ...[
+              SliverPadding(
+                padding: EdgeInsets.only(
+                  left: _horizontalPadding,
+                  right: _horizontalPadding,
+                  top: activeProfile != null ? 0 : topPadding,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: ListHeader(
+                    title: context.appLocalizations.otherProfiles,
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(
+                  _horizontalPadding,
+                  0,
+                  _horizontalPadding,
+                  bottomPadding,
+                ),
+                sliver: SliverGrid.builder(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: columns,
+                    mainAxisSpacing: widget.spacing,
+                    crossAxisSpacing: widget.spacing,
+                    mainAxisExtent: _profileItemHeight,
+                  ),
+                  itemCount: otherProfiles.length,
+                  itemBuilder: (context, index) {
+                    final profile = otherProfiles[index];
+                    return ProfileItem(
+                      key: ValueKey(profile.id),
+                      profile: profile,
+                      groupValue: widget.currentProfileId,
+                      onChanged: _selectProfile,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ],
         );
-        return grid;
       },
     );
   }
@@ -304,225 +312,97 @@ class ProfileItem extends ConsumerWidget {
   final Profile profile;
   final int? groupValue;
   final void Function(int? value) onChanged;
+  final bool showSelectionBadge;
 
   const ProfileItem({
     super.key,
     required this.profile,
     required this.groupValue,
     required this.onChanged,
+    this.showSelectionBadge = false,
   });
 
-  Future<void> _handleDeleteProfile(BuildContext context, WidgetRef ref) async {
-    final profilesAction = ref.read(profilesActionProvider.notifier);
-    final appLocalizations = context.appLocalizations;
-    final users = await profilesAction.providerUsers(profile);
-    final res = await dialogs.showMessage(
-      title: appLocalizations.tip,
-      message: TextSpan(
-        text: users.isEmpty
-            ? appLocalizations.deleteTip(appLocalizations.profile)
-            : appLocalizations.providerInUse(
-                profile.realLabel,
-                users.map((item) => item.realLabel).join(', '),
-              ),
-      ),
-      destructive: true,
-      confirmText: appLocalizations.delete,
-    );
-    if (res != true) {
-      return;
+  Widget _buildRightAnchor(
+    BuildContext context, {
+    required bool isUpdating,
+    required int? customCount,
+  }) {
+    final l = context.appLocalizations;
+    final colorScheme = context.colorScheme;
+    if (isUpdating) {
+      return const ActivityIndicator(size: 22);
     }
-    await profilesAction.deleteProfile(profile.id);
-  }
 
-  Future<void> _handlePreview(BuildContext context) async {
-    unawaited(
-      pushNestedPage<void>(context, PreviewProfileView(profile: profile)),
-    );
-  }
-
-  Future updateProfile(WidgetRef ref) async {
-    if (profile.type != ProfileType.url) return;
-    await globalState.loadingRun(() async {
-      await ref
-          .read(profilesActionProvider.notifier)
-          .updateProfile(profile, showLoading: true);
-    }, tag: LoadingTag.profiles);
-  }
-
-  void _handleShowEditExtendPage(BuildContext context) {
-    showNestedExtend(
-      context,
-      builder: (context) => EditProfileView(profile: profile),
-    );
-  }
-
-  SubscriptionInfo? get _subscriptionInfo =>
-      profile.type == ProfileType.url ? profile.subscriptionInfo : null;
-
-  String _subtitle(BuildContext context) {
-    final appLocalizations = context.appLocalizations;
-    final info = _subscriptionInfo;
-    final time = profile.lastUpdateDate?.getLastUpdateTimeDesc(
-      context,
-      compact: true,
-    );
-    final lead = info != null && info.usage != null
-        ? '${(info.upload + info.download).traffic.show} / '
-              '${info.total.traffic.show}'
-        : switch (profile.type) {
-            ProfileType.url => appLocalizations.remote,
-            ProfileType.file => appLocalizations.lastUpdated,
-            ProfileType.custom => appLocalizations.custom,
-          };
-    return time == null || time.isEmpty ? lead : '$lead · $time';
-  }
-
-  Widget? _buildTrailing(BuildContext context, {required bool isUpdating}) {
-    // The card's subtitle already carries the "x days ago"; the row on the right
-    // only shows that a sync is running.
-    if (!isUpdating) {
-      return null;
+    final expired = profileIsExpired(profile);
+    if (expired) {
+      return TitleChip(label: l.expired, color: colorScheme.error);
     }
-    return const ActivityIndicator(size: 24);
-  }
 
-  Future<void> _handleCopyLink(BuildContext context) async {
-    await Clipboard.setData(ClipboardData(text: profile.url));
-    if (context.mounted) {
-      dialogs.showBanner(
-        context.appLocalizations.copySuccess,
-        level: BannerLevel.success,
+    final primaryStyle = AppTextStyle.footnote
+        .of(context, emphasized: true)
+        .toTabular
+        .copyWith(color: colorScheme.onSurface, height: 1.15);
+    final secondaryStyle = AppTextStyle.caption2
+        .of(context)
+        .copyWith(color: colorScheme.onSurfaceVariant, height: 1.15);
+
+    Widget labeledAnchor({
+      required String top,
+      required String bottom,
+      required Widget graphic,
+      String? tooltip,
+    }) {
+      final row = Row(
+        mainAxisSize: MainAxisSize.min,
+        spacing: 8,
+        children: [
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(top, maxLines: 1, style: primaryStyle),
+              const SizedBox(height: 2),
+              Text(bottom, maxLines: 1, style: secondaryStyle),
+            ],
+          ),
+          graphic,
+        ],
+      );
+      return tooltip == null ? row : Tooltip(message: tooltip, child: row);
+    }
+
+    final usage = profileUsageOf(profile);
+    if (usage != null) {
+      return labeledAnchor(
+        top: dashboardTraffic(usage.remaining),
+        bottom: l.remainingShort,
+        graphic: ProfileTrafficRing(share: usage.share, size: 28),
       );
     }
-  }
 
-  Future<void> _handleExportFile(BuildContext context) async {
-    final appLocalizations = context.appLocalizations;
-    final res = await globalState.safeRun<bool>(() async {
-      final mFile = await profile.file;
-      final value = await picker.saveFile(
-        profile.exportFileName,
-        mFile.readAsBytesSync(),
-      );
-      if (value == null) return false;
-      return true;
-    }, title: appLocalizations.tip);
-    if (res == true && context.mounted) {
-      dialogs.showBanner(
-        appLocalizations.exportSuccess,
-        level: BannerLevel.success,
-      );
-    }
-  }
-
-  void _handlePushGenProfilePage(BuildContext context, int id) {
-    BaseNavigator.push(context, ExtendView(profileId: id));
-  }
-
-  void _handlePushCustomProfilePage(BuildContext context, int id) {
-    BaseNavigator.push(context, CustomProfileView(profileId: id));
-  }
-
-  void _handleEdit(BuildContext context) {
-    if (profile.type == ProfileType.custom) {
-      _handlePushCustomProfilePage(context, profile.id);
-    } else {
-      _handleShowEditExtendPage(context);
-    }
-  }
-
-  List<PopupMenuItem> _menuItems(BuildContext context, WidgetRef ref) {
-    final appLocalizations = context.appLocalizations;
-    final isUrl = profile.type == ProfileType.url;
-    final isCustom = profile.type == ProfileType.custom;
-    return [
-      PopupMenuItem(
-        glyph: AppGlyphs.edit,
-        label: appLocalizations.edit,
-        onPressed: () => _handleEdit(context),
+    return switch (profile.type) {
+      ProfileType.url => labeledAnchor(
+        top: l.infiniteTime,
+        bottom: l.remote,
+        graphic: const ProfileTypeBadgeCircle(type: ProfileType.url, size: 28),
       ),
-      if (isCustom) ...[
-        PopupMenuItem(
-          glyph: AppGlyphs.textShort,
-          label: appLocalizations.rename,
-          onPressed: () {
-            renameProfile(context, ref, profile);
-          },
-        ),
-        PopupMenuItem(
-          glyph: AppGlyphs.eye,
-          label: appLocalizations.runtimeConfig,
-          onPressed: () {
-            _handlePreview(context);
-          },
-        ),
-      ] else
-        PopupMenuItem(
-          glyph: AppGlyphs.puzzle,
-          label: appLocalizations.extend,
-          onPressed: () {
-            _handlePushGenProfilePage(context, profile.id);
-          },
-        ),
-      if (isUrl)
-        PopupMenuItem(
-          glyph: AppGlyphs.sync,
-          label: appLocalizations.sync,
-          onPressed: () {
-            updateProfile(ref);
-          },
-        ),
-      if (!isCustom)
-        PopupMenuItem(
-          glyph: AppGlyphs.moreCircle,
-          label: appLocalizations.more,
-          subItems: [
-            PopupMenuItem(
-              glyph: AppGlyphs.eye,
-              label: appLocalizations.runtimeConfig,
-              onPressed: () {
-                _handlePreview(context);
-              },
-            ),
-            if (isUrl)
-              PopupMenuItem(
-                glyph: AppGlyphs.copy,
-                label: appLocalizations.copyLink,
-                onPressed: () {
-                  _handleCopyLink(context);
-                },
-              ),
-            if (isUrl)
-              PopupMenuItem(
-                glyph: AppGlyphs.qrCode,
-                label: appLocalizations.qrcode,
-                onPressed: () {
-                  dialogs.showQrCode(
-                    title: profile.realLabel,
-                    data: profile.url,
-                    message: appLocalizations.shareQrcodeTip,
-                  );
-                },
-              ),
-            PopupMenuItem(
-              glyph: AppGlyphs.export,
-              label: appLocalizations.exportFile,
-              onPressed: () {
-                _handleExportFile(context);
-              },
-            ),
-          ],
-        ),
-      PopupMenuItem(
-        danger: true,
-        glyph: AppGlyphs.delete,
-        label: appLocalizations.delete,
-        onPressed: () {
-          _handleDeleteProfile(context, ref);
-        },
+      ProfileType.file => labeledAnchor(
+        top: 'YAML',
+        bottom: l.local,
+        graphic: const ProfileTypeBadgeCircle(type: ProfileType.file, size: 28),
       ),
-    ];
+      ProfileType.custom => labeledAnchor(
+        top: customCount != null ? l.groupCount(customCount) : l.custom,
+        bottom: l.custom,
+        tooltip: customCount != null
+            ? l.proxyGroupsCount(customCount, customCount.compact)
+            : null,
+        graphic: const ProfileTypeBadgeCircle(
+          type: ProfileType.custom,
+          size: 28,
+        ),
+      ),
+    };
   }
 
   @override
@@ -531,10 +411,13 @@ class ProfileItem extends ConsumerWidget {
     final customCount = profile.type == ProfileType.custom
         ? ref.watch(profileGroupsCountProvider(profile.id)).value
         : null;
-    final subscriptionInfo = _subscriptionInfo;
     final isSelected = profile.id == groupValue;
+    final expired = profileIsExpired(profile);
+    final colorScheme = context.colorScheme;
+    final menuItems = buildProfileMenuItems(context, ref, profile);
+
     return ContextMenuRegion(
-      menuItems: isUpdating ? null : _menuItems(context, ref),
+      menuItems: isUpdating ? null : menuItems,
       child: Card(
         enterActionsOnRight: true,
         radius: AppCorner.xl,
@@ -542,81 +425,60 @@ class ProfileItem extends ConsumerWidget {
         onPressed: () {
           onChanged(profile.id);
         },
-        child: ListItem(
+        child: Padding(
           key: Key(profile.id.toString()),
-          minTileHeight: _profileItemHeight,
-          minVerticalPadding: listRowVerticalPadding,
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 8,
-            children: [
-              ?_buildTrailing(context, isUpdating: isUpdating),
-              if (isSelected) const SelectionBadge(size: 24),
-            ],
+          padding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: _cardVerticalPadding,
           ),
-          title: _ProfileCardTitle(
-            profile: profile,
-            expire: subscriptionInfo?.expireDate,
-            // A profile that never expires still says so in the pill, and a file
-            // says where it comes from, now that the subtitle carries the time.
-            chip: subscriptionInfo?.expireDate != null
-                ? null
-                : switch (profile.type) {
-                    ProfileType.url => context.appLocalizations.infiniteTime,
-                    ProfileType.file => context.appLocalizations.local,
-                    ProfileType.custom => customCount?.compact,
-                  },
-            chipTooltip: profile.type == ProfileType.custom && customCount != null
-                ? context.appLocalizations.proxyGroupsCount(
-                    customCount,
-                    customCount.compact,
-                  )
-                : null,
-            subtitle: _subtitle(context),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              ProfileIconBadge(profile: profile, size: 40),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    EmojiText(
+                      profile.realLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyle.headline.of(context),
+                    ),
+                    const SizedBox(height: _infoGap),
+                    Text(
+                      profileSubtitleText(context, profile),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: expired
+                          ? AppTextStyle.footnote
+                                .of(context, emphasized: true)
+                                .copyWith(color: colorScheme.error)
+                          : AppTextStyle.footnote.of(context).toLighter,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 8,
+                children: [
+                  _buildRightAnchor(
+                    context,
+                    isUpdating: isUpdating,
+                    customCount: customCount,
+                  ),
+                  if (showSelectionBadge && isSelected)
+                    const SelectionBadge(size: 22),
+                ],
+              ),
+            ],
           ),
         ),
       ),
-    );
-  }
-}
-
-class _ProfileCardTitle extends StatelessWidget {
-  const _ProfileCardTitle({
-    required this.profile,
-    required this.expire,
-    required this.chip,
-    required this.chipTooltip,
-    required this.subtitle,
-  });
-
-  final Profile profile;
-  final DateTime? expire;
-  final String? chip;
-  final String? chipTooltip;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ChipTitle(
-          title: profile.realLabel,
-          chip: chip,
-          chipTonal: false,
-          chipTooltip: chipTooltip,
-          expire: expire,
-          style: AppTextStyle.headline.of(context),
-        ),
-        const SizedBox(height: _infoGap),
-        Text(
-          subtitle,
-          style: AppTextStyle.footnote.of(context).toLighter,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
     );
   }
 }

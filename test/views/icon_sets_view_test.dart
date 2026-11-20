@@ -3,6 +3,7 @@ import 'package:fl_clash/features/form/form.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
+import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/config/icon_sets.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
@@ -271,4 +272,57 @@ void main() {
 
     expect(find.text('Qure'), findsOne);
   });
+
+  testWidgets(
+    'built-in icon set displays Built-in subtitle and only Sync + Project URL in menu',
+    (tester) async {
+      const builtIn = IconSet(
+        id: builtInIconSetId,
+        name: builtInIconSetName,
+        url: builtInIconSetUrl,
+        icons: [
+          IconSetIcon(name: '1YunTi.svg', url: 'https://example.com/1.svg'),
+        ],
+      );
+      final action = _RecordingIconSetsAction();
+      await _pumpView(
+        tester,
+        iconSets: _TestIconSets(const [builtIn]),
+        action: action,
+      );
+
+      expect(find.text(builtInIconSetName), findsOne);
+      expect(find.text('Built-in'), findsOne);
+      expect(find.text('Remote'), findsNothing);
+
+      await _openMenu(tester, builtInIconSetName);
+      final menu = find.byType(PopupMenu);
+      expect(find.descendant(of: menu, matching: find.text('Sync')), findsOne);
+      expect(
+        find.descendant(of: menu, matching: find.text('Project URL')),
+        findsOne,
+      );
+      expect(
+        find.descendant(
+          of: menu,
+          matching: find.byWidgetPredicate(
+            (w) => w is GlyphIcon && w.glyph == AppGlyphs.link,
+          ),
+        ),
+        findsOne,
+      );
+      expect(
+        find.descendant(of: menu, matching: find.text('Options')),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: menu, matching: find.text('Delete')),
+        findsNothing,
+      );
+
+      await tester.tap(find.descendant(of: menu, matching: find.text('Sync')));
+      await tester.pumpAndSettle();
+      expect(action.synced.single.id, builtInIconSetId);
+    },
+  );
 }

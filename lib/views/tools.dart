@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/l10n/l10n.dart';
@@ -10,9 +12,11 @@ import 'package:fl_clash/views/backup_and_restore.dart';
 import 'package:fl_clash/views/config/general.dart';
 import 'package:fl_clash/views/hotkey.dart';
 import 'package:fl_clash/widgets/widgets.dart';
+import 'package:fl_clash/features/about/miuix_bg_effect.dart';
 import 'package:fl_clash/features/ip_quality/ip_lookup_view.dart';
 import 'package:fl_clash/features/speed_test/view.dart';
 import 'package:fl_clash/features/traffic_stats/view.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -35,6 +39,12 @@ class _ToolViewState extends ConsumerState<ToolsView> {
   void initState() {
     super.initState();
     _controller = sheetScrollController(context);
+    unawaited(
+      SchedulerBinding.instance.scheduleTask<void>(
+        () => unawaited(MiuixBgEffectController.warmUp()),
+        Priority.idle,
+      ),
+    );
   }
 
   @override

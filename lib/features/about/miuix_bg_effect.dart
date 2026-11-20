@@ -149,8 +149,38 @@ class MiuixBgConfig {
 
 class MiuixBgEffectController extends ChangeNotifier {
   MiuixBgEffectController({required TickerProvider vsync}) : _vsync = vsync {
+    _bgProgram = _cachedBgProgram;
+    _titleProgram = _cachedTitleProgram;
     _ticker = _vsync.createTicker(_onTick);
-    _loadPrograms();
+    if (_bgProgram == null || _titleProgram == null) {
+      _loadPrograms();
+    }
+  }
+
+  static ui.FragmentProgram? _cachedBgProgram;
+  static ui.FragmentProgram? _cachedTitleProgram;
+  static Future<void>? _warmUpFuture;
+
+  /// Preloads and compiles the About page shaders once per process so the
+  /// first route push does not hitch waiting on shader compilation.
+  static Future<void> warmUp() {
+    if (_cachedBgProgram != null && _cachedTitleProgram != null) {
+      return Future<void>.value();
+    }
+    return _warmUpFuture ??= () async {
+      try {
+        final results = await Future.wait([
+          ui.FragmentProgram.fromAsset('shaders/about_bg.frag'),
+          ui.FragmentProgram.fromAsset('shaders/about_title.frag'),
+        ]);
+        _cachedBgProgram = results[0];
+        _cachedTitleProgram = results[1];
+      } catch (_) {
+        // Headless or software test environments without compiled shaders stay on fallback.
+      } finally {
+        _warmUpFuture = null;
+      }
+    }();
   }
 
   static const double _noiseScale = 1.5;
@@ -206,18 +236,14 @@ class MiuixBgEffectController extends ChangeNotifier {
   }
 
   Future<void> _loadPrograms() async {
-    try {
-      final results = await Future.wait([
-        ui.FragmentProgram.fromAsset('shaders/about_bg.frag'),
-        ui.FragmentProgram.fromAsset('shaders/about_title.frag'),
-      ]);
-      if (_disposed) return;
-      _bgProgram = results[0];
-      _titleProgram = results[1];
-      notifyListeners();
-    } catch (_) {
-      // Headless or software test environments without compiled shaders stay on fallback.
+    await warmUp();
+    if (_disposed) return;
+    if (_bgProgram == _cachedBgProgram && _titleProgram == _cachedTitleProgram) {
+      return;
     }
+    _bgProgram = _cachedBgProgram;
+    _titleProgram = _cachedTitleProgram;
+    notifyListeners();
   }
 
   void sync({required bool playing, required double colorInterpPeriod}) {

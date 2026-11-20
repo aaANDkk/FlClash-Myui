@@ -8,10 +8,12 @@ class MiuixFrostedSection extends StatelessWidget {
     super.key,
     this.title,
     required this.items,
+    this.blurEnabled = true,
   });
 
   final String? title;
   final List<Widget> items;
+  final bool blurEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +27,7 @@ class MiuixFrostedSection extends StatelessWidget {
           ListHeader(title: title!)
         else
           const ListSectionGap(),
-        MiuixFrostedCard(items: items),
+        MiuixFrostedCard(items: items, blurEnabled: blurEnabled),
       ],
     );
   }
@@ -35,9 +37,11 @@ class MiuixFrostedCard extends StatelessWidget {
   const MiuixFrostedCard({
     super.key,
     required this.items,
+    this.blurEnabled = true,
   });
 
   final List<Widget> items;
+  final bool blurEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -52,6 +56,13 @@ class MiuixFrostedCard extends StatelessWidget {
         ? const Color(0x22FFFFFF)
         : const Color(0x99FFFFFF);
     const shape = AppShape.xl;
+    final body = DecoratedBox(
+      decoration: ShapeDecoration(color: fillColor, shape: shape),
+      child: ListCardFillScope(
+        fill: const Color(0x00000000),
+        child: generateGroup(items),
+      ),
+    );
     return DecoratedBox(
       position: DecorationPosition.foreground,
       decoration: ShapeDecoration(
@@ -62,16 +73,12 @@ class MiuixFrostedCard extends StatelessWidget {
       ),
       child: ClipPath(
         clipper: const ShapeBorderClipper(shape: shape),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-          child: DecoratedBox(
-            decoration: ShapeDecoration(color: fillColor, shape: shape),
-            child: ListCardFillScope(
-              fill: const Color(0x00000000),
-              child: generateGroup(items),
-            ),
-          ),
-        ),
+        child: blurEnabled
+            ? BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                child: body,
+              )
+            : body,
       ),
     );
   }

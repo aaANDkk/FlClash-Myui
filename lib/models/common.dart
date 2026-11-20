@@ -1002,7 +1002,16 @@ abstract class IconSet with _$IconSet {
   }) = _IconSet;
 }
 
+const builtInIconSetId = -1;
+const builtInIconSetName = 'Qure-Style-SVG';
+const builtInIconSetUrl =
+    'https://raw.githubusercontent.com/aaANDkk/Qure_Style_SVG/main/Other/Qure-Style-SVG.json';
+const builtInIconSetProjectUrl = 'https://github.com/aaANDkk/Qure_Style_SVG';
+const builtInIconSetAssetPath = 'assets/data/qure_style_svg.json';
+
 extension IconSetExt on IconSet {
+  bool get isBuiltIn => id == builtInIconSetId || url == builtInIconSetUrl;
+
   bool get isRemote => url.isNotEmpty;
 
   String get cover => icons.firstOrNull?.url ?? '';

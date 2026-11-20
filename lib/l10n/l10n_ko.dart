@@ -2357,6 +2357,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get outboundIp => '아웃바운드 IP';
 
   @override
+  String get outboundIpAddress => '아웃바운드 IP 주소';
+
+  @override
   String get ipAddress => 'IP 주소';
 
   @override
@@ -4413,4 +4416,28 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get ipQuery => 'IP 조회';
+
+  @override
+  String get otherProfiles => '기타 프로필';
+
+  @override
+  String get customIcon => '사용자 지정 아이콘';
+
+  @override
+  String get remainingShort => '남음';
+
+  @override
+  String get expired => '만료됨';
+
+  @override
+  String get localFile => '로컬 파일';
+
+  @override
+  String get lastEdited => '최근 편집';
+
+  @override
+  String get builtIn => '내장';
+
+  @override
+  String get projectUrl => '프로젝트 주소';
 }

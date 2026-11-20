@@ -782,6 +782,12 @@ abstract final class AppGlyphs {
     ], role: GlyphRole.detail),
   ]);
 
+  static const cloud = Glyph([
+    GlyphPath(
+      'M7.2 18.2H17.3A4.2 4.2 0 0 0 18.1 9.9A5.8 5.8 0 0 0 6.8 8.7A4.6 4.6 0 0 0 7.2 18.2Z',
+    ),
+  ]);
+
   static const cloudSync = Glyph([
     GlyphPath(
       'M7.2 18.2H17.3A4.2 4.2 0 0 0 18.1 9.9A5.8 5.8 0 0 0 6.8 8.7A4.6 4.6 0 0 0 7.2 18.2Z',

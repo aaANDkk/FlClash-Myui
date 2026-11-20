@@ -2310,6 +2310,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get outboundIp => 'アウトバウンド IP';
 
   @override
+  String get outboundIpAddress => 'アウトバウンド IP アドレス';
+
+  @override
   String get ipAddress => 'IP アドレス';
 
   @override
@@ -4338,4 +4341,28 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get ipQuery => 'IPクエリ';
+
+  @override
+  String get otherProfiles => 'その他のプロファイル';
+
+  @override
+  String get customIcon => 'カスタムアイコン';
+
+  @override
+  String get remainingShort => '残り';
+
+  @override
+  String get expired => '期限切れ';
+
+  @override
+  String get localFile => 'ローカルファイル';
+
+  @override
+  String get lastEdited => '最終編集';
+
+  @override
+  String get builtIn => '内蔵';
+
+  @override
+  String get projectUrl => 'プロジェクト URL';
 }

@@ -245,6 +245,16 @@ class Preferences {
     await sharedPreferencesIns?.setString(iconRulesKey, value);
   }
 
+  Future<String?> getProfileIcons() async {
+    final sharedPreferencesIns = await _store.value;
+    return sharedPreferencesIns?.getString(profileIconsKey);
+  }
+
+  Future<void> setProfileIcons(String value) async {
+    final sharedPreferencesIns = await _store.value;
+    await sharedPreferencesIns?.setString(profileIconsKey, value);
+  }
+
   Future<void> clearPreferences() async {
     final sharedPreferencesIns = await _store.value;
     await sharedPreferencesIns?.clear();

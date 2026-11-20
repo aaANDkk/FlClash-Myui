@@ -118,10 +118,12 @@ class FloatingHeader extends StatelessWidget {
           right: 0,
           bottom: -overhang,
           child: IgnorePointer(
-            child: LayoutBuilder(
-              builder: (_, constraints) => DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: _scrimOf(constraints.maxHeight),
+            child: RepaintBoundary(
+              child: LayoutBuilder(
+                builder: (_, constraints) => DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: _scrimOf(constraints.maxHeight),
+                  ),
                 ),
               ),
             ),
@@ -153,9 +155,11 @@ class FloatingHeaderBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        ScrollConfiguration(
-          behavior: const ShowBarScrollBehavior(),
-          child: body,
+        RepaintBoundary(
+          child: ScrollConfiguration(
+            behavior: const ShowBarScrollBehavior(),
+            child: body,
+          ),
         ),
         Positioned(
           top: 0,

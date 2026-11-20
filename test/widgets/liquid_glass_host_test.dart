@@ -799,4 +799,141 @@ void main() {
     await tester.pumpWidget(scene(offstage: false, enabled: false));
     expect(LiquidGlassHost.debugHeldCaptures, held);
   });
+
+  testWidgets('repainting a sibling on a Surface keeps a static glass capture', (
+    tester,
+  ) async {
+    final tick = ValueNotifier(0);
+    addTearDown(tick.dispose);
+
+    await tester.pumpWidget(
+      _app(
+        Surface(
+          color: _red,
+          child: Stack(
+            children: [
+              Positioned(
+                left: 0,
+                top: 0,
+                width: 40,
+                height: 40,
+                child: ValueListenableBuilder<int>(
+                  valueListenable: tick,
+                  builder: (_, value, _) => ColoredBox(
+                    color: value.isEven ? _green : _blue,
+                  ),
+                ),
+              ),
+              _pane(const Rect.fromLTWH(100, 300, 200, 100)),
+            ],
+          ),
+        ),
+      ),
+    );
+    expect(_capture().snapshots, 1);
+
+    tick.value = 1;
+    await tester.pump();
+    expect(_capture().snapshots, 0);
+  });
+
+  testWidgets(
+    'repainting a sibling over FloatingHeader keeps a static glass capture',
+    (tester) async {
+      final tick = ValueNotifier(0);
+      addTearDown(tick.dispose);
+
+      await tester.pumpWidget(
+        _app(
+          Surface(
+            color: _red,
+            child: Stack(
+              children: [
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  right: 0,
+                  height: 80,
+                  child: FloatingHeader(
+                    backgroundColor: _red,
+                    child: Stack(
+                      children: [
+                        Positioned(
+                          left: 0,
+                          top: 10,
+                          width: 40,
+                          height: 40,
+                          child: ValueListenableBuilder<int>(
+                            valueListenable: tick,
+                            builder: (_, value, _) => ColoredBox(
+                              color: value.isEven ? _green : _blue,
+                            ),
+                          ),
+                        ),
+                        _pane(const Rect.fromLTWH(240, 10, 120, 40)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      expect(_capture().snapshots, 1);
+
+      tick.value = 1;
+      await tester.pump();
+      expect(_capture().snapshots, 0);
+    },
+  );
+
+  testWidgets('Surface preserves child state when alpha crosses zero', (
+    tester,
+  ) async {
+    final alpha = ValueNotifier<double>(0);
+    addTearDown(alpha.dispose);
+    var initCount = 0;
+
+    await tester.pumpWidget(
+      _app(
+        ValueListenableBuilder<double>(
+          valueListenable: alpha,
+          builder: (_, value, _) => Surface(
+            color: _red.withValues(alpha: value),
+            child: _CountingChild(onInit: () => initCount++),
+          ),
+        ),
+      ),
+    );
+    expect(initCount, 1);
+
+    alpha.value = 0.5;
+    await tester.pump();
+    expect(initCount, 1);
+
+    alpha.value = 0;
+    await tester.pump();
+    expect(initCount, 1);
+  });
+}
+
+class _CountingChild extends StatefulWidget {
+  const _CountingChild({required this.onInit});
+
+  final VoidCallback onInit;
+
+  @override
+  State<_CountingChild> createState() => _CountingChildState();
+}
+
+class _CountingChildState extends State<_CountingChild> {
+  @override
+  void initState() {
+    super.initState();
+    widget.onInit();
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.expand();
 }

@@ -61,6 +61,12 @@ class _AboutViewState extends ConsumerState<AboutView>
 
   double _scrollOffset = 0.0;
   double _heroExtent = 280.0;
+  Size? _lastMeasuredViewSize;
+  Animation<double>? _routeAnimation;
+  bool _routeTransitioning = false;
+
+  static bool _isAnimatingStatus(AnimationStatus? status) =>
+      status == AnimationStatus.forward || status == AnimationStatus.reverse;
 
   @override
   void initState() {
@@ -71,15 +77,32 @@ class _AboutViewState extends ConsumerState<AboutView>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final nextAnimation = ModalRoute.of(context)?.animation;
+    if (nextAnimation != _routeAnimation) {
+      _routeAnimation?.removeStatusListener(_handleRouteAnimationStatus);
+      _routeAnimation = nextAnimation;
+      _routeAnimation?.addStatusListener(_handleRouteAnimationStatus);
+    }
+    _routeTransitioning = _isAnimatingStatus(_routeAnimation?.status);
     _syncBgAnimation();
   }
 
   @override
   void dispose() {
+    _routeAnimation?.removeStatusListener(_handleRouteAnimationStatus);
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _bgController.dispose();
     super.dispose();
+  }
+
+  void _handleRouteAnimationStatus(AnimationStatus status) {
+    final transitioning = _isAnimatingStatus(status);
+    if (transitioning == _routeTransitioning || !mounted) return;
+    setState(() {
+      _routeTransitioning = transitioning;
+    });
+    _syncBgAnimation();
   }
 
   void _onScroll() {
@@ -107,6 +130,7 @@ class _AboutViewState extends ConsumerState<AboutView>
     final playing =
         widget.dynamicBackground &&
         !context.disableAnimations &&
+        !_routeTransitioning &&
         _scrollProgress < 1.0;
     _bgController.sync(
       playing: playing,
@@ -114,7 +138,9 @@ class _AboutViewState extends ConsumerState<AboutView>
     );
   }
 
-  void _measureHero() {
+  void _measureHero(Size viewSize) {
+    if (_lastMeasuredViewSize == viewSize) return;
+    _lastMeasuredViewSize = viewSize;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final box = _heroKey.currentContext?.findRenderObject() as RenderBox?;
@@ -173,13 +199,18 @@ class _AboutViewState extends ConsumerState<AboutView>
     final progress = _scrollProgress;
     final barBgAlpha = ((progress - 0.35) / 0.65).clamp(0.0, 1.0);
     final collapsed = progress >= 1.0;
+    final blurEnabled = !_routeTransitioning;
+    final avatarCachePx = (40 * MediaQuery.devicePixelRatioOf(context)).round();
 
     _bgController.sync(
       playing:
-          widget.dynamicBackground && !context.disableAnimations && !collapsed,
+          widget.dynamicBackground &&
+          !context.disableAnimations &&
+          !_routeTransitioning &&
+          !collapsed,
       colorInterpPeriod: preset.colorInterpPeriod,
     );
-    _measureHero();
+    _measureHero(MediaQuery.sizeOf(context));
 
     final barBackgroundColor = SurfaceLevel.page
         .colorOf(colorScheme)
@@ -251,6 +282,7 @@ class _AboutViewState extends ConsumerState<AboutView>
                       children: [
                         MiuixFrostedSection(
                           title: appLocalizations.more,
+                          blurEnabled: blurEnabled,
                           items: [
                             _buildLinkItem(
                               glyph: AppGlyphs.code,
@@ -278,6 +310,7 @@ class _AboutViewState extends ConsumerState<AboutView>
                         ),
                         MiuixFrostedSection(
                           title: appLocalizations.otherContributors,
+                          blurEnabled: blurEnabled,
                           items: [
                             for (final contributor in _contributors)
                               ListItem(
@@ -287,7 +320,11 @@ class _AboutViewState extends ConsumerState<AboutView>
                                   foregroundDecoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     image: DecorationImage(
-                                      image: AssetImage(contributor.avatar),
+                                      image: ResizeImage.resizeIfNeeded(
+                                        avatarCachePx,
+                                        avatarCachePx,
+                                        AssetImage(contributor.avatar),
+                                      ),
                                       fit: BoxFit.cover,
                                     ),
                                   ),

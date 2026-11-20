@@ -714,6 +714,7 @@
   "installedAppsPermissionDesc": "이 시스템은 권한을 허용하기 전까지 설치된 앱 목록을 숨깁니다. 앱별 프록시를 구성하려면 권한을 허용하세요.",
   "installedAppsPermissionDeniedMessage": "앱 목록 권한이 거부되어 설치된 앱을 표시할 수 없습니다. 시스템 설정에서 직접 허용해 주세요.",
   "outboundIp": "아웃바운드 IP",
+  "outboundIpAddress": "아웃바운드 IP 주소",
   "ipAddress": "IP 주소",
   "ipQualityLevel": "등급",
   "ipQualityGood": "양호",
@@ -1319,5 +1320,13 @@
   "trafficStatsSince": "{date}부터",
   "trafficStatsDetailOffTip": "세부 통계가 꺼져 있어 총량과 시간별 추이만 기록됩니다.",
   "trafficStatsRefresh": "새로고침",
-  "ipQuery": "IP 조회"
+  "ipQuery": "IP 조회",
+  "otherProfiles": "기타 프로필",
+  "customIcon": "사용자 지정 아이콘",
+  "remainingShort": "남음",
+  "expired": "만료됨",
+  "localFile": "로컬 파일",
+  "lastEdited": "최근 편집",
+  "builtIn": "내장",
+  "projectUrl": "프로젝트 주소"
 }

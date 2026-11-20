@@ -4394,6 +4394,12 @@ abstract class AppLocalizations {
   /// **'Outbound IP'**
   String get outboundIp;
 
+  /// No description provided for @outboundIpAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Outbound IP address'**
+  String get outboundIpAddress;
+
   /// No description provided for @ipAddress.
   ///
   /// In en, this message translates to:
@@ -7299,6 +7305,22 @@ abstract class AppLocalizations {
   String get trafficStatsRefresh;
 
   String get ipQuery;
+
+  String get otherProfiles;
+
+  String get customIcon;
+
+  String get remainingShort;
+
+  String get expired;
+
+  String get localFile;
+
+  String get lastEdited;
+
+  String get builtIn;
+
+  String get projectUrl;
 }
 
 class _AppLocalizationsDelegate

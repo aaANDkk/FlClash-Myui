@@ -179,6 +179,12 @@ void main() {
     expect(find.textContaining('42%', findRichText: true), findsOneWidget);
     expect(find.text('42 GB / 100 GB'), findsOneWidget);
     expect(find.textContaining('30 days left'), findsOneWidget);
+    final wave = find.byWidgetPredicate(
+      (widget) => widget is CustomPaint && widget.painter is WavyProgressPainter,
+    );
+    final painter =
+        tester.widget<CustomPaint>(wave).painter! as WavyProgressPainter;
+    expect(painter.track, DashboardColors.of(tester.element(wave)).tone);
   });
 
   testWidgets('the desktop card puts the days left beside its update time', (

@@ -714,6 +714,7 @@
   "installedAppsPermissionDesc": "このシステムでは、許可するまでインストール済みアプリの一覧が提供されません。許可すると、アプリごとのプロキシを設定できます。",
   "installedAppsPermissionDeniedMessage": "アプリ一覧の権限が拒否されたため、インストール済みアプリを取得できません。システム設定から手動で許可してください。",
   "outboundIp": "アウトバウンド IP",
+  "outboundIpAddress": "アウトバウンド IP アドレス",
   "ipAddress": "IP アドレス",
   "ipQualityLevel": "レベル",
   "ipQualityGood": "良好",
@@ -1319,5 +1320,13 @@
   "trafficStatsSince": "{date} 以降の統計",
   "trafficStatsDetailOffTip": "詳細統計がオフのため、合計と時間帯別の推移のみ記録されます。",
   "trafficStatsRefresh": "更新",
-  "ipQuery": "IPクエリ"
+  "ipQuery": "IPクエリ",
+  "otherProfiles": "その他のプロファイル",
+  "customIcon": "カスタムアイコン",
+  "remainingShort": "残り",
+  "expired": "期限切れ",
+  "localFile": "ローカルファイル",
+  "lastEdited": "最終編集",
+  "builtIn": "内蔵",
+  "projectUrl": "プロジェクト URL"
 }

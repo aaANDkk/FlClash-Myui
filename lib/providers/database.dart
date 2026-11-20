@@ -5,6 +5,7 @@ import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/database/database.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
+import 'package:flutter/services.dart';
 import 'package:prism_ui/banner.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -546,10 +547,49 @@ class ClashProviders extends _$ClashProviders
 
 @Riverpod(keepAlive: true)
 class IconSets extends _$IconSets with AsyncNotifierMixin, OptimisticMixin {
+  Future<void>? _seedFuture;
+
+  Future<void> _ensureBuiltInIconSet() {
+    return _seedFuture ??= _seedBuiltInIconSet();
+  }
+
+  Future<void> _seedBuiltInIconSet() async {
+    try {
+      final existing = await database.iconSetsDao.query().get();
+      if (existing.any((item) => item.isBuiltIn)) {
+        return;
+      }
+      var name = builtInIconSetName;
+      var icons = const <IconSetIcon>[];
+      try {
+        final raw = await rootBundle.loadString(builtInIconSetAssetPath);
+        final parsed = parseIconSet(raw);
+        if (parsed.name.trim().isNotEmpty) {
+          name = parsed.name.trim();
+        }
+        icons = parsed.icons;
+      } catch (e) {
+        commonPrint.log('load built-in icon set asset error $e');
+      }
+      await database.iconSets.put(
+        IconSet(
+          id: builtInIconSetId,
+          name: name,
+          url: builtInIconSetUrl,
+          icons: icons,
+          order: -1,
+        ).toCompanion(),
+      );
+    } catch (e) {
+      commonPrint.log('seed built-in icon set error $e');
+    }
+  }
+
   @override
-  Stream<List<IconSet>> build() {
+  Stream<List<IconSet>> build() async* {
+    await _ensureBuiltInIconSet();
     final query = database.iconSetsDao.query();
-    return settled(query.watch(), query.get);
+    yield* settled(query.watch(), query.get);
   }
 
   @override
@@ -567,6 +607,9 @@ class IconSets extends _$IconSets with AsyncNotifierMixin, OptimisticMixin {
   }
 
   void del(int id) {
+    if (value.any((item) => item.id == id && item.isBuiltIn)) {
+      return;
+    }
     optimistic(
       value.where((item) => item.id != id).toList(),
       () => database.iconSets.remove((t) => t.id.equals(id)),

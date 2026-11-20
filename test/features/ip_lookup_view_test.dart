@@ -9,6 +9,7 @@ import 'package:fl_clash/providers/outbound_ip.dart';
 import 'package:fl_clash/providers/routed_probe.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/ui/ui.dart' as app_ui;
+import 'package:fl_clash/ui/vertical_ticket_perforation.dart';
 import 'package:fl_clash/views/tools.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -186,6 +187,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final l = tester.element(find.byType(IpLookupView)).appLocalizations;
+    expect(find.text(l.outboundIpAddress), findsOneWidget);
     expect(find.text(_outboundIp), findsOneWidget);
     expect(find.text('28'), findsOneWidget);
     expect(find.text('KR'), findsOneWidget);
@@ -204,6 +206,8 @@ void main() {
     await tester.enterText(find.byType(app_ui.SearchField), '$_customIp:443');
     await tester.tap(find.text(l.search));
     await tester.pumpAndSettle();
+    expect(find.text(l.ipAddress), findsOneWidget);
+    expect(find.text(l.outboundIpAddress), findsNothing);
     expect(find.text(_customIp), findsAtLeastNWidgets(1));
     expect(find.text('AU'), findsOneWidget);
     expect(find.textContaining('AS13335'), findsOneWidget);
@@ -300,10 +304,40 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('IP查询'), findsOneWidget);
+      expect(find.text('IP 查询'), findsOneWidget);
+      expect(find.text('出站 IP 地址'), findsOneWidget);
       expect(find.text(_outboundIp), findsOneWidget);
       expect(find.text('28'), findsOneWidget);
-      expect(find.text('数据中心'), findsOneWidget);
+      expect(find.text('数据中心'), findsWidgets);
+      final perforation = find.byWidgetPredicate(
+        (widget) =>
+            widget is CustomPaint &&
+            widget.painter is VerticalTicketPerforationPainter,
+      );
+      if (scenario.size.width >= 760) {
+        expect(perforation, findsOneWidget);
+        final bounds = tester.getRect(perforation);
+        final card = tester.getRect(
+          find.ancestor(of: perforation, matching: find.byType(app_ui.Card)),
+        );
+        expect(bounds.top, card.top);
+        expect(bounds.bottom, card.bottom);
+        final theme = app_ui.Theme.of(tester.element(perforation));
+        final notchColor = app_ui.SurfaceLevel.page.colorOf(theme.colorScheme);
+        expect(
+          perforation,
+          paints
+            ..circle(x: bounds.width / 2, y: 0, radius: 9, color: notchColor)
+            ..circle(
+              x: bounds.width / 2,
+              y: bounds.height,
+              radius: 9,
+              color: notchColor,
+            ),
+        );
+      } else {
+        expect(perforation, findsNothing);
+      }
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
     });

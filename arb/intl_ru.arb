@@ -714,6 +714,7 @@
   "installedAppsPermissionDesc": "Эта система не выдаёт список установленных приложений без разрешения. Предоставьте его, чтобы настроить прокси для отдельных приложений.",
   "installedAppsPermissionDeniedMessage": "Разрешение на список приложений отклонено, поэтому установленные приложения недоступны. Предоставьте его вручную в системных настройках.",
   "outboundIp": "Исходящий IP",
+  "outboundIpAddress": "Исходящий IP-адрес",
   "ipAddress": "IP-адрес",
   "ipQualityLevel": "Уровень",
   "ipQualityGood": "Хороший",
@@ -1319,5 +1320,13 @@
   "trafficStatsSince": "С {date}",
   "trafficStatsDetailOffTip": "Подробный учёт выключен. Записывается только общий трафик и динамика.",
   "trafficStatsRefresh": "Обновить",
-  "ipQuery": "IP-запрос"
+  "ipQuery": "IP-запрос",
+  "otherProfiles": "Другие профили",
+  "customIcon": "Свой значок",
+  "remainingShort": "Осталось",
+  "expired": "Истекло",
+  "localFile": "Локальный файл",
+  "lastEdited": "Изменено",
+  "builtIn": "Встроенный",
+  "projectUrl": "Адрес проекта"
 }

@@ -757,6 +757,7 @@
   "installedAppsPermissionDesc": "This system hides the installed app list until the permission is granted. Authorize it to configure the per-app proxy.",
   "installedAppsPermissionDeniedMessage": "The app list permission was denied, so installed apps cannot be listed. Please grant it manually in system settings.",
   "outboundIp": "Outbound IP",
+  "outboundIpAddress": "Outbound IP address",
   "ipAddress": "IP address",
   "ipQualityLevel": "Level",
   "ipQualityGood": "Good",
@@ -1434,5 +1435,13 @@
   "trafficStatsSince": "Since {date}",
   "trafficStatsDetailOffTip": "Detailed breakdown is turned off. Only total and hourly traffic are recorded.",
   "trafficStatsRefresh": "Refresh",
-  "ipQuery": "IP Lookup"
+  "ipQuery": "IP Lookup",
+  "otherProfiles": "Other profiles",
+  "customIcon": "Custom icon",
+  "remainingShort": "Left",
+  "expired": "Expired",
+  "localFile": "Local file",
+  "lastEdited": "Last edited",
+  "builtIn": "Built-in",
+  "projectUrl": "Project URL"
 }

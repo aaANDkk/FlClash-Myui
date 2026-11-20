@@ -1461,7 +1461,8 @@ class _Lens extends StatelessWidget {
     final tone = colorScheme.brightness == Brightness.dark ? 4.0 : 90.0;
     final secondary = Hct.fromInt(colorScheme.secondary.toARGB32());
     final hct = Hct.from(secondary.hue, secondary.chroma, tone);
-    final platter = Color(hct.toInt()).withValues(alpha: 0.85);
+    final solidPlatter = Color(hct.toInt());
+    final platter = solidPlatter.withValues(alpha: 0.85);
     return PositionedDirectional(
       start: rect.left,
       top: rect.top,
@@ -1471,12 +1472,7 @@ class _Lens extends StatelessWidget {
         decoration: ShapeDecoration(
           color: glass
               ? platter.withValues(alpha: platter.a * (1 - lifted))
-              : Color.alphaBlend(
-                  colorScheme.onSurface.withValues(alpha: 0.08 * lifted),
-                  SurfaceLevel.floatingOf(
-                    colorScheme,
-                  ).next.colorOf(colorScheme),
-                ),
+              : solidPlatter,
           shape: AppShape.full,
         ),
       ),
