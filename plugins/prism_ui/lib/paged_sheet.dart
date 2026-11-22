@@ -8,7 +8,6 @@ import 'package:prism_ui/inherited.dart';
 import 'package:prism_ui/navigator_resizable.dart';
 import 'package:prism_ui/page_transition.dart';
 import 'package:prism_ui/pop_scope.dart';
-import 'package:prism_ui/shape.dart';
 import 'package:prism_ui/sheet_header.dart';
 import 'package:prism_ui/sheet.dart';
 import 'package:prism_ui/sheet_navigator.dart';
@@ -111,16 +110,17 @@ class PagedSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final type = SheetProvider.of(context)?.type;
+    final isBottomSheet = type == SheetType.bottomSheet;
     final pages = NavigatorResizable(child: child);
     return Surface(
       color: _sheetColorOf(context),
-      shape: type == SheetType.bottomSheet
+      shape: isBottomSheet
           ? RoundedSuperellipseBorder(
               borderRadius: bottomSheetRadiusOf(context),
             )
-          : AppShape.none,
-      clipBehavior: Clip.antiAlias,
-      child: type == SheetType.bottomSheet
+          : null,
+      clipBehavior: isBottomSheet ? Clip.antiAlias : Clip.hardEdge,
+      child: isBottomSheet
           ? Stack(
               children: [
                 pages,

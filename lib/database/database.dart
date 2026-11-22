@@ -63,6 +63,13 @@ class Database extends _$Database {
   static LazyDatabase _openConnection() {
     return LazyDatabase(() async {
       final databaseFile = File(await appPath.databasePath);
+      // Avoid a persistent Drift worker isolate on Android: when the Activity
+      // destroys the FlutterEngine while VpnService keeps the process alive,
+      // a surviving child isolate delays IsolateGroup cleanup until after
+      // Impeller tears down ContextVK, triggering vkDestroyFramebuffer SIGSEGV.
+      if (Platform.isAndroid) {
+        return NativeDatabase(databaseFile);
+      }
       return NativeDatabase.createInBackground(databaseFile);
     });
   }

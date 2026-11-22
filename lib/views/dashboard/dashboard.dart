@@ -113,10 +113,12 @@ class _DashboardViewState extends ConsumerState<DashboardView> {
             density: layout,
             scale: scale,
             child: layout.isDesktop
-                ? _DesktopDashboard(
-                    platform: platform,
-                    columns: dashboardColumnsOf(room.width),
-                    gap: gap,
+                ? _DesktopDashboardSnapshot(
+                    child: _DesktopDashboard(
+                      platform: platform,
+                      columns: dashboardColumnsOf(room.width),
+                      gap: gap,
+                    ),
                   )
                 : _MobileDashboard(
                     controller: _controller,
@@ -129,6 +131,75 @@ class _DashboardViewState extends ConsumerState<DashboardView> {
           );
         },
       ),
+    );
+  }
+}
+
+/// Freezes the multi-card desktop dashboard into a single GPU texture while a
+/// covering side sheet slides in or out, avoiding per-frame re-rasterization of
+/// shadowed cards and live updates underneath the modal barrier.
+class _DesktopDashboardSnapshot extends StatefulWidget {
+  const _DesktopDashboardSnapshot({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_DesktopDashboardSnapshot> createState() =>
+      _DesktopDashboardSnapshotState();
+}
+
+class _DesktopDashboardSnapshotState extends State<_DesktopDashboardSnapshot> {
+  final _snapshot = SnapshotController();
+  Animation<double>? _cover;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final cover = sheetCoverOf(context);
+    if (identical(cover, _cover)) {
+      return;
+    }
+    _detachCover();
+    _cover = cover
+      ..addListener(_syncSnapshot)
+      ..addStatusListener(_handleStatus);
+    _syncSnapshot();
+  }
+
+  void _detachCover() {
+    _cover?.removeListener(_syncSnapshot);
+    _cover?.removeStatusListener(_handleStatus);
+    _cover = null;
+  }
+
+  void _handleStatus(AnimationStatus status) {
+    _syncSnapshot();
+  }
+
+  void _syncSnapshot() {
+    final cover = _cover;
+    final active =
+        cover != null &&
+        (cover.isAnimating || (cover.value > 0.0 && cover.value < 1.0));
+    if (_snapshot.allowSnapshotting != active) {
+      _snapshot.allowSnapshotting = active;
+    }
+  }
+
+  @override
+  void dispose() {
+    _detachCover();
+    _snapshot.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SnapshotWidget(
+      controller: _snapshot,
+      mode: SnapshotMode.permissive,
+      autoresize: true,
+      child: widget.child,
     );
   }
 }

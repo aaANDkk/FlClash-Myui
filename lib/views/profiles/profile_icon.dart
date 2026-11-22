@@ -19,13 +19,10 @@ Glyph profileDefaultGlyph(ProfileType type) => switch (type) {
 
 Color profileTypeAccent(BuildContext context, ProfileType type) {
   final colorScheme = context.colorScheme;
-  final isDark = colorScheme.brightness == Brightness.dark;
   return switch (type) {
     ProfileType.url => colorScheme.primary,
-    ProfileType.file =>
-      isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706),
-    ProfileType.custom =>
-      isDark ? const Color(0xFFA78BFA) : const Color(0xFF7C3AED),
+    ProfileType.file => DashboardColors.of(context).complement,
+    ProfileType.custom => colorScheme.tertiary,
   };
 }
 

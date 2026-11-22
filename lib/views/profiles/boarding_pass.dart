@@ -7,13 +7,14 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
-import 'package:fl_clash/ui/vertical_ticket_perforation.dart';
 import 'package:fl_clash/views/dashboard/style.dart';
 import 'package:fl_clash/views/dashboard/widgets/profile_detail.dart';
 import 'package:fl_clash/views/dashboard/widgets/profiles.dart';
 import 'package:fl_clash/views/profiles/custom/custom.dart';
 import 'package:fl_clash/views/profiles/extend/extend.dart';
 import 'package:fl_clash/widgets/widgets.dart';
+import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -253,22 +254,41 @@ List<PopupMenuItem> buildProfileMenuItems(
   ];
 }
 
-/// Active profile hero styled as a boarding pass ("飞机票"):
-/// - Portrait (`!isWide`): vertical pass with top info + 2 circular actions
-///   (primary + `⋯` PopupAnchor morph menu), horizontal perforated tear-line
-///   with semicircular notches, and bottom traffic wavy bar or 3 stat tiles.
-/// - Landscape (`isWide`): horizontal pass with left ticket body, vertical
-///   perforated tear-line with top/bottom semicircular notches, and right stub
-///   exposing all profile actions directly as a 2-row circular button matrix.
+/// Which portion of [ProfileBoardingPass] to render. Used internally by the
+/// profile-switch FLIP overlay so each hero card can animate independently.
+enum HeroCardPart { all, primaryOnly, actionsOnly }
+
+/// Active profile hero:
+/// - Portrait (`!isWide`): vertical boarding pass with top info + 2 circular
+///   actions (primary + `⋯` PopupAnchor morph menu), horizontal perforated
+///   tear-line with semicircular notches, and bottom traffic wavy bar or 3
+///   stat tiles.
+/// - Landscape (`isWide`): two independent 50/50 rounded superellipse cards
+///   separated by [spacing] — left info & metrics card paired with right
+///   2-row aligned action grid (unified 8dp horizontal gap, 14dp vertical gap).
 class ProfileBoardingPass extends ConsumerStatefulWidget {
   const ProfileBoardingPass({
     super.key,
     required this.profile,
     required this.isWide,
+    this.spacing = 16.0,
+    this.part = HeroCardPart.all,
+    this.primaryCardKey,
+    this.actionsCardKey,
+    this.hidePrimary = false,
+    this.hideActions = false,
+    this.metricsReveal = 1.0,
   });
 
   final Profile profile;
   final bool isWide;
+  final double spacing;
+  final HeroCardPart part;
+  final GlobalKey? primaryCardKey;
+  final GlobalKey? actionsCardKey;
+  final bool hidePrimary;
+  final bool hideActions;
+  final double metricsReveal;
 
   @override
   ConsumerState<ProfileBoardingPass> createState() =>
@@ -278,6 +298,36 @@ class ProfileBoardingPass extends ConsumerStatefulWidget {
 class _ProfileBoardingPassState extends ConsumerState<ProfileBoardingPass>
     with ConfigCountsWatch<ProfileBoardingPass> {
   static const _nearlyUsedShare = 0.9;
+
+  /// Shared height for the top band (header info ↔ landscape primary actions)
+  /// so all 3 profile types align horizontally and stay height-identical.
+  static double get _topBandHeight {
+    final measure = globalState.measure;
+    final headerText =
+        measure.textHeight(AppTextStyle.headline) +
+        3.0 +
+        measure.textHeight(AppTextStyle.footnote);
+    return math.max(46.0, (headerText + 2.0).ceilToDouble());
+  }
+
+  /// Shared height for the bottom band (usage wave ↔ 3 stat tiles ↔ landscape
+  /// secondary actions) so Remote, Local YAML, and Custom hero cards have the
+  /// exact same height in both portrait and landscape.
+  static double get _bottomBandHeight {
+    final measure = globalState.measure;
+    final usageHeight =
+        measure.textHeight(AppTextStyle.title3) +
+        4.0 +
+        12.0 +
+        4.0 +
+        measure.textHeight(AppTextStyle.caption1);
+    final secondaryTileHeight =
+        16.0 + 17.0 + 5.0 + measure.textHeight(AppTextStyle.caption2);
+    return math.max(
+      62.0,
+      math.max(usageHeight, secondaryTileHeight).ceilToDouble(),
+    );
+  }
 
   ProfileStats? _statsOf(List<ExternalProvider> providers) {
     final effectiveCounts =
@@ -321,53 +371,56 @@ class _ProfileBoardingPassState extends ConsumerState<ProfileBoardingPass>
     final colorScheme = context.colorScheme;
     final expired = profileIsExpired(profile);
     final subtitle = profileSubtitleText(context, profile);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        ProfileIconBadge(
-          profile: profile,
-          size: 46,
-          onTap: () => openProfileIconPicker(context, ref, profile),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(
-                    child: EmojiText(
-                      profile.realLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyle.headline.of(
-                        context,
-                        emphasized: true,
+    return SizedBox(
+      height: _topBandHeight,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          ProfileIconBadge(
+            profile: profile,
+            size: 46,
+            onTap: () => openProfileIconPicker(context, ref, profile),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: EmojiText(
+                        profile.realLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyle.headline.of(
+                          context,
+                          emphasized: true,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 6),
-                  _buildTypeStamp(context, profile),
-                ],
-              ),
-              const SizedBox(height: 3),
-              Text(
-                subtitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: expired
-                    ? AppTextStyle.footnote
-                          .of(context, emphasized: true)
-                          .copyWith(color: colorScheme.error)
-                    : AppTextStyle.footnote.of(context).toLighter,
-              ),
-            ],
+                    const SizedBox(width: 6),
+                    _buildTypeStamp(context, profile),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: expired
+                      ? AppTextStyle.footnote
+                            .of(context, emphasized: true)
+                            .copyWith(color: colorScheme.error)
+                      : AppTextStyle.footnote.of(context).toLighter,
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -378,9 +431,11 @@ class _ProfileBoardingPassState extends ConsumerState<ProfileBoardingPass>
     List<PopupMenuItem> menuItems,
   ) {
     final l = context.appLocalizations;
+    final accent = profileTypeAccent(context, profile.type);
     final Widget primaryButton = switch (profile.type) {
       ProfileType.url => _CircleIconButton(
         tooltip: l.sync,
+        accent: accent,
         onPressed: isUpdating ? null : () => handleSyncProfile(ref, profile),
         child: isUpdating
             ? const ActivityIndicator(size: 16)
@@ -388,11 +443,13 @@ class _ProfileBoardingPassState extends ConsumerState<ProfileBoardingPass>
       ),
       ProfileType.file => _CircleIconButton(
         tooltip: l.edit,
+        accent: accent,
         onPressed: () => handleEditProfile(context, profile),
         child: const GlyphIcon(AppGlyphs.edit, size: 18),
       ),
       ProfileType.custom => _CircleIconButton(
         tooltip: l.edit,
+        accent: accent,
         onPressed: () => handleEditProfile(context, profile),
         child: const GlyphIcon(AppGlyphs.customize, size: 18),
       ),
@@ -452,75 +509,75 @@ class _ProfileBoardingPassState extends ConsumerState<ProfileBoardingPass>
       _ => null,
     };
 
-    final waveSpacing = widget.isWide ? 4.0 : 8.0;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          spacing: 12,
-          children: [
-            Flexible(
-              fit: widget.isWide ? FlexFit.tight : FlexFit.loose,
-              child: Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(text: percentText, style: percentStyle),
-                    TextSpan(text: ' ${l.usedShort}', style: unitStyle),
-                  ],
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            Text(
-              trafficText,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.end,
-              style: trafficStyle,
-            ),
-          ],
-        ),
-        SizedBox(height: waveSpacing),
-        SizedBox(
-          height: 12,
-          child: CustomPaint(
-            painter: WavyProgressPainter(
-              value: usage.share,
-              active: waveColor,
-              track: colors.tone2,
-            ),
-          ),
-        ),
-        SizedBox(height: waveSpacing),
-        Row(
-          spacing: 12,
-          children: [
-            Text(
-              leftFoot,
-              maxLines: 1,
-              style: expired
-                  ? AppTextStyle.caption1
-                        .of(context, emphasized: true)
-                        .copyWith(color: colorScheme.error)
-                  : DashboardText.label(context),
-            ),
-            if (rightFoot != null)
-              Expanded(
-                child: Text(
-                  rightFoot,
+    return SizedBox(
+      height: _bottomBandHeight,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            spacing: 12,
+            children: [
+              Flexible(
+                fit: widget.isWide ? FlexFit.tight : FlexFit.loose,
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(text: percentText, style: percentStyle),
+                      TextSpan(text: ' ${l.usedShort}', style: unitStyle),
+                    ],
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.end,
-                  style: DashboardText.label(context),
                 ),
               ),
-          ],
-        ),
-      ],
+              Text(
+                trafficText,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.end,
+                style: trafficStyle,
+              ),
+            ],
+          ),
+          SizedBox(
+            height: 12,
+            child: CustomPaint(
+              painter: WavyProgressPainter(
+                value: usage.share,
+                active: waveColor,
+                track: colors.tone2,
+              ),
+            ),
+          ),
+          Row(
+            spacing: 12,
+            children: [
+              Text(
+                leftFoot,
+                maxLines: 1,
+                style: expired
+                    ? AppTextStyle.caption1
+                          .of(context, emphasized: true)
+                          .copyWith(color: colorScheme.error)
+                    : DashboardText.label(context),
+              ),
+              if (rightFoot != null)
+                Expanded(
+                  child: Text(
+                    rightFoot,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                    style: DashboardText.label(context),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -554,11 +611,11 @@ class _ProfileBoardingPassState extends ConsumerState<ProfileBoardingPass>
     Widget tile(int? value, String label) {
       return Expanded(
         child: Container(
-          height: 58,
+          height: _bottomBandHeight,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           decoration: ShapeDecoration(
             color: tileFill,
-            shape: AppShape.all(AppCorner.lg),
+            shape: AppShape.all(14),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -708,15 +765,18 @@ class _ProfileBoardingPassState extends ConsumerState<ProfileBoardingPass>
             label: l.edit,
             accent: accent,
             tinted: true,
+            span: 2,
             onPressed: () => handleEditProfile(context, profile),
+          ),
+          _PillAction(
+            glyph: AppGlyphs.textShort,
+            label: l.rename,
+            accent: accent,
+            tinted: false,
+            onPressed: () => renameProfile(context, ref, profile),
           ),
         ],
         actions: [
-          _StubAction(
-            glyph: AppGlyphs.textShort,
-            label: l.rename,
-            onPressed: () => renameProfile(context, ref, profile),
-          ),
           _StubAction(
             glyph: AppGlyphs.photos,
             label: l.icon,
@@ -744,22 +804,33 @@ class _ProfileBoardingPassState extends ConsumerState<ProfileBoardingPass>
     bool isUpdating,
   ) {
     final plan = _landscapeStubPlan(context, profile, isUpdating);
+    final topHeight = _topBandHeight;
+    final bottomHeight = _bottomBandHeight;
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
-      spacing: profile.type == ProfileType.url ? 10 : 12,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        _GridSpanRow(
+          spans: [for (final pill in plan.pills) pill.span],
+          spacing: 8,
+          textDirection: Directionality.of(context),
+          children: [
+            for (final pill in plan.pills)
+              _PrimaryActionTile(action: pill, height: topHeight),
+          ],
+        ),
+        const SizedBox(height: 14),
         Row(
           spacing: 8,
           children: [
-            for (final pill in plan.pills)
-              Expanded(child: _ActionPillButton(action: pill)),
-          ],
-        ),
-        Row(
-          children: [
             for (final action in plan.actions)
-              Expanded(child: _LabeledCircleAction(action: action)),
+              Expanded(
+                child: _SecondaryActionTile(
+                  action: action,
+                  height: bottomHeight,
+                ),
+              ),
           ],
         ),
       ],
@@ -778,119 +849,148 @@ class _ProfileBoardingPassState extends ConsumerState<ProfileBoardingPass>
     final stats = _statsOf(providers);
     final usage = profileUsageOf(profile);
     final colorScheme = context.colorScheme;
-    final isDark = colorScheme.brightness == Brightness.dark;
     final cardColor = SurfaceLevel.card.colorOf(colorScheme);
-    final pageColor = SurfaceLevel.page.colorOf(colorScheme);
-    final dashColor = colorScheme.onSurface.withValues(
-      alpha: isDark ? 0.14 : 0.11,
-    );
     final menuItems = buildProfileMenuItems(context, ref, profile);
 
     final bodyMetrics = usage != null
         ? _buildUsageStub(context, profile, usage, stats)
         : _buildStatsStub(context, profile, stats, customGroupsCount);
+    final reveal = widget.metricsReveal.clamp(0.0, 1.0);
+    final Widget revealedMetrics = reveal >= 1.0
+        ? bodyMetrics
+        : Opacity(
+            opacity: reveal,
+            child: Transform.translate(
+              offset: Offset(0, 8 * (1 - reveal)),
+              child: bodyMetrics,
+            ),
+          );
+
+    Widget cardShell({Key? key, required Widget child}) {
+      return ClipPath(
+        key: key,
+        clipper: ShapeBorderClipper(shape: AppShape.all(AppCorner.xl)),
+        child: ColoredBox(
+          color: cardColor,
+          child: SurfaceScope(level: SurfaceLevel.card, child: child),
+        ),
+      );
+    }
+
+    Widget buildPrimaryLandscapeCard({Key? key}) {
+      return cardShell(
+        key: key,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildHeaderInfo(context, profile),
+              const SizedBox(height: 14),
+              revealedMetrics,
+            ],
+          ),
+        ),
+      );
+    }
+
+    Widget buildActionsLandscapeCard({Key? key}) {
+      return cardShell(
+        key: key,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: _buildLandscapeActionMatrix(context, profile, isUpdating),
+        ),
+      );
+    }
+
+    Widget buildPortraitCard({Key? key}) {
+      final isDark = colorScheme.brightness == Brightness.dark;
+      final pageColor = SurfaceLevel.page.colorOf(colorScheme);
+      final dashColor = colorScheme.onSurface.withValues(
+        alpha: isDark ? 0.14 : 0.11,
+      );
+      Widget perforation = SizedBox(
+        height: 18,
+        child: CustomPaint(
+          painter: _HorizontalPerforationPainter(
+            notchColor: pageColor,
+            dashColor: dashColor,
+          ),
+          child: const SizedBox.expand(),
+        ),
+      );
+      if (reveal < 1.0) {
+        perforation = Opacity(opacity: reveal, child: perforation);
+      }
+      return cardShell(
+        key: key,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                spacing: 10,
+                children: [
+                  Expanded(child: _buildHeaderInfo(context, profile)),
+                  _buildPortraitActions(context, profile, isUpdating, menuItems),
+                ],
+              ),
+            ),
+            perforation,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: revealedMetrics,
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (widget.part == HeroCardPart.primaryOnly) {
+      return widget.isWide ? buildPrimaryLandscapeCard() : buildPortraitCard();
+    }
+    if (widget.part == HeroCardPart.actionsOnly) {
+      return buildActionsLandscapeCard();
+    }
 
     final Widget passContent;
     if (widget.isWide) {
-      final isRemote = profile.type == ProfileType.url;
       passContent = IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: widget.spacing,
           children: [
             Expanded(
-              flex: 12,
-              child: Padding(
-                padding: isRemote
-                    ? const EdgeInsets.symmetric(horizontal: 20, vertical: 15)
-                    : const EdgeInsets.fromLTRB(18, 18, 12, 18),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: isRemote
-                      ? MainAxisAlignment.center
-                      : MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildHeaderInfo(context, profile),
-                    SizedBox(height: isRemote ? 12 : 16),
-                    bodyMetrics,
-                  ],
-                ),
-              ),
-            ),
-            SizedBox(
-              width: 20,
-              child: CustomPaint(
-                painter: VerticalTicketPerforationPainter(
-                  notchColor: pageColor,
-                  dashColor: dashColor,
-                ),
-                child: const SizedBox.expand(),
+              child: Opacity(
+                opacity: widget.hidePrimary ? 0.0 : 1.0,
+                child: buildPrimaryLandscapeCard(key: widget.primaryCardKey),
               ),
             ),
             Expanded(
-              flex: 10,
-              child: Padding(
-                padding: isRemote
-                    ? const EdgeInsets.fromLTRB(10, 12, 16, 12)
-                    : const EdgeInsets.fromLTRB(10, 16, 16, 16),
-                child: _buildLandscapeActionMatrix(
-                  context,
-                  profile,
-                  isUpdating,
-                ),
+              child: Opacity(
+                opacity: widget.hideActions ? 0.0 : 1.0,
+                child: buildActionsLandscapeCard(key: widget.actionsCardKey),
               ),
             ),
           ],
         ),
       );
     } else {
-      passContent = Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              spacing: 10,
-              children: [
-                Expanded(child: _buildHeaderInfo(context, profile)),
-                _buildPortraitActions(context, profile, isUpdating, menuItems),
-              ],
-            ),
-          ),
-          SizedBox(
-            height: 18,
-            child: CustomPaint(
-              painter: _HorizontalPerforationPainter(
-                notchColor: pageColor,
-                dashColor: dashColor,
-              ),
-              child: const SizedBox.expand(),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: bodyMetrics,
-          ),
-        ],
+      passContent = Opacity(
+        opacity: widget.hidePrimary ? 0.0 : 1.0,
+        child: buildPortraitCard(key: widget.primaryCardKey),
       );
     }
 
     return ContextMenuRegion(
       menuItems: isUpdating ? null : menuItems,
-      child: Focus(
-        child: ClipPath(
-          clipper: ShapeBorderClipper(shape: AppShape.all(AppCorner.xl)),
-          child: ColoredBox(
-            color: cardColor,
-            child: SurfaceScope(
-              level: SurfaceLevel.card,
-              child: passContent,
-            ),
-          ),
-        ),
-      ),
+      child: Focus(child: passContent),
     );
   }
 }
@@ -902,6 +1002,7 @@ class _PillAction {
     required this.accent,
     required this.tinted,
     required this.onPressed,
+    this.span = 1,
     this.loading = false,
   });
 
@@ -910,13 +1011,222 @@ class _PillAction {
   final Color accent;
   final bool tinted;
   final VoidCallback? onPressed;
+  final int span;
   final bool loading;
 }
 
-class _ActionPillButton extends StatelessWidget {
-  const _ActionPillButton({required this.action});
+class _GridSpanRowParentData extends ContainerBoxParentData<RenderBox> {}
+
+/// Single-row grid whose items occupy integer column spans over an equal-unit
+/// track with uniform [spacing], so a `span: 2` item matches `2 * unit + spacing`
+/// exactly and works cleanly inside [IntrinsicHeight].
+class _GridSpanRow extends MultiChildRenderObjectWidget {
+  const _GridSpanRow({
+    required this.spans,
+    required this.spacing,
+    required this.textDirection,
+    required super.children,
+  }) : assert(spans.length == children.length);
+
+  final List<int> spans;
+  final double spacing;
+  final TextDirection textDirection;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderGridSpanRow(
+    spans: spans,
+    spacing: spacing,
+    textDirection: textDirection,
+  );
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderGridSpanRow renderObject,
+  ) {
+    renderObject
+      ..spans = spans
+      ..spacing = spacing
+      ..textDirection = textDirection;
+  }
+}
+
+class _RenderGridSpanRow extends RenderBox
+    with
+        ContainerRenderObjectMixin<RenderBox, _GridSpanRowParentData>,
+        RenderBoxContainerDefaultsMixin<RenderBox, _GridSpanRowParentData> {
+  _RenderGridSpanRow({
+    required List<int> spans,
+    required double spacing,
+    required TextDirection textDirection,
+  }) : _spans = spans,
+       _spacing = spacing,
+       _textDirection = textDirection;
+
+  List<int> _spans;
+  List<int> get spans => _spans;
+  set spans(List<int> value) {
+    if (listEquals(_spans, value)) return;
+    _spans = value;
+    markNeedsLayout();
+  }
+
+  double _spacing;
+  double get spacing => _spacing;
+  set spacing(double value) {
+    if (_spacing == value) return;
+    _spacing = value;
+    markNeedsLayout();
+  }
+
+  TextDirection _textDirection;
+  TextDirection get textDirection => _textDirection;
+  set textDirection(TextDirection value) {
+    if (_textDirection == value) return;
+    _textDirection = value;
+    markNeedsLayout();
+  }
+
+  int get _totalUnits => _spans.fold(0, (sum, span) => sum + span);
+
+  double _widthForSpan(double totalWidth, int span) {
+    final units = _totalUnits;
+    if (units <= 0 || !totalWidth.isFinite) {
+      return 0;
+    }
+    final unitWidth = math.max(
+      0.0,
+      (totalWidth - (units - 1) * _spacing) / units,
+    );
+    return unitWidth * span + (span - 1) * _spacing;
+  }
+
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _GridSpanRowParentData) {
+      child.parentData = _GridSpanRowParentData();
+    }
+  }
+
+  @override
+  double computeMinIntrinsicWidth(double height) {
+    var total = 0.0;
+    var count = 0;
+    var child = firstChild;
+    while (child != null) {
+      total += child.getMinIntrinsicWidth(height);
+      count++;
+      child = childAfter(child);
+    }
+    return count > 1 ? total + (count - 1) * _spacing : total;
+  }
+
+  @override
+  double computeMaxIntrinsicWidth(double height) {
+    var total = 0.0;
+    var count = 0;
+    var child = firstChild;
+    while (child != null) {
+      total += child.getMaxIntrinsicWidth(height);
+      count++;
+      child = childAfter(child);
+    }
+    return count > 1 ? total + (count - 1) * _spacing : total;
+  }
+
+  double _computeIntrinsicHeight(double width, {required bool maxMode}) {
+    var result = 0.0;
+    var index = 0;
+    var child = firstChild;
+    while (child != null) {
+      final span = index < _spans.length ? _spans[index] : 1;
+      final childWidth = width.isFinite
+          ? _widthForSpan(width, span)
+          : double.infinity;
+      final h = maxMode
+          ? child.getMaxIntrinsicHeight(childWidth)
+          : child.getMinIntrinsicHeight(childWidth);
+      if (h > result) {
+        result = h;
+      }
+      index++;
+      child = childAfter(child);
+    }
+    return result;
+  }
+
+  @override
+  double computeMinIntrinsicHeight(double width) =>
+      _computeIntrinsicHeight(width, maxMode: false);
+
+  @override
+  double computeMaxIntrinsicHeight(double width) =>
+      _computeIntrinsicHeight(width, maxMode: true);
+
+  @override
+  void performLayout() {
+    final totalWidth = constraints.maxWidth.isFinite
+        ? constraints.maxWidth
+        : computeMaxIntrinsicWidth(constraints.maxHeight);
+    var maxHeight = constraints.minHeight;
+    final widths = <double>[];
+    var index = 0;
+    var child = firstChild;
+    while (child != null) {
+      final span = index < _spans.length ? _spans[index] : 1;
+      final w = _widthForSpan(totalWidth, span);
+      widths.add(w);
+      child.layout(
+        BoxConstraints(
+          minWidth: w,
+          maxWidth: w,
+          minHeight: constraints.minHeight,
+          maxHeight: constraints.maxHeight,
+        ),
+        parentUsesSize: true,
+      );
+      if (child.size.height > maxHeight) {
+        maxHeight = child.size.height;
+      }
+      index++;
+      child = childAfter(child);
+    }
+    final resolvedHeight = constraints.constrainHeight(maxHeight);
+    final isRtl = _textDirection == TextDirection.rtl;
+    var cursor = isRtl ? totalWidth : 0.0;
+    index = 0;
+    child = firstChild;
+    while (child != null) {
+      final w = widths[index];
+      if (child.size.height != resolvedHeight) {
+        child.layout(
+          BoxConstraints.tightFor(width: w, height: resolvedHeight),
+          parentUsesSize: true,
+        );
+      }
+      final dx = isRtl ? cursor - w : cursor;
+      (child.parentData! as _GridSpanRowParentData).offset = Offset(dx, 0);
+      cursor = isRtl ? dx - _spacing : dx + w + _spacing;
+      index++;
+      child = childAfter(child);
+    }
+    size = constraints.constrain(Size(totalWidth, resolvedHeight));
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      defaultHitTestChildren(result, position: position);
+
+  @override
+  void paint(PaintingContext context, Offset offset) =>
+      defaultPaint(context, offset);
+}
+
+class _PrimaryActionTile extends StatelessWidget {
+  const _PrimaryActionTile({required this.action, required this.height});
 
   final _PillAction action;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
@@ -926,33 +1236,36 @@ class _ActionPillButton extends StatelessWidget {
         ? action.accent.withValues(alpha: isDark ? 0.18 : 0.11)
         : DashboardColors.of(context).tone;
     final foreground = action.tinted ? action.accent : colorScheme.onSurface;
-    return PressSurface(
-      fill: fill,
-      foreground: foreground,
-      shape: AppShape.full,
-      minimum: const BoxConstraints(minHeight: 36),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      onPressed: action.onPressed,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        spacing: 6,
-        children: [
-          if (action.loading)
-            const ActivityIndicator(size: 15)
-          else
-            GlyphIcon(action.glyph, size: 16),
-          Flexible(
-            child: Text(
-              action.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyle.footnote
-                  .of(context, emphasized: true)
-                  .copyWith(color: foreground),
+    return SizedBox(
+      height: height,
+      child: PressSurface(
+        fill: fill,
+        foreground: foreground,
+        shape: AppShape.all(14),
+        minimum: BoxConstraints(minHeight: height),
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        onPressed: action.onPressed,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          spacing: 6,
+          children: [
+            if (action.loading)
+              const ActivityIndicator(size: 15)
+            else
+              GlyphIcon(action.glyph, size: 16),
+            Flexible(
+              child: Text(
+                action.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyle.footnote
+                    .of(context, emphasized: true)
+                    .copyWith(color: foreground),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -963,28 +1276,35 @@ class _CircleIconButton extends StatelessWidget {
     required this.tooltip,
     required this.onPressed,
     required this.child,
+    this.accent,
     this.danger = false,
   });
 
   final String tooltip;
   final VoidCallback? onPressed;
   final Widget child;
+  final Color? accent;
   final bool danger;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = context.colorScheme;
+    final isDark = colorScheme.brightness == Brightness.dark;
     final fill = danger
-        ? colorScheme.error.withValues(alpha: 0.12)
-        : DashboardColors.of(context).tone;
-    final foreground = danger ? colorScheme.error : colorScheme.onSurface;
+        ? colorScheme.error.withValues(alpha: isDark ? 0.16 : 0.10)
+        : accent != null
+            ? accent!.withValues(alpha: isDark ? 0.18 : 0.11)
+            : DashboardColors.of(context).tone;
+    final foreground = danger
+        ? colorScheme.error
+        : accent ?? colorScheme.onSurface;
     return Tooltip(
       message: tooltip,
       child: PressSurface(
         fill: fill,
         foreground: foreground,
         shape: AppShape.full,
-        minimum: const BoxConstraints.tightFor(width: 34, height: 34),
+        minimum: const BoxConstraints.tightFor(width: 36, height: 36),
         onPressed: onPressed,
         child: Center(child: child),
       ),
@@ -1006,35 +1326,53 @@ class _StubAction {
   final bool danger;
 }
 
-class _LabeledCircleAction extends StatelessWidget {
-  const _LabeledCircleAction({required this.action});
+class _SecondaryActionTile extends StatelessWidget {
+  const _SecondaryActionTile({required this.action, required this.height});
 
   final _StubAction action;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = context.colorScheme;
+    final isDark = colorScheme.brightness == Brightness.dark;
+    final fill = action.danger
+        ? colorScheme.error.withValues(alpha: isDark ? 0.16 : 0.10)
+        : DashboardColors.of(context).tone;
+    final iconColor = action.danger ? colorScheme.error : colorScheme.onSurface;
     final labelColor = action.danger
         ? colorScheme.error
         : colorScheme.onSurfaceVariant;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _CircleIconButton(
-          tooltip: action.label,
-          danger: action.danger,
+    return Tooltip(
+      message: action.label,
+      child: SizedBox(
+        height: height,
+        child: PressSurface(
+          fill: fill,
+          foreground: iconColor,
+          shape: AppShape.all(14),
+          minimum: BoxConstraints(minHeight: height),
+          padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 8),
           onPressed: action.onPressed,
-          child: GlyphIcon(action.glyph, size: 17),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            spacing: 5,
+            children: [
+              GlyphIcon(action.glyph, size: 17, color: iconColor),
+              Text(
+                action.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: AppTextStyle.caption2
+                    .of(context)
+                    .copyWith(color: labelColor, height: 1.0),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 5),
-        Text(
-          action.label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center,
-          style: AppTextStyle.caption2.of(context).copyWith(color: labelColor),
-        ),
-      ],
+      ),
     );
   }
 }

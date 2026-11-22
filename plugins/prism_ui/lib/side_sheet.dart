@@ -4,6 +4,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:prism_ui/l10n.dart';
 import 'package:prism_ui/color.dart';
+import 'package:prism_ui/deferred_push.dart';
 import 'package:prism_ui/drag_back.dart';
 import 'package:prism_ui/shape.dart';
 import 'package:prism_ui/sheet_navigator.dart';
@@ -63,13 +64,11 @@ typedef _SizeChangeCallback<Size> = void Function(Size);
 class _SideSheetLayoutWithSizeListener extends SingleChildRenderObjectWidget {
   const _SideSheetLayoutWithSizeListener({
     required this.onChildSizeChanged,
-    required this.animationValue,
     required this.width,
     super.child,
   });
 
   final _SizeChangeCallback<Size> onChildSizeChanged;
-  final double animationValue;
   final double width;
 
   @override
@@ -78,7 +77,6 @@ class _SideSheetLayoutWithSizeListener extends SingleChildRenderObjectWidget {
   ) {
     return _RenderSideSheetLayoutWithSizeListener(
       onChildSizeChanged: onChildSizeChanged,
-      animationValue: animationValue,
       width: width,
     );
   }
@@ -89,7 +87,6 @@ class _SideSheetLayoutWithSizeListener extends SingleChildRenderObjectWidget {
     _RenderSideSheetLayoutWithSizeListener renderObject,
   ) {
     renderObject.onChildSizeChanged = onChildSizeChanged;
-    renderObject.animationValue = animationValue;
     renderObject.width = width;
   }
 }
@@ -98,10 +95,8 @@ class _RenderSideSheetLayoutWithSizeListener extends RenderShiftedBox {
   _RenderSideSheetLayoutWithSizeListener({
     RenderBox? child,
     required _SizeChangeCallback<Size> onChildSizeChanged,
-    required double animationValue,
     required double width,
   }) : _onChildSizeChanged = onChildSizeChanged,
-       _animationValue = animationValue,
        _width = width,
        super(child);
 
@@ -116,18 +111,6 @@ class _RenderSideSheetLayoutWithSizeListener extends RenderShiftedBox {
     }
 
     _onChildSizeChanged = newCallback;
-    markNeedsLayout();
-  }
-
-  double get animationValue => _animationValue;
-  double _animationValue;
-
-  set animationValue(double newValue) {
-    if (_animationValue == newValue) {
-      return;
-    }
-
-    _animationValue = newValue;
     markNeedsLayout();
   }
 
@@ -204,7 +187,7 @@ class _RenderSideSheetLayoutWithSizeListener extends RenderShiftedBox {
   }
 
   Offset _getPositionForChild(Size size, Size childSize) {
-    return Offset(size.width - childSize.width * animationValue, 0.0);
+    return Offset(size.width - childSize.width, 0.0);
   }
 
   @override
@@ -272,42 +255,53 @@ class _ModalSideSheetState<T> extends State<_ModalSideSheet<T>> {
     final width = _widthFor(MediaQuery.sizeOf(context).width);
 
     final route = widget.route;
-    return AnimatedBuilder(
-      animation: route.animation!,
-      child: route.dragBackDetector(
-        SideSheet(
-          builder: route.builder,
-          backgroundColor: widget.backgroundColor,
+    return Semantics(
+      scopesRoute: true,
+      namesRoute: true,
+      label: routeLabel,
+      explicitChildNodes: true,
+      child: ClipRect(
+        child: _SideSheetLayoutWithSizeListener(
+          onChildSizeChanged: (Size size) {
+            widget.route._didChangeBarrierSemanticsClip(
+              _getNewClipDetails(size),
+            );
+          },
+          width: width,
+          child: AnimatedBuilder(
+            animation: route.animation!,
+            child: RepaintBoundary(
+              child: route.dragBackDetector(
+                SideSheet(
+                  builder: route.builder,
+                  backgroundColor: widget.backgroundColor,
+                ),
+              ),
+            ),
+            builder: (BuildContext context, Widget? child) {
+              final curve = route.isDragBackActive
+                  ? Curves.linear
+                  : _sideSheetCurve;
+              final double animationValue = curve.transform(
+                route.animation!.value,
+              );
+              return FractionalTranslation(
+                translation: Offset(1.0 - animationValue, 0.0),
+                child: child,
+              );
+            },
+          ),
         ),
       ),
-      builder: (BuildContext context, Widget? child) {
-        final curve = route.isDragBackActive ? Curves.linear : _sideSheetCurve;
-        final double animationValue = curve.transform(route.animation!.value);
-        return Semantics(
-          scopesRoute: true,
-          namesRoute: true,
-          label: routeLabel,
-          explicitChildNodes: true,
-          child: ClipRect(
-            child: _SideSheetLayoutWithSizeListener(
-              onChildSizeChanged: (Size size) {
-                widget.route._didChangeBarrierSemanticsClip(
-                  _getNewClipDetails(size),
-                );
-              },
-              animationValue: animationValue,
-              width: width,
-              child: child,
-            ),
-          ),
-        );
-      },
     );
   }
 }
 
 class ModalSideSheetRoute<T> extends PopupRoute<T>
-    with DragBackRouteMixin<T>, SheetCoverRouteMixin<T> {
+    with
+        DragBackRouteMixin<T>,
+        SheetCoverRouteMixin<T>,
+        DeferredPushRouteMixin<T> {
   ModalSideSheetRoute({
     required this.builder,
     this.barrierLabel,
@@ -355,11 +349,6 @@ class ModalSideSheetRoute<T> extends PopupRoute<T>
 
   @override
   Color get barrierColor => modalBarrierColor ?? Colors.black54;
-
-  @override
-  AnimationController createAnimationController() {
-    return SideSheet.createAnimationController(navigator!);
-  }
 
   @override
   Widget buildPage(

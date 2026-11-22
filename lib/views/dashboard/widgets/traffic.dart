@@ -104,17 +104,35 @@ class _SpeedChart extends StatelessWidget {
 }
 
 /// The upload or the download on its own desktop card.
-class SpeedCard extends ConsumerWidget {
+class SpeedCard extends StatelessWidget {
   const SpeedCard({super.key, required this.direction});
 
   final TrafficDirection direction;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final density = DashboardDensityScope.of(context);
+    final padding = dashboardCardPadding(density);
+    return DashboardCard(
+      padding: padding,
+      semanticLabel: direction.labelOf(context),
+      child: RepaintBoundary(
+        child: _SpeedCardContent(direction: direction, density: density),
+      ),
+    );
+  }
+}
+
+class _SpeedCardContent extends ConsumerWidget {
+  const _SpeedCardContent({required this.direction, required this.density});
+
+  final TrafficDirection direction;
+  final DashboardDensity density;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final compact = density.isCompact;
     final scale = DashboardDensityScope.scaleOf(context);
-    final padding = dashboardCardPadding(density);
     final appLocalizations = context.appLocalizations;
     final traffics = ref.watch(trafficsProvider);
     final total = ref.watch(
@@ -134,59 +152,55 @@ class SpeedCard extends ConsumerWidget {
         child: _SpeedChart(direction: direction, traffics: traffics),
       ),
     );
-    return DashboardCard(
-      padding: padding,
-      semanticLabel: direction.labelOf(context),
-      child: LayoutBuilder(
-        builder: (context, constraints) => Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              height: 24 * scale,
-              child: Row(
-                spacing: 8,
-                children: [
-                  GlyphIcon(
-                    direction.glyph,
-                    size: 18,
-                    color: direction.glyphColorOf(context),
-                  ),
-                  Text(
-                    direction.labelOf(context),
-                    maxLines: 1,
-                    style: DashboardText.cardTitle(context),
-                  ),
-                  Expanded(
-                    child: Text(
-                      appLocalizations.trafficPeak(
-                        '${dashboardTraffic(peak)}/s',
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.end,
-                      style: DashboardText.label(context),
+    return LayoutBuilder(
+      builder: (context, constraints) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 24 * scale,
+            child: Row(
+              spacing: 8,
+              children: [
+                GlyphIcon(
+                  direction.glyph,
+                  size: 18,
+                  color: direction.glyphColorOf(context),
+                ),
+                Text(
+                  direction.labelOf(context),
+                  maxLines: 1,
+                  style: DashboardText.cardTitle(context),
+                ),
+                Expanded(
+                  child: Text(
+                    appLocalizations.trafficPeak(
+                      '${dashboardTraffic(peak)}/s',
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                    style: DashboardText.label(context),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            SizedBox(height: compact ? 6 : 10),
-            _Figure(
-              show: speed,
-              unit: _speedUnit(speed),
-              style: compact ? AppTextStyle.largeTitle : AppTextStyle.display,
-              unitStyle: AppTextStyle.subheadline,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              appLocalizations.trafficTotal(dashboardTraffic(total)),
-              maxLines: 1,
-              style: DashboardText.label(context),
-            ),
-            SizedBox(height: compact ? 8 : 10),
-            if (constraints.hasBoundedHeight) Expanded(child: chart) else chart,
-          ],
-        ),
+          ),
+          SizedBox(height: compact ? 6 : 10),
+          _Figure(
+            show: speed,
+            unit: _speedUnit(speed),
+            style: compact ? AppTextStyle.largeTitle : AppTextStyle.display,
+            unitStyle: AppTextStyle.subheadline,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            appLocalizations.trafficTotal(dashboardTraffic(total)),
+            maxLines: 1,
+            style: DashboardText.label(context),
+          ),
+          SizedBox(height: compact ? 8 : 10),
+          if (constraints.hasBoundedHeight) Expanded(child: chart) else chart,
+        ],
       ),
     );
   }

@@ -102,7 +102,7 @@ class SuperellipseBorder extends RoundedSuperellipseBorder {
 
   @override
   Path getOuterPath(Rect rect, {TextDirection? textDirection}) {
-    if (!_isDesktop) {
+    if (!_isDesktop || borderRadius == BorderRadius.zero) {
       return super.getOuterPath(rect, textDirection: textDirection);
     }
     final localPath = _getPathForSize(rect.size, textDirection);
@@ -118,7 +118,9 @@ class SuperellipseBorder extends RoundedSuperellipseBorder {
     Paint paint, {
     TextDirection? textDirection,
   }) {
-    if (!_isDesktop) {
+    if (!_isDesktop ||
+        borderRadius == BorderRadius.zero ||
+        paint.maskFilter != null) {
       super.paintInterior(canvas, rect, paint, textDirection: textDirection);
       return;
     }
