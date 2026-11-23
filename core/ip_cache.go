@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/json"
 	"net/netip"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -16,10 +17,16 @@ type ipCacheEntry struct {
 	Data  json.RawMessage
 }
 
-// Entries are loaded only for an operation, not retained in the background.
+// Entries are cached in memory and re-synced only when the backing file's
+// metadata changes, avoiding repeated full-file decompression on concurrent
+// lookups.
 type ipCacheStore struct {
-	mu   sync.Mutex
-	path string
+	mu      sync.Mutex
+	path    string
+	loaded  bool
+	modTime time.Time
+	size    int64
+	entries map[string]ipCacheEntry
 }
 
 var ipCache ipCacheStore
@@ -34,9 +41,17 @@ func (s *ipCacheStore) init(home string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.path = ""
+	s.loaded = false
+	s.modTime = time.Time{}
+	s.size = 0
+	s.entries = nil
 	if home != "" {
 		s.path = filepath.Join(home, "ip_cache.dat")
 	}
+}
+
+func ipCacheEntryValid(entry ipCacheEntry, now time.Time) bool {
+	return now.Before(entry.Saved.Add(ipCacheTTL)) && !entry.Saved.After(now) && json.Valid(entry.Data)
 }
 
 func (s *ipCacheStore) load(now time.Time) map[string]ipCacheEntry {
@@ -45,11 +60,29 @@ func (s *ipCacheStore) load(now time.Time) map[string]ipCacheEntry {
 		return map[string]ipCacheEntry{}
 	}
 	for key, entry := range entries {
-		if !now.Before(entry.Saved.Add(ipCacheTTL)) || entry.Saved.After(now) || !json.Valid(entry.Data) {
+		if !ipCacheEntryValid(entry, now) {
 			delete(entries, key)
 		}
 	}
 	return entries
+}
+
+func (s *ipCacheStore) syncFromDiskLocked(now time.Time) {
+	info, err := os.Stat(s.path)
+	if err != nil {
+		s.loaded = false
+		s.modTime = time.Time{}
+		s.size = 0
+		s.entries = nil
+		return
+	}
+	if s.loaded && info.ModTime().Equal(s.modTime) && info.Size() == s.size {
+		return
+	}
+	s.entries = s.load(now)
+	s.loaded = true
+	s.modTime = info.ModTime()
+	s.size = info.Size()
 }
 
 func (s *ipCacheStore) get(ip string, now time.Time) json.RawMessage {
@@ -58,7 +91,15 @@ func (s *ipCacheStore) get(ip string, now time.Time) json.RawMessage {
 	if s.path == "" {
 		return nil
 	}
-	return s.load(now)[ip].Data
+	s.syncFromDiskLocked(now)
+	if s.entries == nil {
+		return nil
+	}
+	entry, ok := s.entries[ip]
+	if !ok || !ipCacheEntryValid(entry, now) {
+		return nil
+	}
+	return entry.Data
 }
 
 func (s *ipCacheStore) put(ip string, data json.RawMessage, now time.Time) error {
@@ -67,7 +108,16 @@ func (s *ipCacheStore) put(ip string, data json.RawMessage, now time.Time) error
 	if s.path == "" {
 		return nil
 	}
-	entries := s.load(now)
+	s.syncFromDiskLocked(now)
+	entries := s.entries
+	if entries == nil {
+		entries = map[string]ipCacheEntry{}
+	}
+	for key, entry := range entries {
+		if !ipCacheEntryValid(entry, now) {
+			delete(entries, key)
+		}
+	}
 	entries[ip] = ipCacheEntry{Saved: now, Data: data}
 	for len(entries) > ipCacheLimit {
 		oldest := ""
@@ -83,7 +133,18 @@ func (s *ipCacheStore) put(ip string, data json.RawMessage, now time.Time) error
 	if err != nil {
 		return err
 	}
-	return writeTrafficStoreBytes(s.path, encoded)
+	if err := writeTrafficStoreBytes(s.path, encoded); err != nil {
+		return err
+	}
+	s.entries = entries
+	if info, err := os.Stat(s.path); err == nil {
+		s.loaded = true
+		s.modTime = info.ModTime()
+		s.size = info.Size()
+	} else {
+		s.loaded = false
+	}
+	return nil
 }
 
 func ipCacheKey(ip string) string {

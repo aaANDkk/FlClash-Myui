@@ -22,6 +22,81 @@ import 'risk_view.dart';
 const _wideLeftFlex = 9;
 const _wideRightFlex = 13;
 const _wideCardGap = 12.0;
+const _wideMinLeftWidth = 228.0;
+const _flagCardHorizontalPadding = 20.0;
+const _flagPillSpacing = 6.0;
+const _flagPillHorizontalPadding = 9.0;
+const _flagPillIconGap = 6.0;
+
+double _measureSingleLineFlagsCardWidth(BuildContext context, IpRisk risk) {
+  final l = context.appLocalizations;
+  final textDirection = Directionality.of(context);
+  final textScaler = MediaQuery.textScalerOf(context);
+  final locale = Localizations.maybeLocaleOf(context);
+
+  double measurePill(String label, {required bool emphasized, required double iconSize}) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: AppTextStyle.caption1.of(context, emphasized: emphasized),
+      ),
+      textDirection: textDirection,
+      textScaler: textScaler,
+      locale: locale,
+      maxLines: 1,
+    )..layout();
+    final width =
+        _flagPillHorizontalPadding * 2 +
+        iconSize +
+        _flagPillIconGap +
+        painter.width.ceilToDouble();
+    painter.dispose();
+    return width;
+  }
+
+  var maxRowWidth = 0.0;
+  for (final group in IpRiskGroup.values) {
+    final groupChecks = risk.checks.where((c) => c.group == group).toList();
+    if (groupChecks.isEmpty) continue;
+    final homeBroadband =
+        risk.isHomeBroadband && group == IpRiskGroup.datacenter;
+    final pillWidths = <double>[
+      if (homeBroadband)
+        measurePill(l.ipRiskHomeBroadband, emphasized: true, iconSize: 13.0)
+      else
+        for (final check in groupChecks)
+          measurePill(
+            riskCheckLabel(context, check.name),
+            emphasized: check.hit == true,
+            iconSize: check.hit == false ? 11.0 : 13.0,
+          ),
+    ];
+    final rowWidth =
+        pillWidths.fold<double>(0.0, (sum, w) => sum + w) +
+        math.max(0, pillWidths.length - 1) * _flagPillSpacing;
+    if (rowWidth > maxRowWidth) {
+      maxRowWidth = rowWidth;
+    }
+  }
+  return maxRowWidth + _flagCardHorizontalPadding * 2 + 2.0;
+}
+
+({double left, double right}) _wideColumnWidths(
+  BuildContext context,
+  double contentWidth,
+  IpRisk risk,
+) {
+  final usable = math.max(0.0, contentWidth - _wideCardGap);
+  final defaultRight =
+      usable * _wideRightFlex / (_wideLeftFlex + _wideRightFlex);
+  if (risk.checks.isEmpty) {
+    return (left: usable - defaultRight, right: defaultRight);
+  }
+  final requiredRight = _measureSingleLineFlagsCardWidth(context, risk);
+  final maxRight = math.max(defaultRight, usable - _wideMinLeftWidth);
+  final right = requiredRight.clamp(defaultRight, maxRight);
+  return (left: usable - right, right: right);
+}
 
 class IpLookupView extends ConsumerStatefulWidget {
   const IpLookupView({super.key, this.initialIp = ''});
@@ -32,10 +107,12 @@ class IpLookupView extends ConsumerStatefulWidget {
   ConsumerState<IpLookupView> createState() => _IpLookupViewState();
 }
 
-class _IpLookupViewState extends ConsumerState<IpLookupView> {
+class _IpLookupViewState extends ConsumerState<IpLookupView>
+    with RouteSettledMixin<IpLookupView> {
   late final OutboundIpProbe _probe;
   late final TextEditingController _controller;
   final _focusNode = FocusNode();
+  bool _watchingProbe = false;
   String? _queriedIp;
   bool _retrying = false;
   bool _retryHold = false;
@@ -44,16 +121,27 @@ class _IpLookupViewState extends ConsumerState<IpLookupView> {
   @override
   void initState() {
     super.initState();
-    _probe = ref.read(outboundIpProbeProvider.notifier)..watch(routedOutbound);
+    _probe = ref.read(outboundIpProbeProvider.notifier);
     final initial = publicIpOf(widget.initialIp);
     _queriedIp = initial;
     _controller = TextEditingController(text: initial ?? '');
   }
 
   @override
+  void didSettleRoute() {
+    if (!_watchingProbe) {
+      _watchingProbe = true;
+      _probe.watch(routedOutbound);
+    }
+    setState(() {});
+  }
+
+  @override
   void dispose() {
     _retryTimer?.cancel();
-    _probe.unwatch(routedOutbound);
+    if (_watchingProbe) {
+      _probe.unwatch(routedOutbound);
+    }
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -144,10 +232,10 @@ class _IpLookupViewState extends ConsumerState<IpLookupView> {
         outboundIp.isEmpty &&
         entry.phase == ProbePhase.failed;
 
-    final riskState = activeIp.isNotEmpty
+    final riskState = routeSettled && activeIp.isNotEmpty
         ? ref.watch(ipRiskProvider(activeIp))
         : null;
-    final locateState = activeIp.isNotEmpty
+    final locateState = routeSettled && activeIp.isNotEmpty
         ? ref.watch(ipLocateProvider(activeIp))
         : null;
 
@@ -163,6 +251,7 @@ class _IpLookupViewState extends ConsumerState<IpLookupView> {
         locateState != null && !locateState.isLoading && attribution == null;
 
     final isLoading =
+        !routeSettled ||
         probingOutbound ||
         (!riskFailed &&
             !attributionFailed &&
@@ -185,75 +274,130 @@ class _IpLookupViewState extends ConsumerState<IpLookupView> {
           ),
         ],
         body: Builder(
-          builder: (context) => LayoutBuilder(
-            builder: (context, constraints) {
-              const sidePadding = 16.0;
-              final isWide = constraints.maxWidth >= 760;
-              return ListView(
-                padding: EdgeInsets.fromLTRB(
-                  sidePadding,
-                  context.contentTopPadding,
-                  sidePadding,
-                  24 + context.bottomInset,
-                ),
-                children: [
-                  _IpSearchBar(
-                    controller: _controller,
-                    focusNode: _focusNode,
-                    showOutboundShortcut: isCustom,
-                    isWide: constraints.maxWidth >= 600,
-                    onSubmitted: _submitSearch,
-                    onUseOutbound: _useOutboundIp,
-                  ),
-                  const SizedBox(height: 12),
-                  AnimatedSwitcher(
-                    duration: context.motionDuration(commonDuration),
-                    reverseDuration: context.motionDuration(
-                      const Duration(milliseconds: 160),
-                    ),
-                    switchInCurve: Easing.emphasizedDecelerate,
-                    switchOutCurve: Curves.easeIn,
-                    layoutBuilder: (currentChild, previousChildren) => Align(
-                      alignment: Alignment.topCenter,
-                      child: Stack(
-                        alignment: Alignment.topCenter,
-                        children: <Widget>[...previousChildren, ?currentChild],
+          builder: (context) => NullStatusSwitcher(
+            holdsArrival: false,
+            isLoading: !_retrying && isLoading,
+            isEmpty: false,
+            loadingStatus: const Center(child: ActivityIndicator.page()),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                const sidePadding = 16.0;
+                final isWide = constraints.maxWidth >= 760;
+                final showSubsequentLoading = !_retrying && isLoading;
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    ListView(
+                      padding: EdgeInsets.fromLTRB(
+                        sidePadding,
+                        context.contentTopPadding,
+                        sidePadding,
+                        24 + context.bottomInset,
                       ),
-                    ),
-                    transitionBuilder: (child, animation) => FadeTransition(
-                      opacity: animation,
-                      child: child.key is ValueKey<String> &&
-                              (child.key as ValueKey<String>).value.startsWith(
-                                'data:',
-                              )
-                          ? ScaleTransition(
-                              scale: animation.drive(
-                                Tween(begin: 0.96, end: 1.0),
+                      children: [
+                        _IpSearchBar(
+                          controller: _controller,
+                          focusNode: _focusNode,
+                          showOutboundShortcut: isCustom,
+                          isWide: constraints.maxWidth >= 600,
+                          onSubmitted: _submitSearch,
+                          onUseOutbound: _useOutboundIp,
+                        ),
+                        const SizedBox(height: 12),
+                        AnimatedSwitcher(
+                          duration: context.motionDuration(commonDuration),
+                          reverseDuration: context.motionDuration(
+                            const Duration(milliseconds: 160),
+                          ),
+                          switchInCurve: Easing.emphasizedDecelerate,
+                          switchOutCurve: Curves.easeIn,
+                          layoutBuilder: (currentChild, previousChildren) =>
+                              Align(
+                                alignment: Alignment.topCenter,
+                                child: Stack(
+                                  alignment: Alignment.topCenter,
+                                  children: <Widget>[
+                                    ...previousChildren,
+                                    ?currentChild,
+                                  ],
+                                ),
                               ),
-                              child: child,
-                            )
-                          : child,
+                          transitionBuilder: (child, animation) =>
+                              FadeTransition(
+                                opacity: animation,
+                                child:
+                                    child.key is ValueKey<String> &&
+                                            (child.key as ValueKey<String>)
+                                                .value
+                                                .startsWith('data:')
+                                        ? ScaleTransition(
+                                            scale: animation.drive(
+                                              Tween(begin: 0.96, end: 1.0),
+                                            ),
+                                            child: child,
+                                          )
+                                        : child,
+                              ),
+                          child: _buildContent(
+                            context,
+                            isWide: isWide,
+                            contentWidth: math.max(
+                              0.0,
+                              constraints.maxWidth - sidePadding * 2,
+                            ),
+                            activeIp: activeIp,
+                            isOutbound: isOutbound,
+                            hidden: hidden,
+                            isLoading: isLoading,
+                            outboundFailed: outboundFailed,
+                            risk: risk,
+                            attribution: attribution,
+                            onRetry: () => _retryFailed(
+                              activeIp,
+                              riskFailed: riskFailed,
+                              attributionFailed: attributionFailed,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    child: _buildContent(
-                      context,
-                      isWide: isWide,
-                      activeIp: activeIp,
-                      isOutbound: isOutbound,
-                      hidden: hidden,
-                      isLoading: isLoading,
-                      outboundFailed: outboundFailed,
-                      risk: risk,
-                      attribution: attribution,
-                      onRetry: () => _retryFailed(
-                        activeIp,
-                        riskFailed: riskFailed,
-                        attributionFailed: attributionFailed,
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: AnimatedSwitcher(
+                          duration: context.motionDuration(commonDuration),
+                          reverseDuration: context.motionDuration(
+                            const Duration(milliseconds: 150),
+                          ),
+                          switchInCurve: Easing.emphasizedDecelerate,
+                          switchOutCurve: Curves.easeIn,
+                          transitionBuilder: (child, animation) =>
+                              ActivityPresence(
+                                animation: animation,
+                                child: FadeTransition(
+                                  opacity: animation,
+                                  child: ScaleTransition(
+                                    scale: animation.drive(
+                                      Tween(begin: 0.92, end: 1.0),
+                                    ),
+                                    child: child,
+                                  ),
+                                ),
+                              ),
+                          child: showSubsequentLoading
+                              ? Center(
+                                  key: ValueKey('loading:$activeIp'),
+                                  child: const ActivityIndicator.page(),
+                                )
+                              : const SizedBox.shrink(
+                                  key: ValueKey('loading:idle'),
+                                ),
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              );
-            },
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -263,6 +407,7 @@ class _IpLookupViewState extends ConsumerState<IpLookupView> {
   Widget _buildContent(
     BuildContext context, {
     required bool isWide,
+    required double contentWidth,
     required String activeIp,
     required bool isOutbound,
     required bool hidden,
@@ -274,44 +419,51 @@ class _IpLookupViewState extends ConsumerState<IpLookupView> {
   }) {
     final l = context.appLocalizations;
     if (!_retrying && isLoading) {
-      return SizedBox(
-        key: ValueKey('loading:$activeIp'),
-        height: 280,
-        child: const Center(child: ActivityIndicator.page()),
-      );
+      return SizedBox.shrink(key: ValueKey('loading-slot:$activeIp'));
     }
 
     if (!isLoading && risk != null && attribution != null) {
       final hasChecks = risk.checks.isNotEmpty;
-      final heroCard = _IpRiskHeroCard(
-        ip: activeIp,
-        risk: risk,
-        hidden: hidden,
-        isOutbound: isOutbound,
-        fillHeight: isWide && hasChecks,
+      final wideWidths = isWide
+          ? _wideColumnWidths(context, contentWidth, risk)
+          : null;
+      final heroCard = RepaintBoundary(
+        child: _IpRiskHeroCard(
+          ip: activeIp,
+          risk: risk,
+          hidden: hidden,
+          isOutbound: isOutbound,
+          fillHeight: isWide && hasChecks,
+        ),
       );
-      final attributionCard = _IpAttributionCard(
-        risk: risk,
-        attribution: attribution,
-        hidden: hidden,
-        isWide: isWide,
+      final attributionCard = RepaintBoundary(
+        child: _IpAttributionCard(
+          risk: risk,
+          attribution: attribution,
+          hidden: hidden,
+          isWide: isWide,
+          wideLeftWidth: wideWidths?.left,
+          wideRightWidth: wideWidths?.right,
+        ),
       );
       final flagsCard = hasChecks
-          ? _IpFlagsCard(risk: risk, isWide: isWide)
+          ? RepaintBoundary(
+              child: _IpFlagsCard(risk: risk, isWide: isWide),
+            )
           : null;
       return Column(
         key: ValueKey('data:$activeIp'),
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (isWide) ...[
-            if (flagsCard != null)
+            if (flagsCard != null && wideWidths != null)
               IntrinsicHeight(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(flex: _wideLeftFlex, child: heroCard),
+                    SizedBox(width: wideWidths.left, child: heroCard),
                     const SizedBox(width: _wideCardGap),
-                    Expanded(flex: _wideRightFlex, child: flagsCard),
+                    SizedBox(width: wideWidths.right, child: flagsCard),
                   ],
                 ),
               )
@@ -494,7 +646,6 @@ class _IpRiskHeroCard extends StatelessWidget {
     final hitCount = risk.checks.where((c) => c.hit == true).length;
     final totalChecks = risk.checks.length;
     final typeText = risk.typeLabel(context) ?? risk.levelLabel(context);
-    final typeColor = risk.isHomeBroadband ? riskGradient.first : scoreColor;
     final flagColor = totalChecks == 0
         ? cs.onSurfaceVariant
         : hitCount == 0
@@ -610,7 +761,6 @@ class _IpRiskHeroCard extends StatelessWidget {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             _InlineMetric(
-              dotColor: typeColor,
               label: l.ipType,
               value: typeText,
               valueColor: risk.isHomeBroadband ? riskGradient.first : null,
@@ -633,20 +783,22 @@ class _IpRiskHeroCard extends StatelessWidget {
       children: [
         Semantics(
           label: '${l.ipRiskScore} ${risk.displayScore} / 100',
-          child: SizedBox(
-            height: 24,
-            width: double.infinity,
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: risk.displayScore.toDouble()),
-              duration: context.motionDuration(
-                const Duration(milliseconds: 520),
-              ),
-              curve: Curves.easeOutCubic,
-              builder: (_, animatedScore, _) => CustomPaint(
-                painter: _RiskScaleBarPainter(
-                  score: animatedScore,
-                  surface: colors.card,
-                  track: colors.tone2,
+          child: RepaintBoundary(
+            child: SizedBox(
+              height: 24,
+              width: double.infinity,
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: risk.displayScore.toDouble()),
+                duration: context.motionDuration(
+                  const Duration(milliseconds: 520),
+                ),
+                curve: Curves.easeOutCubic,
+                builder: (_, animatedScore, _) => CustomPaint(
+                  painter: _RiskScaleBarPainter(
+                    score: animatedScore,
+                    surface: colors.card,
+                    track: colors.tone2,
+                  ),
                 ),
               ),
             ),
@@ -733,14 +885,14 @@ class _IpRiskHeroCard extends StatelessWidget {
 
 class _InlineMetric extends StatelessWidget {
   const _InlineMetric({
-    required this.dotColor,
+    this.dotColor,
     required this.label,
     required this.value,
     this.valueColor,
     this.tabular = false,
   });
 
-  final Color dotColor;
+  final Color? dotColor;
   final String label;
   final String value;
   final Color? valueColor;
@@ -759,10 +911,14 @@ class _InlineMetric extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       spacing: 6,
       children: [
-        DecoratedBox(
-          decoration: ShapeDecoration(color: dotColor, shape: AppShape.circle),
-          child: const SizedBox.square(dimension: 7),
-        ),
+        if (dotColor != null)
+          DecoratedBox(
+            decoration: ShapeDecoration(
+              color: dotColor!,
+              shape: AppShape.circle,
+            ),
+            child: const SizedBox.square(dimension: 7),
+          ),
         Text(
           label,
           style: AppTextStyle.footnote
@@ -834,12 +990,16 @@ class _IpAttributionCard extends StatelessWidget {
     required this.attribution,
     required this.hidden,
     required this.isWide,
+    this.wideLeftWidth,
+    this.wideRightWidth,
   });
 
   final IpRisk risk;
   final IpLocateInfo attribution;
   final bool hidden;
   final bool isWide;
+  final double? wideLeftWidth;
+  final double? wideRightWidth;
 
   Widget _field(BuildContext context, String label, Widget value) {
     final cs = context.colorScheme;
@@ -860,7 +1020,7 @@ class _IpAttributionCard extends StatelessWidget {
   }
 
   Widget _textValue(BuildContext context, String value) {
-    return SelectableText(
+    return Text(
       value,
       style: AppTextStyle.subheadline.of(context, emphasized: true),
     );
@@ -873,7 +1033,7 @@ class _IpAttributionCard extends StatelessWidget {
   }) {
     final cs = context.colorScheme;
     if (asn.isNotEmpty && network.isNotEmpty) {
-      return SelectableText.rich(
+      return Text.rich(
         TextSpan(
           children: [
             TextSpan(
@@ -893,12 +1053,12 @@ class _IpAttributionCard extends StatelessWidget {
       );
     }
     if (asn.isNotEmpty) {
-      return SelectableText(
+      return Text(
         asn,
         style: AppTextStyle.subheadline.of(context, emphasized: true).toTabular,
       );
     }
-    return SelectableText(
+    return Text(
       network,
       style: AppTextStyle.subheadline.of(context, emphasized: true),
     );
@@ -1030,7 +1190,7 @@ class _IpAttributionCard extends StatelessWidget {
             ),
           if (place.isNotEmpty) ...[
             SizedBox(height: country.isNotEmpty ? placeGap : 0),
-            SelectableText(
+            Text(
               place,
               style: country.isNotEmpty
                   ? AppTextStyle.subheadline
@@ -1088,83 +1248,115 @@ class _IpAttributionCard extends StatelessWidget {
     );
 
     const singleZonePadding = EdgeInsets.symmetric(horizontal: 20, vertical: 18);
-    return Card(
-      radius: AppCorner.xl,
-      padding: EdgeInsets.zero,
-      child: ClipPath(
-        clipper: ShapeBorderClipper(
-          shape: AppShape.xl,
-          textDirection: Directionality.of(context),
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              right: -24,
-              top: 0,
-              bottom: 0,
-              child: Center(
-                child: IgnorePointer(
-                  child: GlyphIcon(
-                    AppGlyphs.proxies,
-                    size: 124,
-                    color: cs.primary.withValues(alpha: isDark ? 0.09 : 0.065),
+    return SelectionArea(
+      child: Card(
+        radius: AppCorner.xl,
+        padding: EdgeInsets.zero,
+        child: ClipPath(
+          clipper: ShapeBorderClipper(
+            shape: AppShape.xl,
+            textDirection: Directionality.of(context),
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                right: -24,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: IgnorePointer(
+                    child: GlyphIcon(
+                      AppGlyphs.proxies,
+                      size: 124,
+                      color: cs.primary.withValues(
+                        alpha: isDark ? 0.09 : 0.065,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-            if (specs.isEmpty || !hasLocation)
-              Padding(
-                padding: singleZonePadding,
-                child: specs.isEmpty ? leftZone : rightZone,
-              )
-            else
-              IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(
-                      flex: _wideLeftFlex,
-                      child: Padding(
-                        padding: const EdgeInsetsDirectional.fromSTEB(
-                          20,
-                          18,
-                          15,
-                          18,
+              if (specs.isEmpty || !hasLocation)
+                Padding(
+                  padding: singleZonePadding,
+                  child: specs.isEmpty ? leftZone : rightZone,
+                )
+              else
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (wideLeftWidth != null)
+                        SizedBox(
+                          width: wideLeftWidth,
+                          child: Padding(
+                            padding: const EdgeInsetsDirectional.fromSTEB(
+                              20,
+                              18,
+                              15,
+                              18,
+                            ),
+                            child: leftZone,
+                          ),
+                        )
+                      else
+                        Expanded(
+                          flex: _wideLeftFlex,
+                          child: Padding(
+                            padding: const EdgeInsetsDirectional.fromSTEB(
+                              20,
+                              18,
+                              15,
+                              18,
+                            ),
+                            child: leftZone,
+                          ),
                         ),
-                        child: leftZone,
-                      ),
-                    ),
-                    SizedBox(
-                      width: _wideCardGap,
-                      child: OverflowBox(
-                        minWidth: 20,
-                        maxWidth: 20,
-                        child: CustomPaint(
-                          painter: VerticalTicketPerforationPainter(
-                            notchColor: SurfaceLevel.page.colorOf(cs),
-                            dashColor: cs.outlineVariant.withValues(
-                              alpha: isDark ? 0.55 : 0.48,
+                      SizedBox(
+                        width: _wideCardGap,
+                        child: OverflowBox(
+                          minWidth: 20,
+                          maxWidth: 20,
+                          child: CustomPaint(
+                            painter: VerticalTicketPerforationPainter(
+                              notchColor: SurfaceLevel.page.colorOf(cs),
+                              dashColor: cs.outlineVariant.withValues(
+                                alpha: isDark ? 0.55 : 0.48,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    Expanded(
-                      flex: _wideRightFlex,
-                      child: Padding(
-                        padding: const EdgeInsetsDirectional.fromSTEB(
-                          15,
-                          18,
-                          20,
-                          18,
+                      if (wideRightWidth != null)
+                        SizedBox(
+                          width: wideRightWidth,
+                          child: Padding(
+                            padding: const EdgeInsetsDirectional.fromSTEB(
+                              15,
+                              18,
+                              20,
+                              18,
+                            ),
+                            child: rightZone,
+                          ),
+                        )
+                      else
+                        Expanded(
+                          flex: _wideRightFlex,
+                          child: Padding(
+                            padding: const EdgeInsetsDirectional.fromSTEB(
+                              15,
+                              18,
+                              20,
+                              18,
+                            ),
+                            child: rightZone,
+                          ),
                         ),
-                        child: rightZone,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1220,7 +1412,7 @@ class _IpAttributionCard extends StatelessWidget {
               ),
             if (place.isNotEmpty) ...[
               SizedBox(height: country.isNotEmpty ? 3 : 0),
-              SelectableText(
+              Text(
                 place,
                 style: country.isNotEmpty
                     ? AppTextStyle.subheadline
@@ -1243,95 +1435,100 @@ class _IpAttributionCard extends StatelessWidget {
         _field(context, l.ipRiskHostname, _textValue(context, risk.hostname)),
     ];
 
-    return Card(
-      radius: AppCorner.xl,
-      padding: EdgeInsets.zero,
-      child: ClipPath(
-        clipper: ShapeBorderClipper(
-          shape: AppShape.xl,
-          textDirection: Directionality.of(context),
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              right: -24,
-              bottom: -22,
-              child: IgnorePointer(
-                child: GlyphIcon(
-                  AppGlyphs.proxies,
-                  size: 128,
-                  color: cs.primary.withValues(alpha: isDark ? 0.10 : 0.07),
+    return SelectionArea(
+      child: Card(
+        radius: AppCorner.xl,
+        padding: EdgeInsets.zero,
+        child: ClipPath(
+          clipper: ShapeBorderClipper(
+            shape: AppShape.xl,
+            textDirection: Directionality.of(context),
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                right: -24,
+                bottom: -22,
+                child: IgnorePointer(
+                  child: GlyphIcon(
+                    AppGlyphs.proxies,
+                    size: 128,
+                    color: cs.primary.withValues(alpha: isDark ? 0.10 : 0.07),
+                  ),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      _IpHeaderIconBadge(
-                        glyph: AppGlyphs.location,
-                        color: cs.primary,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          country.isNotEmpty || !hasLocation
-                              ? l.ipRiskLocation
-                              : l.ipRiskCity,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyle.headline.of(
-                            context,
-                            emphasized: true,
-                          ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 18,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        _IpHeaderIconBadge(
+                          glyph: AppGlyphs.location,
+                          color: cs.primary,
                         ),
-                      ),
-                      if (countryCode.isNotEmpty) ...[
-                        const SizedBox(width: 12),
-                        DecoratedBox(
-                          decoration: ShapeDecoration(
-                            color: colors.tone,
-                            shape: AppShape.full,
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            child: Text(
-                              countryCode,
-                              style: AppTextStyle.footnote
-                                  .of(context, emphasized: true)
-                                  .toTabular
-                                  .copyWith(color: cs.onSurfaceVariant),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            country.isNotEmpty || !hasLocation
+                                ? l.ipRiskLocation
+                                : l.ipRiskCity,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyle.headline.of(
+                              context,
+                              emphasized: true,
                             ),
                           ),
                         ),
+                        if (countryCode.isNotEmpty) ...[
+                          const SizedBox(width: 12),
+                          DecoratedBox(
+                            decoration: ShapeDecoration(
+                              color: colors.tone,
+                              shape: AppShape.full,
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              child: Text(
+                                countryCode,
+                                style: AppTextStyle.footnote
+                                    .of(context, emphasized: true)
+                                    .toTabular
+                                    .copyWith(color: cs.onSurfaceVariant),
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
-                  ),
-                  if (sections.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    for (final (index, section) in sections.indexed) ...[
-                      if (index > 0) ...[
-                        const SizedBox(height: sectionGap),
-                        Divider(
-                          height: 1,
-                          thickness: Divider.separatorThicknessOf(context),
-                        ),
-                        const SizedBox(height: sectionGap),
+                    ),
+                    if (sections.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      for (final (index, section) in sections.indexed) ...[
+                        if (index > 0) ...[
+                          const SizedBox(height: sectionGap),
+                          Divider(
+                            height: 1,
+                            thickness: Divider.separatorThicknessOf(context),
+                          ),
+                          const SizedBox(height: sectionGap),
+                        ],
+                        section,
                       ],
-                      section,
                     ],
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1476,8 +1673,8 @@ class _FlagGroupRow extends StatelessWidget {
           .copyWith(color: cs.onSurfaceVariant),
     );
     final pills = Wrap(
-      spacing: 6,
-      runSpacing: 6,
+      spacing: _flagPillSpacing,
+      runSpacing: _flagPillSpacing,
       children: [
         if (homeBroadband)
           const _LookupFlagPill(
@@ -1543,14 +1740,17 @@ class _LookupFlagPill extends StatelessWidget {
           );
     return Container(
       constraints: const BoxConstraints(minHeight: 26),
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+      padding: const EdgeInsets.symmetric(
+        horizontal: _flagPillHorizontalPadding,
+        vertical: 3,
+      ),
       decoration: ShapeDecoration(
         color: hit || home ? color.withValues(alpha: 0.12) : colors.tone,
         shape: AppShape.sm,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        spacing: 6,
+        spacing: _flagPillIconGap,
         children: [
           leading,
           Flexible(

@@ -609,13 +609,69 @@ void main() {
 
       container.read(currentProfileIdProvider.notifier).value = b.id;
       container.read(currentProfileIdProvider.notifier).value = c.id;
-      await _waitForSetupToSettle(tester, () => setupCalls >= 2);
+      await _waitForSetupToSettle(tester, () => setupCalls >= 1);
 
       expect(container.read(currentProfileIdProvider), c.id);
-      expect(setupCalls, 2);
+      expect(setupCalls, 1);
 
       await tester.pumpWidget(const SizedBox.shrink());
     });
+
+    testWidgets(
+      'rapidly switching 10 profiles collapses into a single setup and flushes immediately on leaving page',
+      (tester) async {
+        final coreInterface = _coreInterface();
+        when(() => coreInterface.getExternalProviders()).thenAnswer(
+          (_) async => [],
+        );
+        when(() => coreInterface.getProxies()).thenAnswer(
+          (_) async => const ProxiesData(proxies: {}, all: []),
+        );
+        final appliedProfileIds = <int?>[];
+        final profiles = [
+          for (var i = 0; i < 11; i++) Profile.normal(label: 'p$i'),
+        ];
+        late ProviderContainer container;
+        when(() => coreInterface.setupConfig(any())).thenAnswer((_) async {
+          appliedProfileIds.add(container.read(currentProfileIdProvider));
+        });
+        container = await _pumpCoreManager(
+          tester,
+          coreInterface,
+          overrides: [
+            initProvider.overrideWithBuild((_, _) => true),
+            currentPageLabelProvider.overrideWithBuild(
+              (_, _) => PageLabel.profiles,
+            ),
+            profilesProvider.overrideWith(() => TestProfiles(profiles)),
+            currentProfileIdProvider.overrideWithBuild(
+              (_, _) => profiles.first.id,
+            ),
+            setupStateProvider.overrideWith((_, _) => _nullProfileSetupState),
+          ],
+        );
+        globalState.container = container;
+
+        for (var i = 1; i < profiles.length; i++) {
+          container.read(currentProfileIdProvider.notifier).value =
+              profiles[i].id;
+        }
+        expect(appliedProfileIds, isEmpty);
+
+        // Navigating to Proxies flushes the pending switch immediately.
+        container.read(currentPageLabelProvider.notifier).value =
+            PageLabel.proxies;
+        await _waitForSetupToSettle(
+          tester,
+          () => appliedProfileIds.isNotEmpty,
+        );
+
+        expect(container.read(currentProfileIdProvider), profiles.last.id);
+        expect(appliedProfileIds, [profiles.last.id]);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
 
     testWidgets(
       'a missing profile id recovers to a fallback without looping when '

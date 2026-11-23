@@ -167,7 +167,7 @@ func runServiceCheck(ctx context.Context, checker serviceChecker, proxyName stri
 	}
 	env := serviceEnv{ctx: ctx, proxyName: proxyName, timeout: timeout, hits: hits}
 	item = checker.check(env)
-	if item.Status == serviceTimeout && hasBudget(ctx, timeout) {
+	if item.Status == serviceTimeout && ctx.Err() == nil && hasBudget(ctx, timeout) {
 		item = checker.check(env)
 	}
 	return item
@@ -213,6 +213,15 @@ func claimService(parent context.Context, name string) (context.Context, func())
 		}
 		serviceClaimsMu.Unlock()
 	}
+}
+
+func cancelAllServiceChecks() {
+	serviceClaimsMu.Lock()
+	for name, claim := range serviceClaims {
+		(*claim)()
+		delete(serviceClaims, name)
+	}
+	serviceClaimsMu.Unlock()
 }
 
 func hasBudget(ctx context.Context, timeout time.Duration) bool {

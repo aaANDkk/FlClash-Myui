@@ -170,6 +170,16 @@ jobs:
           curl -fsSL --ssl-no-revoke --retry 3 -o "$bundle" "https://curl.se/ca/$CA_BUNDLE"
           echo "$CA_BUNDLE_SHA256  $bundle" | sha256sum -c -
 
+      - name: Apply Clash.Meta patches
+        shell: bash
+        run: |
+          for patch in core/patches/*.patch; do
+            [ -f "$patch" ] || continue
+            echo "Applying $patch"
+            git -C core/Clash.Meta apply --ignore-whitespace --check "../../$patch"
+            git -C core/Clash.Meta apply --ignore-whitespace "../../$patch"
+          done
+
       - name: Setup
         env:
           ANDROID_NDK_HOME: ${{ steps.build-ndk.outputs.ndk-path }}

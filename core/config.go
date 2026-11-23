@@ -141,6 +141,11 @@ func applyConfig(params *SetupParams) error {
 	configMu.Lock()
 	defer configMu.Unlock()
 
+	// Cancel probes from the previous profile so they stop holding slots or
+	// resolving routes while the new config is being applied.
+	cancelAllOutboundIps()
+	cancelAllServiceChecks()
+
 	applyOptions(params.Options)
 	cfg, err := loadSetupConfig(params)
 	if err != nil {

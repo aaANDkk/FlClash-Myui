@@ -1,4 +1,6 @@
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/country_flags.dart';
+import 'package:fl_clash/common/country_names.dart';
 import 'package:fl_clash/features/ip_quality/ip_locate.dart';
 import 'package:fl_clash/features/ip_quality/risk_model.dart';
 import 'package:fl_clash/features/ip_quality/risk_view.dart';
@@ -23,11 +25,13 @@ import 'dart:math' as math;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../helpers/glyph_finders.dart';
 import '../../helpers/test_app.dart';
+import 'package:prism_ui/hct/hct.dart';
 import 'package:prism_ui/prism_ui.dart';
 import '../../helpers/host_scaffold.dart';
 
@@ -165,15 +169,17 @@ void _useTallView(WidgetTester tester) {
 }
 
 Finder _clover() => find.ancestor(
-  of: find.byType(ShapeBadge),
+  of: find.byType(CountryBadgeShape),
   matching: find.byWidgetPredicate((widget) => widget is PressRegion),
 );
 
-double _cloverTurn(WidgetTester tester) => tester
-    .widget<ShapeBadge>(
-      find.descendant(of: _clover(), matching: find.byType(ShapeBadge)),
-    )
-    .rotation;
+CountryBadgeShape _badgeShape(WidgetTester tester) => tester.widget<CountryBadgeShape>(
+  find.descendant(of: _clover(), matching: find.byType(CountryBadgeShape)),
+);
+
+double _cloverTurn(WidgetTester tester) => _badgeShape(tester).rotation;
+
+double _cloverMorph(WidgetTester tester) => _badgeShape(tester).morphProgress;
 
 DashboardChip _chip(WidgetTester tester, String label) =>
     tester.widget<DashboardChip>(
@@ -232,7 +238,8 @@ void main() {
         );
         container.read(runTimeProvider.notifier).value = running ? 1 : null;
         await tester.pump();
-        expect(find.text('0 \u00b7 Low risk'), findsOneWidget);
+        expect(find.text('0 / 100'), findsOneWidget);
+        expect(find.text('Low risk'), findsOneWidget);
         expect(find.byType(RiskLevelBadge), findsNothing);
         expect(tester.takeException(), isNull);
       });
@@ -243,7 +250,8 @@ void main() {
 
       expect(find.text(_ip), findsOneWidget);
       expect(find.text('GB'), findsOneWidget);
-      expect(find.text('1 \u00b7 Low risk'), findsOneWidget);
+      expect(find.text('1 / 100'), findsOneWidget);
+      expect(find.text('Low risk'), findsOneWidget);
       expect(_chip(tester, 'Not running').tone, DashboardChipTone.idle);
       expect(find.text('Fraud score'), findsOneWidget);
       expect(find.text('Type'), findsNothing);
@@ -277,18 +285,35 @@ void main() {
     });
 
     testWidgets(
-      'shows a neutral score and separator beside colored risk text',
+      'shows colored score with muted denominator and outlined risk pill aligned with runtime',
       (tester) async {
         const risk = IpRisk(ip: _ip, score: 50, level: IpRiskLevel.medium);
         await tester.pumpWidget(_app((_, _) async => risk));
         await tester.pump();
-        final context = tester.element(find.byType(CurrentOutboundCard));
-        final score = tester.widget<Text>(find.text('50 \u00b7 Medium risk'));
-        expect(score.style!.color, context.colorScheme.onSurface);
+        final scoreColor = riskScoreColor(50);
+        final score = tester.widget<Text>(find.text('50 / 100'));
         final spans = (score.textSpan! as TextSpan).children!.cast<TextSpan>();
-        expect(spans.first.text, '50 \u00b7 ');
-        expect(spans.first.style?.color, isNull);
-        expect(spans.last.style!.color, riskScoreColor(50));
+        expect(spans.first.text, '50');
+        expect(spans.first.style!.color, scoreColor);
+        expect(spans.last.text, ' / 100');
+        expect(spans.last.style!.color, isNot(scoreColor));
+        final level = tester.widget<Text>(find.text('Medium risk'));
+        expect(level.style!.color, scoreColor);
+        final pill = tester.widget<DecoratedBox>(
+          find.ancestor(
+            of: find.text('Medium risk'),
+            matching: find.byType(DecoratedBox),
+          ).first,
+        );
+        final decoration = pill.decoration as ShapeDecoration;
+        expect(decoration.color, isNull);
+        final border = decoration.shape as RoundedSuperellipseBorder;
+        expect(border.side.width, 1);
+        expect(border.side.color.toARGB32() & 0x00FFFFFF, scoreColor.toARGB32() & 0x00FFFFFF);
+        final runtimeRect = tester.getRect(find.text('00:00:00'));
+        final scoreRect = tester.getRect(find.text('50 / 100'));
+        expect(scoreRect.top, closeTo(runtimeRect.top, 0.5));
+        expect(scoreRect.height, closeTo(runtimeRect.height, 0.5));
         expect(find.byType(RiskLevelBadge), findsNothing);
         expect(find.text('Type'), findsNothing);
         expect(tester.takeException(), isNull);
@@ -331,6 +356,7 @@ void main() {
       expect(find.byType(SkeletonPill), findsNWidgets(2));
       expect(find.byType(SkeletonText), findsNWidgets(2));
       expect(tester.widget<PressRegion>(_clover()).onTap, isNull);
+      expect(_cloverMorph(tester), closeTo(1, 1e-6));
       final turn = _cloverTurn(tester);
       await tester.pump(const Duration(milliseconds: 300));
       expect(_cloverTurn(tester), isNot(turn));
@@ -339,7 +365,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(SkeletonPill), findsNothing);
-      expect(find.text('1 \u00b7 Low risk'), findsOneWidget);
+      expect(find.text('1 / 100'), findsOneWidget);
+      expect(find.text('Low risk'), findsOneWidget);
+      expect(_cloverMorph(tester), closeTo(0, 1e-6));
+      expect(find.byType(SvgPicture), findsOneWidget);
       expect(_cloverTurn(tester) % (math.pi / 2), closeTo(0, 1e-9));
       expect(tester.widget<PressRegion>(_clover()).onTap, isNotNull);
     });
@@ -385,7 +414,7 @@ void main() {
     });
 
     testWidgets(
-      'shows country below IP and full country-region-city tooltip from ipRiskProvider',
+      'shows location pin with country name below IP and full country-region-city tooltip from ipRiskProvider',
       (tester) async {
         const located = IpRisk(
           ip: _ip,
@@ -399,18 +428,199 @@ void main() {
         await tester.pumpWidget(_app((_, _) async => located));
         await tester.pump();
 
+        expect(find.byGlyph(AppGlyphs.location), findsOneWidget);
+        expect(find.text('China'), findsOneWidget);
+        expect(find.text('CN'), findsNothing);
+        final cardContext = tester.element(find.byType(CurrentOutboundCard));
+        final stoppedColor = cardContext.colorScheme.onSurfaceVariant;
+        expect(tester.widget<Text>(find.text('China')).style!.color, stoppedColor);
         expect(
-          find.byWidgetPredicate(
-            (w) => w is EmojiText && w.text == '\u{1F1E8}\u{1F1F3} China',
-          ),
-          findsOneWidget,
+          tester.widget<GlyphIcon>(find.byGlyph(AppGlyphs.location)).color,
+          stoppedColor,
         );
+        expect(
+          tester.getTopLeft(find.text(_ip)).dy,
+          lessThan(tester.getTopLeft(find.text('China')).dy),
+        );
+        final container = ProviderScope.containerOf(cardContext);
+        container.read(runTimeProvider.notifier).value = 1;
+        await tester.pump();
+        final runningColor = cardContext.colorScheme.onSurface;
+        expect(tester.widget<Text>(find.text('China')).style!.color, runningColor);
+        expect(
+          tester.widget<GlyphIcon>(find.byGlyph(AppGlyphs.location)).color,
+          runningColor,
+        );
+        expect(countryFlagTone('TW'), CountryFlagTone.blue);
+        expect(localizedCountryName('CN', const Locale('zh')), '中华人民共和国');
+        expect(localizedCountryName('US', const Locale('zh')), '美利坚合众国');
+        expect(localizedCountryName('TW', const Locale('zh')), '中国宝岛台湾省');
+        expect(localizedCountryName('HK', const Locale('zh')), '香港特别行政区');
+        expect(localizedCountryName('MO', const Locale('zh')), '澳门特别行政区');
+        expect(localizedCountryName('GB', const Locale('zh')), '大不列颠联合王国');
+        expect(localizedCountryName('JP', const Locale('zh')), '东瀛樱花国');
+        expect(localizedCountryName('KR', const Locale('zh')), '宇宙起源泡菜国');
+        expect(localizedCountryName('CA', const Locale('zh')), '加拿大枫叶之国');
+        expect(localizedCountryName('MY', const Locale('zh')), '马来西亚联邦');
+        expect(localizedCountryName('IL', const Locale('zh')), '圣城之地以色列');
+        expect(localizedCountryName('IN', const Locale('zh')), '干净卫生恒河国');
+        expect(localizedCountryName('TH', const Locale('zh')), '萨瓦迪卡泰王国');
+        expect(localizedCountryName('NZ', const Locale('zh')), '中土世界新西兰');
+        expect(localizedCountryName('SG', const Locale('zh')), '花园城市新加坡');
+        expect(localizedCountryName('PH', const Locale('zh')), '南洋碰瓷香蕉国');
+        expect(localizedCountryName('CN', const Locale('en')), isNull);
+        expect(localizedCountryName('US', const Locale('en')), isNull);
+        expect(localizedCountryName('JP', const Locale('ja')), '日本国');
+        expect(localizedCountryName('KR', const Locale('ko')), '대한민국');
+        expect(
+          localizedCountryName('RU', const Locale('ru')),
+          'Российская Федерация',
+        );
+        expect(find.byType(SvgPicture), findsOneWidget);
         expect(
           find.byTooltip(
             '\u{1F1E8}\u{1F1F3} China \u00b7 Shanghai \u00b7 Hongkou (Hongkou Qu)',
           ),
           findsOneWidget,
         );
+        expect(countryFlagTone('JP'), CountryFlagTone.grey);
+        expect(countryFlagTone('KR'), CountryFlagTone.grey);
+        expect(countryFlagTone('HK'), CountryFlagTone.red);
+        expect(countryFlagTone('GB'), CountryFlagTone.red);
+        expect(countryFlagTone('QA'), CountryFlagTone.red);
+        expect(countryFlagTone('US'), CountryFlagTone.red);
+        expect(countryFlagTone('MY'), CountryFlagTone.red);
+        expect(countryFlagTone('LR'), CountryFlagTone.red);
+        expect(countryFlagTone('PR'), CountryFlagTone.red);
+        expect(countryFlagTone('FR'), CountryFlagTone.blue);
+        expect(countryFlagTone('RU'), CountryFlagTone.blue);
+        expect(countryFlagTone('SE'), CountryFlagTone.blue);
+        expect(countryFlagTone('IT'), CountryFlagTone.green);
+        expect(countryFlagTone('MX'), CountryFlagTone.green);
+        expect(countryFlagTone('MR'), CountryFlagTone.green);
+        expect(countryFlagTone('BG'), CountryFlagTone.green);
+        expect(countryFlagTone('IR'), CountryFlagTone.green);
+        expect(countryFlagTone('MO'), CountryFlagTone.green);
+        expect(countryFlagTone('CO'), CountryFlagTone.yellow);
+        final monoScheme = seededColorScheme(
+          seedColor: const Color(0xFFFF3B4A),
+          brightness: Brightness.light,
+          style: ColorStyle.monochrome,
+        );
+        final monoRed = countryFlagRingColors(
+          CountryFlagTone.red,
+          monoScheme,
+          ColorStyle.monochrome,
+        );
+        final monoBlue = countryFlagRingColors(
+          CountryFlagTone.blue,
+          monoScheme,
+          ColorStyle.monochrome,
+        );
+        expect(monoRed.ring, monoBlue.ring);
+        final vividScheme = seededColorScheme(
+          seedColor: const Color(0xFFFF3B4A),
+          brightness: Brightness.light,
+          style: ColorStyle.vivid,
+        );
+        final vividRed = countryFlagRingColors(
+          CountryFlagTone.red,
+          vividScheme,
+          ColorStyle.vivid,
+        );
+        final softScheme = seededColorScheme(
+          seedColor: const Color(0xFFFF3B4A),
+          brightness: Brightness.light,
+          style: ColorStyle.soft,
+        );
+        final softRed = countryFlagRingColors(
+          CountryFlagTone.red,
+          softScheme,
+          ColorStyle.soft,
+        );
+        expect(vividRed.ring, isNot(softRed.ring));
+        expect(vividRed.innerGlow.a, closeTo(vividRed.glow.a * 0.55, 0.01));
+        final monoOverlay = countryFlagOverlayStyle(
+          monoScheme,
+          ColorStyle.monochrome,
+        );
+        expect(monoOverlay.colorMatrix, hasLength(20));
+        expect(monoOverlay.tintVeil.a, 0);
+        final tintedScheme = seededColorScheme(
+          seedColor: const Color(0xFFFF3B4A),
+          brightness: Brightness.dark,
+          style: ColorStyle.tinted,
+        );
+        final tintedOverlay = countryFlagOverlayStyle(
+          tintedScheme,
+          ColorStyle.tinted,
+        );
+        expect(tintedOverlay.tintVeil.a, greaterThan(0));
+        expect(tintedOverlay.colorMatrix[0], lessThan(0.9));
+        final sameToneSeeds = <Color>[
+          const Color(0xFF77D5FF),
+          const Color(0xFFADCAFF),
+          const Color(0xFFC4C4FF),
+          const Color(0xFFDEBBFF),
+          const Color(0xFFE6C900),
+          const Color(0xFF00E93D),
+        ];
+        for (final style in ColorStyle.values) {
+          for (final brightness in Brightness.values) {
+            final baseSeed = sameToneSeeds.first;
+            final baseScheme = seededColorScheme(
+              seedColor: baseSeed,
+              brightness: brightness,
+              style: style,
+            );
+            for (final tone in CountryFlagTone.values) {
+              final expected = countryFlagRingColors(
+                tone,
+                baseScheme,
+                style,
+                seedColor: baseSeed,
+              );
+              expect(expected.ring.a, 1.0);
+              final expectedHct = Hct.fromInt(expected.ring.toARGB32());
+              expect(expectedHct.chroma, lessThanOrEqualTo(40.0));
+              if (style == ColorStyle.tinted && tone == CountryFlagTone.grey) {
+                expect(expectedHct.chroma, greaterThan(2.0));
+                continue;
+              }
+              for (final otherSeed in sameToneSeeds.skip(1)) {
+                final otherScheme = seededColorScheme(
+                  seedColor: otherSeed,
+                  brightness: brightness,
+                  style: style,
+                );
+                final actual = countryFlagRingColors(
+                  tone,
+                  otherScheme,
+                  style,
+                  seedColor: otherSeed,
+                );
+                final actualHct = Hct.fromInt(actual.ring.toARGB32());
+                expect(actualHct.hue, closeTo(expectedHct.hue, 1.5));
+                expect(actualHct.tone, closeTo(expectedHct.tone, 0.5));
+                expect(actualHct.chroma, closeTo(expectedHct.chroma, 1.5));
+              }
+            }
+          }
+        }
+        final navySeed = const Color(0xFF003B76);
+        final navyScheme = seededColorScheme(
+          seedColor: navySeed,
+          brightness: Brightness.light,
+          style: ColorStyle.vivid,
+        );
+        final navyBlue = countryFlagRingColors(
+          CountryFlagTone.blue,
+          navyScheme,
+          ColorStyle.vivid,
+          seedColor: navySeed,
+        );
+        final navyHct = Hct.fromInt(navyBlue.ring.toARGB32());
+        expect(navyHct.tone, lessThan(70));
       },
     );
 
@@ -421,7 +631,8 @@ void main() {
       await tester.pump();
 
       expect(find.text(_ip), findsOneWidget);
-      expect(find.text('1 \u00b7 Low risk'), findsOneWidget);
+      expect(find.text('1 / 100'), findsOneWidget);
+      expect(find.text('Low risk'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -455,6 +666,25 @@ void main() {
       expect(attributionQueries, 1);
       expect(find.text('Source Scamalytics and IPLocate.io'), findsOneWidget);
       expect(find.text('Residential proxy'), findsOneWidget);
+    });
+
+    testWidgets('opens its details from the country label too', (
+      tester,
+    ) async {
+      _useTallView(tester);
+      await tester.pumpWidget(_app((_, _) async => _residential));
+      await tester.pump();
+
+      await tester.tap(find.text('GB'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byType(RiskScoreCard),
+          matching: find.text('Fraud score'),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('reports a source failure and checks again', (tester) async {

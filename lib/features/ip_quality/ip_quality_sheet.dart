@@ -42,10 +42,16 @@ class IpRiskSheet extends ConsumerStatefulWidget {
   ConsumerState<IpRiskSheet> createState() => _IpRiskSheetState();
 }
 
-class _IpRiskSheetState extends ConsumerState<IpRiskSheet> {
+class _IpRiskSheetState extends ConsumerState<IpRiskSheet>
+    with RouteSettledMixin<IpRiskSheet> {
   bool _retrying = false;
   bool _retryHold = false;
   Timer? _retryTimer;
+
+  @override
+  void didSettleRoute() {
+    setState(() {});
+  }
 
   @override
   void dispose() {
@@ -79,7 +85,8 @@ class _IpRiskSheetState extends ConsumerState<IpRiskSheet> {
   @override
   Widget build(BuildContext context) {
     final l = context.appLocalizations;
-    final proxyIpState = widget.ip.isEmpty && widget.proxyName != null
+    final proxyIpState =
+        routeSettled && widget.ip.isEmpty && widget.proxyName != null
         ? ref.watch(proxyExitIpProvider(widget.proxyName!))
         : null;
     final resolvingIp =
@@ -90,10 +97,10 @@ class _IpRiskSheetState extends ConsumerState<IpRiskSheet> {
         ? (proxyIpState.value ?? '')
         : '';
     final effectiveIp = widget.ip.isNotEmpty ? widget.ip : resolvedIp;
-    final state = effectiveIp.isNotEmpty
+    final state = routeSettled && effectiveIp.isNotEmpty
         ? ref.watch(ipRiskProvider(effectiveIp))
         : null;
-    final attributionState = effectiveIp.isNotEmpty
+    final attributionState = routeSettled && effectiveIp.isNotEmpty
         ? ref.watch(ipLocateProvider(effectiveIp))
         : null;
     final risk = state == null || state.hasError ? null : state.value;
@@ -106,6 +113,7 @@ class _IpRiskSheetState extends ConsumerState<IpRiskSheet> {
         !attributionState.isLoading &&
         attribution == null;
     final isLoading =
+        !routeSettled ||
         resolvingIp ||
         (!riskFailed &&
             !attributionFailed &&
@@ -247,13 +255,19 @@ class _IpRiskSheetState extends ConsumerState<IpRiskSheet> {
         key: const ValueKey('data'),
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          RiskScoreCard(risk: risk),
+          RepaintBoundary(child: RiskScoreCard(risk: risk)),
           const SizedBox(height: 12),
           if (risk.checks.isNotEmpty) ...[
-            RiskChecksCard(risk: risk),
+            RepaintBoundary(child: RiskChecksCard(risk: risk)),
             const SizedBox(height: 12),
           ],
-          _LocationCard(risk: risk, attribution: attribution, hidden: hidden),
+          RepaintBoundary(
+            child: _LocationCard(
+              risk: risk,
+              attribution: attribution,
+              hidden: hidden,
+            ),
+          ),
           ListFooter(text: '${l.ipRiskSource} ${l.ipRiskSources}'),
         ],
       );
@@ -333,7 +347,7 @@ class _LocationCard extends StatelessWidget {
       if (emoji)
         EmojiText(value, style: AppTextStyle.body.of(context, emphasized: true))
       else
-        SelectableText(
+        Text(
           value,
           style: hidden && value.contains('*****')
               ? AppTextStyle.body.of(context, emphasized: true).toJetBrainsMono
@@ -406,7 +420,7 @@ class _LocationCard extends StatelessWidget {
             ],
             if (place.isNotEmpty) ...[
               SizedBox(height: country.isNotEmpty ? 4 : 6),
-              SelectableText(
+              Text(
                 place,
                 style: country.isNotEmpty
                     ? AppTextStyle.subheadline
@@ -424,24 +438,26 @@ class _LocationCard extends StatelessWidget {
         _value(context, l.ipRiskHostname, risk.hostname),
     ];
     if (rows.isEmpty) return const SizedBox.shrink();
-    return Card(
-      radius: AppCorner.xl,
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final (index, row) in rows.indexed) ...[
-            if (index > 0) ...[
-              const SizedBox(height: 14),
-              Divider(
-                height: 1,
-                thickness: Divider.separatorThicknessOf(context),
-              ),
-              const SizedBox(height: 14),
+    return SelectionArea(
+      child: Card(
+        radius: AppCorner.xl,
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final (index, row) in rows.indexed) ...[
+              if (index > 0) ...[
+                const SizedBox(height: 14),
+                Divider(
+                  height: 1,
+                  thickness: Divider.separatorThicknessOf(context),
+                ),
+                const SizedBox(height: 14),
+              ],
+              row,
             ],
-            row,
           ],
-        ],
+        ),
       ),
     );
   }

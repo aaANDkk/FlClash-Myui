@@ -117,6 +117,15 @@ func claimOutboundIp(epoch uint64, cancel context.CancelFunc) func() {
 	}
 }
 
+func cancelAllOutboundIps() {
+	outboundIpClaimsMu.Lock()
+	for claim := range outboundIpClaims {
+		(*claim)()
+		delete(outboundIpClaims, claim)
+	}
+	outboundIpClaimsMu.Unlock()
+}
+
 func probeOutboundIpSource(ctx context.Context, url string, proxyName string, timeout time.Duration, hits *hitRecorder) *OutboundIpResult {
 	result := runProbe(ctx, probeRequest{
 		method:    http.MethodGet,

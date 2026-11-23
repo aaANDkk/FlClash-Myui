@@ -2330,6 +2330,49 @@ void main() {
     );
 
     test(
+      'coalesces 9 concurrent force applies into a single follow-up pass',
+      () async {
+        final firstStarted = Completer<void>();
+        final releaseFirst = Completer<void>();
+        var setupCalls = 0;
+        final core = _MockCoreHandlerInterface();
+        when(() => core.getExternalProviders()).thenAnswer((_) async => []);
+        when(() => core.getProxies()).thenAnswer(
+          (_) async => const ProxiesData(proxies: {}, all: []),
+        );
+        when(() => core.setupConfig(any())).thenAnswer((_) async {
+          setupCalls++;
+          if (setupCalls == 1) {
+            firstStarted.complete();
+            await releaseFirst.future;
+          }
+        });
+        final scoped = ProviderContainer(
+          overrides: [
+            currentProfileProvider.overrideWithValue(null),
+            setupStateProvider.overrideWith((_, _) => nullProfileSetupState),
+            coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+            setupActionProvider.overrideWith(SetupAction.new),
+          ],
+        );
+        addTearDown(scoped.dispose);
+        final notifier = scoped.read(setupActionProvider.notifier);
+
+        final first = notifier.applyProfile(force: true);
+        await firstStarted.future;
+
+        final burst = [
+          for (var i = 0; i < 9; i++) notifier.applyProfile(force: true),
+        ];
+        releaseFirst.complete();
+
+        final results = await Future.wait([first, ...burst]);
+        expect(results, everyElement(isTrue));
+        expect(setupCalls, 2);
+      },
+    );
+
+    test(
       'a non-empty setupConfig message during initialize rolls back running',
       () async {
         final core = _MockCoreHandlerInterface();

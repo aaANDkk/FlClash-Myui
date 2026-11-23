@@ -86,6 +86,7 @@ void main() {
       expect(find.byType(MiuixFrostedSection), findsNWidgets(2));
       expect(find.byType(DecorationListItem), findsNWidgets(6));
       expect(find.text('Telegram'), findsOneWidget);
+      expect(find.text('t.me/aaANDkk1314'), findsOneWidget);
       expect(find.text('aaANDkk'), findsOneWidget);
       expect(find.text('About'), findsOneWidget);
       expect(tester.takeException(), isNull);
