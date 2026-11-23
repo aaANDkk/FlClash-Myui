@@ -1,20 +1,18 @@
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
+import 'package:fl_clash/widgets/text_ink.dart';
 import 'package:fl_clash/widgets/traffic_chart.dart';
 import 'package:fl_clash/views/dashboard/layout.dart';
 import 'package:fl_clash/views/dashboard/style.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
 import 'card.dart';
-
 
 const _desktopChartLength = 30;
 
@@ -106,17 +104,35 @@ class _SpeedChart extends StatelessWidget {
 }
 
 /// The upload or the download on its own desktop card.
-class SpeedCard extends ConsumerWidget {
+class SpeedCard extends StatelessWidget {
   const SpeedCard({super.key, required this.direction});
 
   final TrafficDirection direction;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final density = DashboardDensityScope.of(context);
+    final padding = dashboardCardPadding(density);
+    return DashboardCard(
+      padding: padding,
+      semanticLabel: direction.labelOf(context),
+      child: RepaintBoundary(
+        child: _SpeedCardContent(direction: direction, density: density),
+      ),
+    );
+  }
+}
+
+class _SpeedCardContent extends ConsumerWidget {
+  const _SpeedCardContent({required this.direction, required this.density});
+
+  final TrafficDirection direction;
+  final DashboardDensity density;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final compact = density.isCompact;
     final scale = DashboardDensityScope.scaleOf(context);
-    final padding = dashboardCardPadding(density);
     final appLocalizations = context.appLocalizations;
     final traffics = ref.watch(trafficsProvider);
     final total = ref.watch(
@@ -136,59 +152,55 @@ class SpeedCard extends ConsumerWidget {
         child: _SpeedChart(direction: direction, traffics: traffics),
       ),
     );
-    return DashboardCard(
-      padding: padding,
-      semanticLabel: direction.labelOf(context),
-      child: LayoutBuilder(
-        builder: (context, constraints) => Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              height: 24 * scale,
-              child: Row(
-                spacing: 8,
-                children: [
-                  GlyphIcon(
-                    direction.glyph,
-                    size: 18,
-                    color: direction.glyphColorOf(context),
-                  ),
-                  Text(
-                    direction.labelOf(context),
-                    maxLines: 1,
-                    style: DashboardText.cardTitle(context),
-                  ),
-                  Expanded(
-                    child: Text(
-                      appLocalizations.trafficPeak(
-                        '${dashboardTraffic(peak)}/s',
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.end,
-                      style: DashboardText.label(context),
+    return LayoutBuilder(
+      builder: (context, constraints) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 24 * scale,
+            child: Row(
+              spacing: 8,
+              children: [
+                GlyphIcon(
+                  direction.glyph,
+                  size: 18,
+                  color: direction.glyphColorOf(context),
+                ),
+                Text(
+                  direction.labelOf(context),
+                  maxLines: 1,
+                  style: DashboardText.cardTitle(context),
+                ),
+                Expanded(
+                  child: Text(
+                    appLocalizations.trafficPeak(
+                      '${dashboardTraffic(peak)}/s',
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                    style: DashboardText.label(context),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            SizedBox(height: compact ? 6 : 10),
-            _Figure(
-              show: speed,
-              unit: _speedUnit(speed),
-              style: compact ? AppTextStyle.largeTitle : AppTextStyle.display,
-              unitStyle: AppTextStyle.subheadline,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              appLocalizations.trafficTotal(dashboardTraffic(total)),
-              maxLines: 1,
-              style: DashboardText.label(context),
-            ),
-            SizedBox(height: compact ? 8 : 10),
-            if (constraints.hasBoundedHeight) Expanded(child: chart) else chart,
-          ],
-        ),
+          ),
+          SizedBox(height: compact ? 6 : 10),
+          _Figure(
+            show: speed,
+            unit: _speedUnit(speed),
+            style: compact ? AppTextStyle.largeTitle : AppTextStyle.display,
+            unitStyle: AppTextStyle.subheadline,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            appLocalizations.trafficTotal(dashboardTraffic(total)),
+            maxLines: 1,
+            style: DashboardText.label(context),
+          ),
+          SizedBox(height: compact ? 8 : 10),
+          if (constraints.hasBoundedHeight) Expanded(child: chart) else chart,
+        ],
       ),
     );
   }
@@ -301,28 +313,14 @@ TextStyle _speedFigureStyle(BuildContext context) => DashboardText.figure(
   AppTextStyle.title3,
 ).copyWith(fontWeight: FontWeight.w700);
 
-/// How far the digits of a figure ink above and below the alphabetic
-/// baseline, measured from the font actually in use rather than assumed.
-class _DigitInk {
-  const _DigitInk(this.ascent, this.descent);
-
-  final double ascent;
-  final double descent;
-
-  double get height => ascent + descent;
-}
-
 typedef _DigitInkKey = (TextStyle, double);
 
-final _digitInks = <_DigitInkKey, _DigitInk>{};
+final _digitInks = <_DigitInkKey, TextInk>{};
 final _measuringDigitInks = <_DigitInkKey>{};
 
 /// Bumped whenever a measurement lands, so figures drawn on the estimate
 /// redraw on the real ink.
 final _digitInkRevision = ValueNotifier<int>(0);
-
-const _inkSampling = 4.0;
-const _inkThreshold = 128;
 
 /// Digits only: a figure's height is its digits', whatever unit follows.
 const _inkSample = '0123456789';
@@ -334,14 +332,14 @@ _DigitInkKey _digitInkKeyOf(TextStyle style, TextScaler scaler) {
 
 /// The measured ink if it is known, otherwise a rough estimate while the
 /// glyphs are rasterized once in the background.
-_DigitInk _digitInkOf(TextStyle style, TextScaler scaler) {
+TextInk _digitInkOf(TextStyle style, TextScaler scaler) {
   final key = _digitInkKeyOf(style, scaler);
   final ink = _digitInks[key];
   if (ink != null) {
     return ink;
   }
   if (_measuringDigitInks.add(key)) {
-    _measureDigitInk(key.$1, scaler).then(
+    measureTextInk(_inkSample, key.$1, scaler).then(
       (ink) {
         _measuringDigitInks.remove(key);
         if (ink != null) {
@@ -354,101 +352,7 @@ _DigitInk _digitInkOf(TextStyle style, TextScaler scaler) {
       },
     );
   }
-  return _DigitInk(key.$2 * 0.72, 0);
-}
-
-/// Paints the digits off screen at [_inkSampling]x and reads back which rows
-/// hold ink; the result is in logical pixels relative to the baseline.
-Future<_DigitInk?> _measureDigitInk(TextStyle style, TextScaler scaler) async {
-  final painter = TextPainter(
-    text: TextSpan(text: _inkSample, style: style),
-    textDirection: TextDirection.ltr,
-    textScaler: scaler,
-    maxLines: 1,
-  )..layout();
-  final baseline = painter.computeDistanceToActualBaseline(
-    TextBaseline.alphabetic,
-  );
-  final pad = scaler.scale(style.fontSize ?? 14) * 0.5;
-  final width = ((painter.width + pad * 2) * _inkSampling).ceil();
-  final height = ((painter.height + pad * 2) * _inkSampling).ceil();
-  if (width <= 0 || height <= 0) {
-    painter.dispose();
-    return null;
-  }
-  final recorder = ui.PictureRecorder();
-  final canvas = Canvas(recorder)..scale(_inkSampling);
-  painter.paint(canvas, Offset(pad, pad));
-  painter.dispose();
-  final picture = recorder.endRecording();
-  final image = await picture.toImage(width, height);
-  picture.dispose();
-  final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
-  image.dispose();
-  if (data == null) {
-    return null;
-  }
-  int? top;
-  int? bottom;
-  for (var y = 0; y < height; y++) {
-    final row = y * width * 4;
-    for (var x = 0; x < width; x++) {
-      if (data.getUint8(row + x * 4 + 3) >= _inkThreshold) {
-        top ??= y;
-        bottom = y;
-        break;
-      }
-    }
-  }
-  if (top == null || bottom == null) {
-    return null;
-  }
-  final inkTop = top / _inkSampling - pad;
-  final inkBottom = (bottom + 1) / _inkSampling - pad;
-  return _DigitInk(baseline - inkTop, inkBottom - baseline);
-}
-
-/// Reports [baseline] as its child's alphabetic baseline, so a box with no
-/// text of its own can sit on a [Row]'s shared baseline.
-class _BaselineAt extends SingleChildRenderObjectWidget {
-  const _BaselineAt({required this.baseline, super.child});
-
-  final double baseline;
-
-  @override
-  RenderObject createRenderObject(BuildContext context) =>
-      _RenderBaselineAt(baseline);
-
-  @override
-  void updateRenderObject(
-    BuildContext context,
-    _RenderBaselineAt renderObject,
-  ) {
-    renderObject.baseline = baseline;
-  }
-}
-
-class _RenderBaselineAt extends RenderProxyBox {
-  _RenderBaselineAt(this._baseline);
-
-  double _baseline;
-
-  set baseline(double value) {
-    if (value == _baseline) {
-      return;
-    }
-    _baseline = value;
-    markNeedsLayout();
-  }
-
-  @override
-  double? computeDistanceToActualBaseline(TextBaseline baseline) => _baseline;
-
-  @override
-  double? computeDryBaseline(
-    BoxConstraints constraints,
-    TextBaseline baseline,
-  ) => _baseline;
+  return TextInk(key.$2 * 0.72, 0);
 }
 
 class _SpeedFigure extends StatelessWidget {
@@ -476,7 +380,7 @@ class _SpeedFigure extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              _BaselineAt(
+              BaselineAt(
                 baseline: ink.ascent,
                 child: _SpeedArrow(
                   glyph: direction.glyph,

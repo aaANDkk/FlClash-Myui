@@ -11,18 +11,22 @@ import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/config/general.dart';
+import 'package:fl_clash/views/dashboard/dashboard.dart';
 import 'package:fl_clash/views/navigation.dart';
 import 'package:fl_clash/views/tools.dart';
 import 'package:fl_clash/widgets/widgets.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../helpers/fake_desktop_window.dart';
 import '../helpers/glyph_finders.dart';
 import '../helpers/test_app.dart';
 import '../helpers/host_scaffold.dart';
+import '../helpers/test_profiles.dart';
 
 Finder _glyph(Glyph glyph) => find.byGlyph(glyph);
 
@@ -30,6 +34,79 @@ void main() {
   setUp(() {
     navigationPort = navigation;
     addTearDown(() => navigationPort = null);
+  });
+
+  testWidgets('opening a toolbar menu retains the dock glass capture', (
+    tester,
+  ) async {
+    const size = Size(400, 850);
+    tester.view.physicalSize = size * 3;
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(() => LiquidGlassHost.debugLastCapture = null);
+
+    final container = ProviderContainer(
+      overrides: [
+        profilesProvider.overrideWith(TestProfiles.new),
+        navigationItemsStateProvider.overrideWithValue(
+          NavigationItemsState(
+            value: [
+              NavigationItem(
+                glyph: AppGlyphs.proxies,
+                label: PageLabel.proxies,
+                builder: (_) => Scaffold(
+                  title: 'Proxies',
+                  searchState: AppBarSearchState(onSearch: (_) {}),
+                  menuItems: [
+                    for (var i = 0; i < 6; i++)
+                      PopupMenuItem(label: 'Option $i', onPressed: () {}),
+                  ],
+                  body: const SizedBox.expand(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    globalState.container = container;
+    container.read(viewSizeProvider.notifier).value = size;
+    container.read(currentPageLabelProvider.notifier).toPage(PageLabel.proxies);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const TestApp(
+          includeNavigatorKey: false,
+          liquidGlass: LiquidGlassQuality.ultra,
+          child: HomePage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(NavigationDock), findsOneWidget);
+
+    await tester.tap(_glyph(Glyphs.more));
+    for (var frame = 0; frame < 9; frame++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+
+    final before = LiquidGlassHost.debugLastCapture!;
+    LiquidGlassHost.debugLastCapture = null;
+    await tester.pump(const Duration(milliseconds: 16));
+    final after = LiquidGlassHost.debugLastCapture!;
+
+    final dock = before.panes.singleWhere(
+      (pane) => pane.pane.top > size.height / 2,
+    );
+    final laterDock = after.panes.singleWhere(
+      (pane) => pane.pane.top > size.height / 2,
+    );
+    expect(find.byType(PopupMenu), findsOneWidget);
+    expect(after.panes.last.pane, isNot(before.panes.last.pane));
+    expect(identical(laterDock.atlas, dock.atlas), isTrue);
   });
 
   testWidgets('initial desktop layout does not animate mobile navigation out', (
@@ -150,19 +227,18 @@ void main() {
       );
       await tester.pump();
 
-      final sidebarBackground = find.descendant(
-        of: find.byType(AppSidebarContainer),
-        matching: find.byWidgetPredicate(
-          (widget) => widget is Container && widget.child is Row,
-        ),
-      );
-      final sidebarContainer = tester.widget<Container>(
-        sidebarBackground.first,
+      final sidebarBackground = tester.widget<ColoredBox>(
+        find
+            .descendant(
+              of: find.byType(AppSidebarContainer),
+              matching: find.byType(ColoredBox),
+            )
+            .first,
       );
       final colorScheme = Theme.of(
         tester.element(find.byType(AppSidebarContainer)),
       ).colorScheme;
-      expect(sidebarContainer.color, SurfaceLevel.page.colorOf(colorScheme));
+      expect(sidebarBackground.color, SurfaceLevel.page.colorOf(colorScheme));
       final sidebarSurface = tester.widget<Surface>(
         find
             .ancestor(
@@ -172,7 +248,7 @@ void main() {
             .first,
       );
       expect(sidebarSurface.color, colorScheme.chromeSurface);
-      expect(sidebarSurface.color, isNot(sidebarContainer.color));
+      expect(sidebarSurface.color, isNot(sidebarBackground.color));
       expect(
         (sidebarSurface.shape! as BorderDirectional).end,
         Divider.createBorderSide(
@@ -433,6 +509,7 @@ void main() {
   testWidgets(
     'profile trailing controls stay valid while a maximized window restores',
     (tester) async {
+      FakeDesktopWindow().install();
       tester.view.physicalSize = const Size(1440, 900);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
@@ -1018,76 +1095,112 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('the fade tab switch cross-fades the pages in place', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(500, 800);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
+  for (final (glass, direction) in [
+    (null, TextDirection.ltr),
+    (LiquidGlassQuality.ultra, TextDirection.ltr),
+    (LiquidGlassQuality.ultra, TextDirection.rtl),
+  ]) {
+    testWidgets('fade tab switches in place with $glass and $direction', (
+      tester,
+    ) async {
+      const size = Size(500, 800);
+      tester.view.physicalSize = size * 3;
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-    final container = ProviderContainer(
-      overrides: [
-        navigationItemsStateProvider.overrideWithValue(
-          NavigationItemsState(
-            value: [
-              NavigationItem(
-                glyph: AppGlyphs.dashboard,
-                label: PageLabel.dashboard,
-                builder: (_) => const Text('page:dashboard'),
-              ),
-              NavigationItem(
-                glyph: AppGlyphs.tools,
-                label: PageLabel.tools,
-                builder: (_) => const Text('page:tools'),
-              ),
-            ],
+      final container = ProviderContainer(
+        overrides: [
+          navigationItemsStateProvider.overrideWithValue(
+            NavigationItemsState(
+              value: [
+                NavigationItem(
+                  glyph: AppGlyphs.dashboard,
+                  label: PageLabel.dashboard,
+                  builder: (_) => const Text('page:dashboard'),
+                ),
+                NavigationItem(
+                  glyph: AppGlyphs.proxies,
+                  label: PageLabel.proxies,
+                  builder: (_) => const Text('page:proxies'),
+                ),
+                NavigationItem(
+                  glyph: AppGlyphs.tools,
+                  label: PageLabel.tools,
+                  builder: (_) => const Text('page:tools'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      globalState.container = container;
+      container.read(viewSizeProvider.notifier).value = size;
+      container
+          .read(appSettingProvider.notifier)
+          .update((state) => state.copyWith(tabAnimation: TabAnimation.fade));
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: TestApp(
+            includeNavigatorKey: false,
+            liquidGlass: glass,
+            child: Directionality(
+              textDirection: direction,
+              child: const HomePage(),
+            ),
           ),
         ),
-      ],
-    );
-    addTearDown(container.dispose);
-    globalState.container = container;
-    container.read(viewSizeProvider.notifier).value = const Size(500, 800);
-    container
-        .read(appSettingProvider.notifier)
-        .update((state) => state.copyWith(tabAnimation: TabAnimation.fade));
+      );
+      await tester.pumpAndSettle();
+      final page = container.read(currentPageLabelProvider.notifier);
+      final origin = tester.getTopLeft(find.text('page:dashboard')).dx;
 
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const TestApp(includeNavigatorKey: false, child: HomePage()),
-      ),
-    );
-    await tester.pump();
-    final start = tester.getTopLeft(find.text('page:dashboard')).dx;
+      double opacityOf(PageLabel label) => tester
+          .widget<Opacity>(
+            find.ancestor(
+              of: find.text('page:${label.name}'),
+              matching: find.byType(Opacity),
+            ),
+          )
+          .opacity;
 
-    container.read(currentPageLabelProvider.notifier).toPage(PageLabel.tools);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 60));
+      for (final (from, to) in [
+        (PageLabel.dashboard, PageLabel.tools),
+        (PageLabel.tools, PageLabel.dashboard),
+      ]) {
+        page.toPage(to);
+        await tester.pump();
+        for (var frame = 0; frame < 8; frame++) {
+          await tester.pump(const Duration(milliseconds: 16));
+          expect(find.text('page:proxies'), findsNothing);
+          for (final label in [from, to]) {
+            final text = find.text('page:${label.name}');
+            expect(tester.getTopLeft(text).dx, closeTo(origin, 0.01));
+          }
+          expect(opacityOf(from), inExclusiveRange(0, 1));
+          expect(opacityOf(from) + opacityOf(to), moreOrLessEquals(1));
+        }
+        await tester.pumpAndSettle();
+        expect(container.read(currentPageLabelProvider), to);
+        expect(tester.getTopLeft(find.text('page:${to.name}')).dx, origin);
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
 
-    double opacityOf(String text) => tester
-        .widget<Opacity>(
-          find.ancestor(of: find.text(text), matching: find.byType(Opacity)),
-        )
-        .opacity;
-    expect(tester.getTopLeft(find.text('page:dashboard')).dx, start);
-    expect(tester.getTopLeft(find.text('page:tools')).dx, start);
-    expect(opacityOf('page:dashboard'), inExclusiveRange(0, 1));
-    expect(
-      opacityOf('page:dashboard') + opacityOf('page:tools'),
-      moreOrLessEquals(1),
-    );
-
-    await tester.pumpAndSettle();
-    expect(container.read(currentPageLabelProvider), PageLabel.tools);
-    expect(tester.getTopLeft(find.text('page:tools')).dx, start);
-    expect(tester.takeException(), isNull);
-  });
-
-  for (final animation in TabAnimation.values) {
-    testWidgets('a ${animation.name} tab switch freezes only the outgoing page '
-        'and paints arriving icons before settling', (tester) async {
+  for (final (animation, glass) in [
+    (TabAnimation.slide, null),
+    (TabAnimation.fade, null),
+    (TabAnimation.fade, LiquidGlassQuality.ultra),
+  ]) {
+    final snapshotsArrival = animation == TabAnimation.slide || glass != null;
+    testWidgets('a ${animation.name} tab switch with $glass '
+        '${snapshotsArrival ? 'snapshots' : 'keeps live'} the arriving page', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(500, 800);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
@@ -1134,7 +1247,11 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: const TestApp(includeNavigatorKey: false, child: HomePage()),
+          child: TestApp(
+            includeNavigatorKey: false,
+            liquidGlass: glass,
+            child: const HomePage(),
+          ),
         ),
       );
       await tester.pump();
@@ -1160,11 +1277,148 @@ void main() {
       paints.clear();
       iconReady.value = true;
       await tester.pump(const Duration(milliseconds: 16));
-      expect(paints, contains(true));
-      expect(snapshots('page:tools'), isFalse);
+      expect(paints, snapshotsArrival ? isNot(contains(true)) : contains(true));
+      expect(snapshots('page:tools'), snapshotsArrival);
 
       await tester.pumpAndSettle();
       expect(snapshots('page:tools'), isFalse);
+      expect(paints, contains(true));
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('mobile pages scroll on controllers of their own, not the '
+      'route\'s primary one they would share', (tester) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final container = ProviderContainer(
+      overrides: [
+        profilesProvider.overrideWith(TestProfiles.new),
+        navigationItemsStateProvider.overrideWithValue(
+          NavigationItemsState(
+            value: [
+              NavigationItem(
+                glyph: AppGlyphs.dashboard,
+                label: PageLabel.dashboard,
+                builder: (_) =>
+                    const DashboardView(platform: SupportPlatform.Android),
+              ),
+              NavigationItem(
+                glyph: AppGlyphs.tools,
+                label: PageLabel.tools,
+                builder: (_) => const ToolsView(),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    globalState.container = container;
+    container.read(viewSizeProvider.notifier).value = const Size(400, 800);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const TestApp(includeNavigatorKey: false, child: HomePage()),
+      ),
+    );
+    await tester.pump();
+    container.read(currentPageLabelProvider.notifier).toPage(PageLabel.tools);
+    await tester.pumpAndSettle();
+
+    final primary = PrimaryScrollController.of(
+      tester.element(find.byType(ToolsView)),
+    );
+    expect(find.byType(DashboardView, skipOffstage: false), findsOneWidget);
+    expect(primary.hasClients, isFalse);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 5));
+  });
+
+  for (final animation in TabAnimation.values) {
+    testWidgets('tools opens at the top with fractional safe areas during a '
+        '${animation.name} tab switch and retains user scrolling', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      tester.view.physicalSize = const Size(1184, 2560);
+      tester.view.devicePixelRatio = 3;
+      tester.view.padding = const FakeViewPadding(top: 85.2, bottom: 60);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPadding);
+
+      final container = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(TestProfiles.new),
+          navigationItemsStateProvider.overrideWithValue(
+            NavigationItemsState(
+              value: navigation
+                  .getItems(openLogs: true, hasProxies: true)
+                  .map(
+                    (item) => item.label == PageLabel.tools
+                        ? item
+                        : item.copyWith(
+                            builder: (_) => const SizedBox.shrink(),
+                          ),
+                  )
+                  .toList(),
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      globalState.container = container;
+      container.read(viewSizeProvider.notifier).value = const Size(
+        1184 / 3,
+        2560 / 3,
+      );
+      container
+          .read(appSettingProvider.notifier)
+          .update((state) => state.copyWith(tabAnimation: animation));
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const TestApp(includeNavigatorKey: false, child: HomePage()),
+        ),
+      );
+      await tester.pump();
+
+      final scrollable = find.descendant(
+        of: find.byType(ToolsView),
+        matching: find.byType(Scrollable),
+      );
+      ScrollPosition position() =>
+          tester.state<ScrollableState>(scrollable).position;
+      await tester.tap(_glyph(AppGlyphs.tools));
+      await tester.pump();
+      for (var frame = 0; frame < 40; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        if (scrollable.evaluate().isNotEmpty) {
+          expect(position().pixels, 0, reason: 'frame $frame');
+        }
+      }
+      await tester.pumpAndSettle();
+      expect(scrollable, findsOneWidget);
+      expect(position().pixels, 0);
+      expect(position().maxScrollExtent, greaterThan(0));
+
+      await tester.drag(find.byType(PrismListView), const Offset(0, -80));
+      await tester.pumpAndSettle();
+      final savedOffset = position().pixels;
+      expect(savedOffset, greaterThan(0));
+      await tester.tap(_glyph(AppGlyphs.dashboard));
+      await tester.pumpAndSettle();
+      await tester.tap(_glyph(AppGlyphs.tools));
+      await tester.pumpAndSettle();
+
+      expect(position().pixels, savedOffset);
       expect(tester.takeException(), isNull);
     });
   }
@@ -1607,11 +1861,11 @@ class _ThemeManagedTestApp extends StatelessWidget {
     return PrismApp(
       navigatorKey: globalState.navigatorKey,
       localizationsDelegates: const [
-        AppLocalizations.delegate,
+        appLocalizationsDelegate,
         AppUiLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
       ],
-      supportedLocales: AppLocalizations.delegate.supportedLocales,
+      supportedLocales: AppLocalizations.supportedLocales,
       builder: (_, child) => ThemeManager(child: child!),
       home: const HomePage(),
     );

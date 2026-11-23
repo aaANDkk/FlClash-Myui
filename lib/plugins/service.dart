@@ -14,27 +14,29 @@ final _utf8JsonDecoder = utf8.decoder.fuse(json.decoder);
 
 Object? _decodeUtf8Json(Uint8List data) => _utf8JsonDecoder.convert(data);
 
-Map<String, Object?> _decodeResponseOf((Uint8List, CoreMethod) request) {
-  final (data, method) = request;
+Map<String, Object?> _decodeResponseOf((Uint8List, CoreResultModel?) request) {
+  final (data, model) = request;
   final decoded = _decodeUtf8Json(data);
-  return withResultModel(method, Map<String, Object?>.from(decoded as Map));
+  return withResultModel(model, Map<String, Object?>.from(decoded as Map));
 }
 
 Future<Map<String, Object?>> _decodeResponse(
   Uint8List data,
-  CoreMethod method,
+  CoreResultModel? model,
 ) async {
-  if (data.length < 51200) {
-    return _decodeResponseOf((data, method));
+  if (data.length < coreIsolateDecodeBytes) {
+    return _decodeResponseOf((data, model));
   }
-  return compute(_decodeResponseOf, (data, method));
+  return compute(_decodeResponseOf, (data, model));
 }
 
 abstract mixin class ServiceListener {
   void onServiceEvent(CoreEvent event) {}
 
-  void onServiceStopped() {}
+  void onServiceStopped([ServiceStartFailure? failure]) {}
 }
+
+typedef AndroidServiceRun = ({DateTime startedAt, VpnOptions options});
 
 class Service {
   static Service? _instance;
@@ -45,6 +47,7 @@ class Service {
       ObserverList<ServiceListener>();
 
   int _commandRevision = 0;
+  int _stopReportCount = 0;
   bool _startRequested = false;
 
   factory Service() {
@@ -70,12 +73,31 @@ class Service {
           }
           break;
         case 'stopped':
+          final report = call.arguments as Map<Object?, Object?>;
           // A report stamped before the newest command no longer describes it.
-          if (call.arguments != _commandRevision || !_startRequested) {
+          if (report['revision'] != _commandRevision) {
+            break;
+          }
+          _stopReportCount++;
+          if (!_startRequested) {
+            break;
+          }
+          final stopReport = _stopReportCount;
+          // Native starts can advance without a new Flutter revision.
+          final runRequested = await methodChannel.invokeMethod<bool>(
+            'isRunRequested',
+          );
+          if (runRequested != false ||
+              report['revision'] != _commandRevision ||
+              stopReport != _stopReportCount) {
             break;
           }
           _startRequested = false;
-          _dispatch('stop report', (listener) => listener.onServiceStopped());
+          final failure = ServiceStartFailure.fromCode(report['failure']);
+          _dispatch(
+            'stop report',
+            (listener) => listener.onServiceStopped(failure),
+          );
           break;
         default:
           throw MissingPluginException();
@@ -83,7 +105,11 @@ class Service {
     });
   }
 
-  Future<CoreMethodResponse> invokeMethod(CoreMethodCall call) async {
+  Future<CoreMethodResponse> invokeMethod(
+    CoreMethodCall call, {
+    CoreResultModel? model,
+  }) async {
+    model ??= coreResultModelOf(call.method);
     final data = await _coreChannel.invokeMethod<Uint8List>(
       'invokeMethod',
       json.encode(call),
@@ -95,8 +121,8 @@ class Service {
       );
     }
     return resolveSpilledResponse(
-      CoreMethodResponse.fromJson(await _decodeResponse(data, call.method)),
-      method: call.method,
+      CoreMethodResponse.fromJson(await _decodeResponse(data, model)),
+      model: model,
     );
   }
 
@@ -144,12 +170,25 @@ class Service {
     return await methodChannel.invokeMethod<bool>('shutdown') ?? true;
   }
 
-  Future<DateTime?> getRunTime() async {
-    final ms = await methodChannel.invokeMethod<int>('getRunTime') ?? 0;
-    if (ms == 0) {
+  Future<AndroidServiceRun?> adoptRunningService() async {
+    final revision = _commandRevision;
+    final stopReports = _stopReportCount;
+    final run = await methodChannel.invokeMapMethod<String, Object?>(
+      'getRunningService',
+    );
+    if (run == null ||
+        revision != _commandRevision ||
+        stopReports != _stopReportCount) {
       return null;
     }
-    return DateTime.fromMillisecondsSinceEpoch(ms);
+    final startedAt = DateTime.fromMillisecondsSinceEpoch(
+      run['startedAt']! as int,
+    );
+    final options = VpnOptions.fromJson(
+      json.decode(run['options']! as String) as Map<String, Object?>,
+    );
+    _startRequested = true;
+    return (startedAt: startedAt, options: options);
   }
 
   bool get hasListeners {

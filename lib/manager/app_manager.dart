@@ -40,7 +40,12 @@ class _AppStateManagerState extends ConsumerState<AppStateManager>
     });
     ref.listenManual(groupsProvider, (prev, next) {
       if (prev != next) {
-        unawaited(precacheTargetIcons(next.map((group) => group.icon)));
+        _precacheProxyIcons();
+      }
+    }, fireImmediately: true);
+    ref.listenManual(iconRulesProvider, (prev, next) {
+      if (prev != next) {
+        _precacheProxyIcons();
       }
     }, fireImmediately: true);
     ref.listenManual(iconSetsProvider, (_, next) {
@@ -60,11 +65,8 @@ class _AppStateManagerState extends ConsumerState<AppStateManager>
         ref.read(setupActionProvider.notifier).syncSuspend();
       }
     });
-    final systemDns = systemDnsCoordinator;
-    if (systemDns != null) {
-      ref.listenManual(shouldPatchSystemDnsProvider, (prev, next) {
-        unawaited(systemDns.sync(next));
-      }, fireImmediately: true);
+    if (system.isMacOS && !safeModeBuild) {
+      unawaited(restoreLegacySystemDns());
     }
   }
 
@@ -83,13 +85,28 @@ class _AppStateManagerState extends ConsumerState<AppStateManager>
     };
   }
 
+  Iterable<String> _proxyIconSources() {
+    final groups = ref.read(groupsProvider);
+    final rules = ref.read(iconRulesProvider);
+    return [
+      for (final group in groups)
+        resolveProxyGroupIcon(group.name, group.icon, rules),
+      for (final rule in rules) rule.icon,
+    ];
+  }
+
+  void _precacheProxyIcons() {
+    unawaited(precacheTargetIcons(_proxyIconSources()));
+  }
+
   @override
   Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
     _updateVisible(state);
     if (state == AppLifecycleState.resumed) {
+      _precacheProxyIcons();
       unawaited(ref.read(locationPermissionsProvider.notifier).refresh());
       // A certificate removed meanwhile stops decryption before the next start.
-      if (mitmFeature && ref.read(patchClashConfigProvider).mitm.enable) {
+      if (rsFeature && ref.read(patchClashConfigProvider).mitm.enable) {
         unawaited(ref.read(mitmTrustStateProvider.notifier).refresh());
       }
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -229,48 +246,58 @@ class AppSidebarContainer extends ConsumerWidget {
 
     final hasSidebar = viewMode != ViewMode.mobile;
     final isLtr = Directionality.of(context) == TextDirection.ltr;
-    return Container(
-      color: backdropOpacity != null ? Colors.transparent : page,
-      child: Row(
-        children: [
-          AnimatedVisibility.sidebar(
-            visible: hasSidebar,
-            child: Surface(
-              color: backdropOpacity != null
-                  ? chrome.withValues(alpha: backdropOpacity)
-                  : chrome,
-              shape: BorderDirectional(end: Divider.createBorderSide(context)),
-              child: MediaQuery.removePadding(
-                context: context,
-                removeLeft: !isLtr,
-                removeRight: isLtr,
-                child: _Sidebar(
-                  items: navigationItems,
-                  currentIndex: currentIndex,
-                  viewMode: viewMode,
-                  onSelected: onSelected,
+    return Stack(
+      fit: StackFit.expand,
+      clipBehavior: Clip.none,
+      children: [
+        RepaintBoundary(
+          child: ColoredBox(
+            color: backdropOpacity != null ? Colors.transparent : page,
+          ),
+        ),
+        Row(
+          children: [
+            AnimatedVisibility.sidebar(
+              visible: hasSidebar,
+              child: Surface(
+                color: backdropOpacity != null
+                    ? chrome.withValues(alpha: backdropOpacity)
+                    : chrome,
+                shape: BorderDirectional(
+                  end: Divider.createBorderSide(context),
+                ),
+                child: MediaQuery.removePadding(
+                  context: context,
+                  removeLeft: !isLtr,
+                  removeRight: isLtr,
+                  child: _Sidebar(
+                    items: navigationItems,
+                    currentIndex: currentIndex,
+                    viewMode: viewMode,
+                    onSelected: onSelected,
+                  ),
                 ),
               ),
             ),
-          ),
-          Expanded(
-            flex: 1,
-            child: ClipRect(
-              child: LayoutBuilder(
-                builder: (_, constraints) {
-                  _updateSideBarWidth(ref, constraints.maxWidth);
-                  return MediaQuery.removePadding(
-                    context: context,
-                    removeLeft: hasSidebar && isLtr,
-                    removeRight: hasSidebar && !isLtr,
-                    child: child,
-                  );
-                },
+            Expanded(
+              flex: 1,
+              child: ClipRect(
+                child: LayoutBuilder(
+                  builder: (_, constraints) {
+                    _updateSideBarWidth(ref, constraints.maxWidth);
+                    return MediaQuery.removePadding(
+                      context: context,
+                      removeLeft: hasSidebar && isLtr,
+                      removeRight: hasSidebar && !isLtr,
+                      child: child,
+                    );
+                  },
+                ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
+      ],
     );
   }
 }

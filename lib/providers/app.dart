@@ -16,6 +16,9 @@ part 'generated/app.g.dart';
 @Riverpod(keepAlive: true)
 bool safeMode(Ref ref) => safeModeBuild;
 
+@Riverpod(keepAlive: true)
+App? packageIconSource(Ref ref) => app;
+
 /// Android: su is there and granted FlClash's last request.
 @Riverpod(keepAlive: true)
 Future<bool> rootAccess(Ref ref) async {
@@ -39,6 +42,27 @@ class UpdateDownloadState extends _$UpdateDownloadState
     with AutoDisposeNotifierMixin {
   @override
   UpdateDownload? build() => null;
+}
+
+@Riverpod(keepAlive: true)
+class CoreCapabilitiesState extends _$CoreCapabilitiesState
+    with AutoDisposeNotifierMixin {
+  @override
+  CoreCapabilities build() => const CoreCapabilities.everything();
+}
+
+/// The warnings of the config the Core last set up; they end with the Core.
+@Riverpod(keepAlive: true)
+class CoreStopReason extends _$CoreStopReason with AutoDisposeNotifierMixin {
+  @override
+  String? build() {
+    ref.listen(coreStatusProvider, (_, next) {
+      if (next != CoreStatus.disconnected) {
+        state = null;
+      }
+    });
+    return null;
+  }
 }
 
 @Riverpod(keepAlive: true)

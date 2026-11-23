@@ -28,9 +28,20 @@ class CoreAction extends _$CoreAction {
       final result = await startLifecycle();
       await _applyLifecycleResult(result);
     } catch (error) {
-      ref.read(coreStatusProvider.notifier).value = CoreStatus.disconnected;
-      dialogs.showBanner(error.toString(), level: BannerLevel.error);
+      _markStopped(error);
+      dialogs.showBanner(
+        ref.read(coreStopReasonProvider) ?? '',
+        level: BannerLevel.error,
+      );
     }
+  }
+
+  void _markStopped(Object error) {
+    ref.read(coreStatusProvider.notifier).value = CoreStatus.disconnected;
+    final reason = userFacingErrorMessage(error, currentAppLocalizations);
+    ref.read(coreStopReasonProvider.notifier).value = reason.isEmpty
+        ? null
+        : reason;
   }
 
   @protected
@@ -60,7 +71,7 @@ class CoreAction extends _$CoreAction {
       await initCore();
       ref.read(coreStatusProvider.notifier).value = CoreStatus.connected;
     }
-    if (mitmFeature && ref.read(patchClashConfigProvider).mitm.enable) {
+    if (rsFeature && ref.read(patchClashConfigProvider).mitm.enable) {
       unawaited(ref.read(mitmTrustStateProvider.notifier).refresh());
     }
     return true;
@@ -120,7 +131,7 @@ class CoreAction extends _$CoreAction {
       var applied = true;
       while (appliedRevision < _requestedRestartRevision) {
         final revision = _requestedRestartRevision;
-        if (ref.read(isStartProvider)) {
+        if (ref.read(setupActionProvider.notifier).wantsRunning) {
           applied = await ref
               .read(setupActionProvider.notifier)
               .setRunning(true, initialize: true);
@@ -132,8 +143,8 @@ class CoreAction extends _$CoreAction {
         appliedRevision = revision;
       }
       return applied;
-    } catch (_) {
-      ref.read(coreStatusProvider.notifier).value = CoreStatus.disconnected;
+    } catch (error) {
+      _markStopped(error);
       rethrow;
     } finally {
       _restartOperation = null;

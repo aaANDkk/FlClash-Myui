@@ -61,9 +61,6 @@ enum DashboardFeed {
 void openDashboardFeed(BuildContext context, DashboardFeed feed) {
   showSnapSheet(
     context,
-    initialScrollOffset: feed == DashboardFeed.connections
-        ? 0
-        : double.maxFinite,
     builder: (_, controller) => NestedPagedSheet(
       builder: (_) => switch (feed) {
         DashboardFeed.connections => RequestsView(
@@ -123,12 +120,8 @@ mixin ConnectionsPolling<T extends ConsumerStatefulWidget>
     }
     try {
       if (pollsConnections) {
-        final next = [...await _core.getConnections()];
+        final (:next, :tcp) = await _core.getConnectionsWith(_newestFirst);
         if (!isCurrent()) return;
-        next.sort((a, b) => b.start.compareTo(a.start));
-        final tcp = next
-            .where((item) => item.metadata.network.toLowerCase() == 'tcp')
-            .length;
         connectionCount.value = next.length;
         updateWhenRouteSettled(
           () => setState(() {
@@ -922,4 +915,14 @@ class _DnsResult extends StatelessWidget {
       ],
     );
   }
+}
+
+({List<TrackerInfo> next, int tcp}) _newestFirst(
+  List<TrackerInfo> trackerInfos,
+) {
+  final next = [...trackerInfos]..sort((a, b) => b.start.compareTo(a.start));
+  final tcp = next
+      .where((item) => item.metadata.network.toLowerCase() == 'tcp')
+      .length;
+  return (next: next, tcp: tcp);
 }

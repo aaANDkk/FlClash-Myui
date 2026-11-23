@@ -120,8 +120,12 @@ class ConfigToggleItem extends _ConfigItem<bool> {
     required super.selector,
     required super.title,
     required super.onChanged,
+    super.subtitle,
     super.leading,
+    this.enabled = true,
   });
+
+  final bool enabled;
 
   @override
   Widget buildItem(
@@ -133,8 +137,9 @@ class ConfigToggleItem extends _ConfigItem<bool> {
     return ListItem.toggle(
       leading: leading,
       title: Text(title(appLocalizations)),
+      subtitle: buildSubtitle(appLocalizations),
       value: value,
-      onChanged: (value) => onChanged(ref, value),
+      onChanged: enabled ? (value) => onChanged(ref, value) : null,
     );
   }
 }
@@ -147,12 +152,16 @@ class ConfigOptionsItem<T> extends _ConfigItem<T> {
     required super.onChanged,
     required this.options,
     required this.textBuilder,
+    this.available,
     super.subtitle,
     super.leading,
   });
 
   final List<T> options;
   final String Function(T value) textBuilder;
+
+  /// Hides the options it rejects, except the one in use.
+  final ProviderListenable<bool Function(T option)>? available;
 
   @override
   Widget buildItem(
@@ -161,11 +170,18 @@ class ConfigOptionsItem<T> extends _ConfigItem<T> {
     AppLocalizations appLocalizations,
     T value,
   ) {
+    final available = this.available;
+    final isAvailable = available == null ? null : ref.watch(available);
     return ListItem<T>.options(
       leading: leading,
       title: Text(title(appLocalizations)),
       subtitle: buildSubtitle(appLocalizations),
-      options: options,
+      options: isAvailable == null
+          ? options
+          : [
+              for (final option in options)
+                if (option == value || isAvailable(option)) option,
+            ],
       value: value,
       textBuilder: textBuilder,
       onChanged: (value) => onChanged(ref, value),

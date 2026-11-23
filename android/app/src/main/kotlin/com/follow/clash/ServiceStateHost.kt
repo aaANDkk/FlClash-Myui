@@ -17,9 +17,12 @@ import io.flutter.embedding.engine.FlutterEngine
 import kotlinx.coroutines.CoroutineScope
 
 internal data class ServiceRuntime(
-    val vpn: Boolean,
+    val options: VpnOptions,
     val startedAtMillis: Long,
-)
+) {
+    val vpn: Boolean
+        get() = options.enable
+}
 
 /**
  * The machine owns the arbitration and the transitions; this is only the part that cannot run on a
@@ -47,7 +50,7 @@ internal interface ServiceStateHost {
 
     fun app(): AppGateway?
 
-    fun notifyStopped()
+    fun notifyStopped(failure: StartFailure? = null)
 
     suspend fun quickSetup(initParams: String, setupParams: String): Result<String>
 
@@ -135,8 +138,8 @@ internal object AndroidServiceStateHost : ServiceStateHost {
         }
     }
 
-    override fun notifyStopped() {
-        flutterEngine?.plugin<ServicePlugin>()?.notifyStopped()
+    override fun notifyStopped(failure: StartFailure?) {
+        flutterEngine?.plugin<ServicePlugin>()?.notifyStopped(failure)
     }
 
     override suspend fun quickSetup(initParams: String, setupParams: String): Result<String> =

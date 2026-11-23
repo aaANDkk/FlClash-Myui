@@ -1167,6 +1167,21 @@ abstract class Tun with _$Tun {
   }
 }
 
+bool isUsableMixedPort(int port) => port > 0 && port <= 65535;
+
+Object? unusableMixedPort(Object? patchJson) {
+  if (patchJson is! Map) return null;
+  final raw = patchJson['mixed-port'];
+  return raw != null && _mixedPortFromJson(raw) != raw ? raw : null;
+}
+
+int _mixedPortFromJson(Object? value) => switch (value) {
+  final num port
+      when port == port.truncate() && isUsableMixedPort(port.toInt()) =>
+    port.toInt(),
+  _ => defaultMixedPort,
+};
+
 int _mtuFromJson(int value) =>
     value > 0 ? value.clamp(minTunMtu, maxTunMtu) : defaultTunMtu;
 
@@ -1340,18 +1355,8 @@ extension DnsOverrideExt on Dns {
     return json;
   }
 
-  /// [keepEmpty] writes emptied keys, but the core refuses an empty nameserver.
-  Map<String, Object?> overrideJson(
-    Set<DnsOverrideKey> keys, {
-    bool keepEmpty = false,
-  }) => _overrideJson(
-    _json,
-    DnsOverrideKey.values,
-    keys,
-    keepEmpty: keepEmpty
-        ? keys.difference({DnsOverrideKey.nameserver})
-        : const <DnsOverrideKey>{},
-  );
+  Map<String, Object?> overrideJson(Set<DnsOverrideKey> keys) =>
+      _overrideJson(_json, DnsOverrideKey.values, keys);
 
   String overrideYaml(Set<DnsOverrideKey> keys) =>
       yaml.encode(overrideJson(keys));
@@ -1383,12 +1388,13 @@ Object? _plainYaml(Object? node) => switch (node) {
   _ => node,
 };
 
+/// A picked key is written as it is, empty included: an emptied entry clears
+/// the profile's value, and one the core refuses empty fails the config there.
 Map<String, Object?> _overrideJson<K extends OverrideKey>(
   Map<String, Object?> json,
   List<K> values,
-  Set<K> keys, {
-  Set<K> keepEmpty = const {},
-}) {
+  Set<K> keys,
+) {
   final result = <String, Object?>{};
   for (final key in values) {
     if (!keys.contains(key)) {
@@ -1398,9 +1404,6 @@ Map<String, Object?> _overrideJson<K extends OverrideKey>(
     final value = parent == null
         ? json[key.path]
         : (json[parent] as Map)[key.field];
-    if (_isUnset(value) && !keepEmpty.contains(key)) {
-      continue;
-    }
     if (parent == null) {
       result[key.path] = value;
       continue;
@@ -1412,13 +1415,6 @@ Map<String, Object?> _overrideJson<K extends OverrideKey>(
   }
   return result;
 }
-
-bool _isUnset(Object? value) => switch (value) {
-  String() => value.isEmpty,
-  Iterable() => value.isEmpty,
-  Map() => value.isEmpty,
-  _ => false,
-};
 
 /// Reads an edited override document into [json] and returns the keys it
 /// names, which become the override set, or null for an empty document.
@@ -1812,6 +1808,7 @@ abstract class Rule with _$Rule {
     @Default(false) bool noResolve,
     @Default(false) bool src,
     String? order,
+    @Default(false) bool customExit,
   }) = _Rule;
 
   factory Rule.init() {
@@ -1949,6 +1946,11 @@ extension RuleExt on Rule {
 
   List<String> get searchFields => [ruleAction.name, rawValue];
 }
+
+Set<String> customExitsOf(Iterable<Rule> rules) => {
+  for (final rule in rules)
+    if (rule.customExit && rule.ruleTarget != null) rule.ruleTarget!,
+};
 
 final class RuleLineException implements Exception {
   final int line;
@@ -2130,7 +2132,9 @@ Map<String, Object?> _withLegacyGeneralOverrideKeys(Map<String, Object?> json) {
 @freezed
 abstract class PatchClashConfig with _$PatchClashConfig {
   const factory PatchClashConfig({
-    @Default(defaultMixedPort) @JsonKey(name: 'mixed-port') int mixedPort,
+    @Default(defaultMixedPort)
+    @JsonKey(name: 'mixed-port', fromJson: _mixedPortFromJson)
+    int mixedPort,
     @Default(0) @JsonKey(name: 'socks-port') int socksPort,
     @Default(0) @JsonKey(name: 'port') int port,
     @Default(0) @JsonKey(name: 'redir-port') int redirPort,
@@ -2139,8 +2143,11 @@ abstract class PatchClashConfig with _$PatchClashConfig {
     @Default(false) @JsonKey(name: 'allow-lan') bool allowLan,
     @Default(LogLevel.error) @JsonKey(name: 'log-level') LogLevel logLevel,
     @Default(false) bool ipv6,
-    @Default(FindProcessMode.off)
-    @JsonKey(name: 'find-process-mode', unknownEnumValue: FindProcessMode.off)
+    @Default(FindProcessMode.strict)
+    @JsonKey(
+      name: 'find-process-mode',
+      unknownEnumValue: FindProcessMode.strict,
+    )
     FindProcessMode findProcessMode,
     @Default(InterfaceNameMode.clear)
     @JsonKey(
@@ -2184,7 +2191,7 @@ abstract class PatchClashConfig with _$PatchClashConfig {
     ExternalControllerStatus externalController,
     @Default('') String secret,
     @Default({}) Map<String, String> hosts,
-    @Default(false) @JsonKey(name: 'geo-auto-update') bool geoAutoUpdate,
+    @Default(true) @JsonKey(name: 'geo-auto-update') bool geoAutoUpdate,
     @Default(24) @JsonKey(name: 'geo-update-interval') int geoUpdateInterval,
     @Default(defaultTestUrl) @JsonKey(name: 'test-url') String testUrl,
     @Default({})
@@ -2303,6 +2310,7 @@ extension MitmExt on Mitm {
     return {
       ...json,
       ...rules.toJson(),
+      'h2': h2 || rules.h2,
       'decrypt-tls': decryptUntrusted || trustedFingerprint != null,
       'ca-fingerprint': decryptUntrusted ? '' : trustedFingerprint ?? '',
       'limits': {
@@ -2320,7 +2328,11 @@ class MitmRules {
     this.headerRewrite = const [],
     this.bodyRewrite = const [],
     this.mapLocal = const [],
+    this.requestBodyMock = const [],
+    this.clientSourceAddress = const [],
+    this.skipVerifyHostname = const [],
     this.script = const [],
+    this.h2 = false,
   });
 
   final List<String> hostname;
@@ -2328,7 +2340,13 @@ class MitmRules {
   final List<String> headerRewrite;
   final List<String> bodyRewrite;
   final List<String> mapLocal;
+  final List<String> requestBodyMock;
+  final List<String> clientSourceAddress;
+  final List<String> skipVerifyHostname;
   final List<String> script;
+
+  /// A module that turns HTTP/2 on, which only adds to the user's choice.
+  final bool h2;
 
   List<String> linesOf(MitmList list) => switch (list) {
     MitmList.hostname => hostname,
@@ -2336,6 +2354,9 @@ class MitmRules {
     MitmList.headerRewrite => headerRewrite,
     MitmList.bodyRewrite => bodyRewrite,
     MitmList.mapLocal => mapLocal,
+    MitmList.requestBodyMock => requestBodyMock,
+    MitmList.clientSourceAddress => clientSourceAddress,
+    MitmList.skipVerifyHostname => skipVerifyHostname,
     MitmList.script => script,
   };
 

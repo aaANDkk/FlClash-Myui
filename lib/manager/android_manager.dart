@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/core/core.dart';
 import 'package:fl_clash/enum/enum.dart';
@@ -9,6 +7,7 @@ import 'package:fl_clash/plugins/service.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:prism_ui/banner.dart';
 
 class AndroidManager extends ConsumerStatefulWidget {
   final Widget child;
@@ -79,9 +78,12 @@ class _AndroidContainerState extends ConsumerState<AndroidManager>
   }
 
   @override
-  void onServiceStopped() {
-    unawaited(ref.read(setupActionProvider.notifier).setRunning(false));
-    super.onServiceStopped();
+  void onServiceStopped([ServiceStartFailure? failure]) {
+    ref.read(setupActionProvider.notifier).applyAndroidServiceStopped();
+    if (failure != null) {
+      dialogs.showBanner(failure.label, level: BannerLevel.error);
+    }
+    super.onServiceStopped(failure);
   }
 
   @override

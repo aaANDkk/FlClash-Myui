@@ -340,6 +340,50 @@ void main() {
     });
   }
 
+  testWidgets(
+    'without liquid glass the dock keeps an opaque tinted selection pill',
+    (tester) async {
+      tester.view.physicalSize = _mobileSize;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        TestApp(
+          wrapInProviderScope: true,
+          homeBuilder: (child) => HostScaffold(
+            body: Align(alignment: Alignment.bottomCenter, child: child),
+          ),
+          child: NavigationDock(
+            destinations: const [
+              NavigationDockDestination(glyph: AppGlyphs.dashboard, label: 'a'),
+              NavigationDockDestination(glyph: AppGlyphs.tools, label: 'b'),
+            ],
+            selectedIndex: 0,
+            onSelected: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(LiquidGlass), findsNothing);
+      Color? lensColor() =>
+          (tester.widget<DecoratedBox>(_lens).decoration as ShapeDecoration)
+              .color;
+      final restingColor = lensColor();
+      expect(restingColor, isNotNull);
+      expect(restingColor!.a, 1.0);
+
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.text('b')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(LiquidGlass), findsNothing);
+      expect(lensColor(), restingColor);
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('the bar swells under a pointer and stretches past its end', (
     tester,
   ) async {

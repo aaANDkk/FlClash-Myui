@@ -3,7 +3,10 @@ import 'dart:math' as math;
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
+import 'package:fl_clash/views/dashboard/layout.dart';
 import 'package:fl_clash/views/dashboard/style.dart';
+import 'package:fl_clash/views/dashboard/widgets/card.dart';
+import 'package:fl_clash/widgets/text_ink.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 
@@ -387,7 +390,7 @@ class TrafficStatsOverviewCard extends StatelessWidget {
     final centerColor = routeTotal > 0
         ? (showDirectCenter ? directColor : proxyColor)
         : cs.onSurfaceVariant;
-    final trackColor = DashboardColors.of(context).track;
+    final trackColor = DashboardColors.of(context).tone2;
 
     final topRow = IntrinsicHeight(
       child: Row(
@@ -567,48 +570,322 @@ class TrafficStatsOverviewCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (fillHeight) Expanded(child: topRow) else topRow,
-          const SizedBox(height: 12),
-          Divider(height: 1, thickness: Divider.separatorThicknessOf(context)),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 6,
+          const SizedBox(height: 16),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                for (final part in [
-                  (label: l.proxies, color: proxyColor, bytes: proxyTotal),
-                  (label: l.direct, color: directColor, bytes: directTotal),
-                ])
-                  Row(
+                Expanded(
+                  flex: 6,
+                  child: _TrafficStatsRunningTime(
+                    seconds: result.runningSeconds,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  flex: 5,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      DecoratedBox(
-                        decoration: ShapeDecoration(
-                          color: part.color,
-                          shape: AppShape.circle,
+                      Expanded(
+                        child: _TrafficStatsRouteBlock(
+                          name: l.proxies,
+                          color: proxyColor,
+                          bytes: proxyTotal,
+                          blockKey: const ValueKey('traffic-stats-proxy-total'),
                         ),
-                        child: const SizedBox.square(dimension: 9),
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        part.label,
-                        style: AppTextStyle.subheadline
-                            .of(context)
-                            .copyWith(color: cs.onSurfaceVariant),
-                      ),
-                      const Spacer(),
-                      Text(
-                        trafficStatsFormatBytes(part.bytes),
-                        style: AppTextStyle.subheadline
-                            .of(context, emphasized: true)
-                            .toTabular,
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: _TrafficStatsRouteBlock(
+                          name: l.direct,
+                          color: directColor,
+                          bytes: directTotal,
+                          blockKey: const ValueKey(
+                            'traffic-stats-direct-total',
+                          ),
+                        ),
                       ),
                     ],
                   ),
+                ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _TrafficStatsRouteBlock extends StatelessWidget {
+  const _TrafficStatsRouteBlock({
+    required this.name,
+    required this.color,
+    required this.bytes,
+    required this.blockKey,
+  });
+
+  final String name;
+  final Color color;
+  final int bytes;
+  final Key blockKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = trafficStatsFormatBytes(bytes).split(' ');
+    return DecoratedBox(
+      key: blockKey,
+      decoration: ShapeDecoration(
+        color: DashboardColors.of(context).tone,
+        shape: AppShape.md,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: AlignmentDirectional.centerStart,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DecoratedBox(
+                      decoration: ShapeDecoration(
+                        color: color,
+                        shape: AppShape.circle,
+                      ),
+                      child: const SizedBox.square(dimension: 6),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      name,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.visible,
+                      style: AppTextStyle.footnote
+                          .of(context)
+                          .copyWith(
+                            color: context.colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: AlignmentDirectional.centerEnd,
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(text: value.first),
+                      TextSpan(
+                        text: ' ${value.last}',
+                        style: AppTextStyle.caption2
+                            .of(context)
+                            .copyWith(
+                              color: context.colorScheme.onSurfaceVariant,
+                            ),
+                      ),
+                    ],
+                  ),
+                  style: AppTextStyle.subheadline
+                      .of(context, emphasized: true)
+                      .toTabular,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.visible,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TrafficStatsRunningTime extends StatelessWidget {
+  const _TrafficStatsRunningTime({required this.seconds});
+
+  final int seconds;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.appLocalizations;
+    final duration = Duration(seconds: seconds);
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    final headerScale = math.max(1.0, textScale);
+    final numberStyle = AppTextStyle.title1
+        .of(context, emphasized: true)
+        .toTabular
+        .copyWith(fontWeight: FontWeight.w600);
+    final unitStyle = AppTextStyle.caption2
+        .of(context)
+        .copyWith(color: context.colorScheme.onSurfaceVariant);
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 88),
+      child: DecoratedBox(
+        key: const ValueKey('traffic-stats-running-time'),
+        decoration: ShapeDecoration(
+          color: DashboardColors.of(context).tone,
+          shape: AppShape.lg,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _RunningTimeTitle(
+                title: l.trafficStatsRunningTime,
+                scale: headerScale,
+              ),
+              const SizedBox(height: 4),
+              SizedBox(
+                height: 34 * textScale,
+                width: double.infinity,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: '${duration.inHours}',
+                          style: numberStyle,
+                        ),
+                        TextSpan(
+                          text: ' ${l.trafficStatsHourUnit}',
+                          style: unitStyle,
+                        ),
+                        TextSpan(
+                          text: ' ${duration.inMinutes.remainder(60)}',
+                          style: numberStyle,
+                        ),
+                        TextSpan(
+                          text: ' ${l.trafficStatsMinuteUnit}',
+                          style: unitStyle,
+                        ),
+                      ],
+                    ),
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.visible,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RunningTimeTitle extends StatefulWidget {
+  const _RunningTimeTitle({required this.title, required this.scale});
+
+  final String title;
+  final double scale;
+
+  @override
+  State<_RunningTimeTitle> createState() => _RunningTimeTitleState();
+}
+
+class _RunningTimeTitleState extends State<_RunningTimeTitle> {
+  (String, TextStyle, double, TextDirection, Locale?)? _inkKey;
+  Future<TextInk?>? _measurement;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.colorScheme.onSurfaceVariant;
+    final density = DashboardDensity.of(
+      MediaQuery.sizeOf(context) / widget.scale,
+    );
+    final style =
+        (density.isDesktop
+                ? DashboardText.cardTitle(context)
+                : DashboardText.mobileCardTitle(context))
+            .copyWith(color: color);
+    final scaler = MediaQuery.textScalerOf(context);
+    final direction = Directionality.of(context);
+    final locale = Localizations.maybeLocaleOf(context);
+    final key = (
+      widget.title,
+      style,
+      scaler.scale(style.fontSize!),
+      direction,
+      locale,
+    );
+
+    if (_inkKey != key) {
+      _inkKey = key;
+      // Capitals give an alphabetic title its visual height without descenders.
+      final capitals = widget.title.runes
+          .map(String.fromCharCode)
+          .where(
+            (letter) =>
+                letter == letter.toUpperCase() &&
+                letter != letter.toLowerCase(),
+          )
+          .join();
+      _measurement = measureTextInk(
+        capitals.isEmpty ? widget.title : capitals,
+        style,
+        scaler,
+        textDirection: direction,
+        locale: locale,
+      );
+    }
+
+    final clock = GlyphIcon(
+      AppGlyphs.clock,
+      size: DashboardCardHeader.glyphSize,
+      color: color,
+    );
+    final label = Text(
+      widget.title,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: style,
+    );
+    return SizedBox(
+      height:
+          (density.isDesktop ? DashboardCardHeader.height : 26) * widget.scale,
+      child: Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: FutureBuilder<TextInk?>(
+          key: ValueKey(key),
+          future: _measurement,
+          builder: (context, snapshot) {
+            final ink = snapshot.data;
+            return Row(
+              spacing: 8,
+              crossAxisAlignment: ink == null
+                  ? CrossAxisAlignment.center
+                  : CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                if (ink == null)
+                  clock
+                else
+                  BaselineAt(
+                    baseline:
+                        DashboardCardHeader.glyphSize / 2 +
+                        (ink.ascent - ink.descent) / 2,
+                    child: clock,
+                  ),
+                Expanded(child: label),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -703,7 +980,8 @@ class _TrafficStatsTrendCardState extends State<TrafficStatsTrendCard> {
           : Builder(
               builder: (chartCtx) {
                 double chartWidth() =>
-                    (chartCtx.findRenderObject() as RenderBox?)?.size.width ?? 0;
+                    (chartCtx.findRenderObject() as RenderBox?)?.size.width ??
+                    0;
 
                 return MouseRegion(
                   onHover: (e) => _updateIndexFromDx(
@@ -901,9 +1179,7 @@ class _TrendBarPainter extends CustomPainter {
       unitIdx++;
     }
     final val = rawMax / factor;
-    final mag = math
-        .pow(10, (math.log(val) / math.ln10).floor())
-        .toDouble();
+    final mag = math.pow(10, (math.log(val) / math.ln10).floor()).toDouble();
     final norm = val / mag;
     var step = 10.0;
     for (final candidate in _niceSteps) {
@@ -1002,10 +1278,7 @@ class _TrendBarPainter extends CustomPainter {
     );
     final downPaint = Paint()..color = downloadColor;
     final upPaint = Paint()..color = uploadColor;
-    final cornerRadius = math.min(
-      count <= 10 ? 4.0 : 2.8,
-      barWidth * 0.25,
-    );
+    final cornerRadius = math.min(count <= 10 ? 4.0 : 2.8, barWidth * 0.25);
     final topRadius = Radius.circular(cornerRadius);
     const minSegH = 3.0;
     const segGap = 2.0;
@@ -1031,7 +1304,10 @@ class _TrendBarPainter extends CustomPainter {
         var downH = 0.0;
         var upH = 0.0;
         if (point.up > 0 && point.down > 0) {
-          final gapH = math.min(segGap, math.max(0.0, chartHeight - 2 * minSegH));
+          final gapH = math.min(
+            segGap,
+            math.max(0.0, chartHeight - 2 * minSegH),
+          );
           final rawH = (point.total / maxTotal) * chartHeight;
           final minBothH = math.min(chartHeight, 2 * minSegH + gapH + 1.5);
           totalH = math
@@ -1110,10 +1386,7 @@ class _TrendBarPainter extends CustomPainter {
   List<int> _verticalGuideIndices(int count) {
     switch (period) {
       case TrafficStatsPeriod.day:
-        return [
-          for (var i = 0; i < count; i += 6) i,
-          count,
-        ];
+        return [for (var i = 0; i < count; i += 6) i, count];
       case TrafficStatsPeriod.week:
         return [for (var i = 0; i <= count; i++) i];
       case TrafficStatsPeriod.month:
@@ -1229,7 +1502,7 @@ class TrafficStatsRuleHitsSection extends StatelessWidget {
                     hitCountText: l.trafficStatsHitCount(rules[i].hits),
                     defaultBadge: l.defaultText,
                     fallbackRuleBadge: l.rule,
-                    trackColor: DashboardColors.of(context).track,
+                    trackColor: DashboardColors.of(context).tone2,
                   ),
               ],
             ),
@@ -1549,7 +1822,7 @@ class TrafficStatsRankingSection extends StatelessWidget {
                         height: 4,
                         width: double.infinity,
                         child: ColoredBox(
-                          color: DashboardColors.of(context).track,
+                          color: DashboardColors.of(context).tone2,
                           child: Align(
                             alignment: AlignmentDirectional.centerStart,
                             child: FractionallySizedBox(

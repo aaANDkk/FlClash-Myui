@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/manager/android_manager.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/plugins/service.dart';
@@ -19,11 +21,18 @@ import '../helpers/test_profiles.dart';
 
 class _RecordingSetupAction extends SetupAction {
   static final requests = <bool>[];
+  static var nativeStops = 0;
 
   @override
   Future<bool> setRunning(bool running, {bool initialize = false}) async {
     requests.add(running);
     return true;
+  }
+
+  @override
+  void applyAndroidServiceStopped() {
+    nativeStops++;
+    super.applyAndroidServiceStopped();
   }
 }
 
@@ -37,6 +46,7 @@ void main() {
     await mockPreferences();
     store = await SharedPreferences.getInstance();
     _RecordingSetupAction.requests.clear();
+    _RecordingSetupAction.nativeStops = 0;
     container = ProviderContainer(
       overrides: [
         profilesProvider.overrideWith(TestProfiles.new),
@@ -85,9 +95,33 @@ void main() {
     listener.onServiceStopped();
     await tester.pump();
 
-    expect(_RecordingSetupAction.requests, [false]);
+    expect(_RecordingSetupAction.requests, isEmpty);
+    expect(_RecordingSetupAction.nativeStops, 1);
 
     await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('a start the service gave up says why it turned off', (
+    tester,
+  ) async {
+    loadAppLocalizations(const Locale('en'));
+    await pumpAndroidManager(tester);
+    final listener =
+        tester.state(find.byType(AndroidManager)) as ServiceListener;
+
+    listener.onServiceStopped(ServiceStartFailure.vpnPermission);
+    await tester.pump();
+    await tester.pump();
+
+    expect(_RecordingSetupAction.requests, isEmpty);
+    expect(_RecordingSetupAction.nativeStops, 1);
+    expect(
+      find.text(currentAppLocalizations.vpnPermissionNotGranted),
+      findsOneWidget,
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 10));
   });
 
   testWidgets('persists shared state after the debounce window', (

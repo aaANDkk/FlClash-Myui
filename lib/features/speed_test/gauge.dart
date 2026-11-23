@@ -308,7 +308,7 @@ class _SpeedTestGaugeState extends State<SpeedTestGauge>
                       fraction: fraction,
                       color: widget.color,
                       startColor: widget.otherColor,
-                      trackColor: DashboardColors.of(context).track,
+                      trackColor: DashboardColors.of(context).tone2,
                       needleColor: const Color(0xff8e8e93),
                       labelStyle: AppTextStyle.body
                           .of(context)

@@ -1,10 +1,12 @@
 import 'dart:io';
 
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/mitm_network.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/form/form.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/config.dart';
+import 'package:fl_clash/providers/mitm.dart';
 import 'package:fl_clash/views/config/override.dart';
 import 'package:fl_clash/views/config/tun.dart';
 import 'package:fl_clash/widgets/widgets.dart';
@@ -141,19 +143,6 @@ class Ipv6Item extends ConsumerWidget {
   }
 }
 
-class AutoSetSystemDnsItem extends ConsumerWidget {
-  const AutoSetSystemDnsItem({super.key});
-
-  @override
-  Widget build(BuildContext context, ref) {
-    return _networkToggle(
-      title: (l) => l.autoSetSystemDns,
-      select: (state) => state.autoSetSystemDns,
-      update: (state, value) => state.copyWith(autoSetSystemDns: value),
-    );
-  }
-}
-
 class DNSHijackingItem extends ConsumerWidget {
   const DNSHijackingItem({super.key});
 
@@ -240,9 +229,16 @@ class BypassDomainItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, ref) {
+    final module = ref
+        .watch(mitmTakeoverProvider)
+        .value
+        ?.keys[MitmNetworkKey.bypassDomain];
     return ConfigListEditItem(
       title: (l) => l.bypassDomain,
+      subtitle: module == null ? null : (l) => l.mitmChangeReplacedBy(module),
       itemMaxLength: TextInputLimits.domain,
+      itemSubtitle: (item, l) =>
+          item == windowsLocalBypass ? l.bypassLocalWindowsOnly : null,
       selector: networkSettingProvider.select((state) => state.bypassDomain),
       onChanged: _networkWriter(
         (state, value) => state.copyWith(bypassDomain: value),
@@ -265,6 +261,44 @@ class RouteAddressItem extends ConsumerWidget {
       ),
       onChanged: _tunWriter(
         (state, value) => state.copyWith.tun(routeAddress: value),
+      ),
+    );
+  }
+}
+
+class PacModeItem extends ConsumerWidget {
+  const PacModeItem({super.key});
+
+  @override
+  Widget build(BuildContext context, ref) {
+    return _networkToggle(
+      title: (l) => l.pacMode,
+      select: (state) => state.pacMode,
+      update: (state, value) => state.copyWith(pacMode: value),
+    );
+  }
+}
+
+class PacScriptItem extends ConsumerWidget {
+  const PacScriptItem({super.key});
+
+  @override
+  Widget build(BuildContext context, ref) {
+    final title = context.appLocalizations.pacScript;
+    return ListItem(
+      title: Text(title),
+      onTap: () => showQuickEdit(
+        context,
+        title: title,
+        content: ref.read(networkSettingProvider).pacScript,
+        language: Language.javaScript,
+        apply: (content) => ref
+            .read(networkSettingProvider.notifier)
+            .update(
+              (state) => state.copyWith(
+                pacScript: content.trim().isEmpty ? defaultPacScript : content,
+              ),
+            ),
       ),
     );
   }
@@ -454,12 +488,10 @@ List<Widget> outboundItems({required bool isDesktop, required bool isLinux}) {
 
 List<Widget> networkOptionsItems({
   required bool isDesktop,
-  required bool isMacOS,
   required bool isCustomInterfaceName,
 }) {
   return [
     if (isDesktop) const TUNItem(),
-    if (isMacOS) const AutoSetSystemDnsItem(),
     const TunStackItem(),
     // mihomo's DefaultSocketHook ignores interface-name on Android
     // (core/lib.go installHooks, vendored dialer.go), so these rows only
@@ -503,17 +535,21 @@ class VpnSections extends ConsumerWidget {
   }
 }
 
-class SystemProxySection extends StatelessWidget {
+class SystemProxySection extends ConsumerWidget {
   const SystemProxySection({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, ref) {
     final appLocalizations = context.appLocalizations;
+    final pacMode = ref.watch(
+      networkSettingProvider.select((state) => state.pacMode),
+    );
     return generateSection(
       title: appLocalizations.system,
       items: [
         const SystemProxyItem(),
-        const BypassDomainItem(),
+        const PacModeItem(),
+        if (pacMode) const PacScriptItem() else const BypassDomainItem(),
         if (system.isWindows) const LoopbackItem(),
       ],
     );
@@ -535,7 +571,6 @@ class NetworkOptionsSection extends ConsumerWidget {
       title: appLocalizations.options,
       items: networkOptionsItems(
         isDesktop: system.isDesktop,
-        isMacOS: system.isMacOS,
         isCustomInterfaceName: isCustomInterfaceName,
       ),
       footer: system.isDesktop ? appLocalizations.tunDesc : null,

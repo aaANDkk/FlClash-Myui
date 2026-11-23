@@ -112,6 +112,9 @@ mixin AlertMotionRouteMixin<T> on PopupRoute<T> {
 
   VoidCallback? get onBarrierDismiss => null;
 
+  /// Where the page grows from, given its size; its center when null.
+  AlertScaleOrigin? get scaleOrigin => null;
+
   @override
   Duration get transitionDuration => _alertDuration;
 
@@ -153,7 +156,11 @@ mixin AlertMotionRouteMixin<T> on PopupRoute<T> {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    return _AlertTransition(animation: _spring, child: child);
+    return _AlertTransition(
+      animation: _spring,
+      origin: scaleOrigin,
+      child: child,
+    );
   }
 
   @override
@@ -163,10 +170,17 @@ mixin AlertMotionRouteMixin<T> on PopupRoute<T> {
   }
 }
 
+typedef AlertScaleOrigin = Alignment Function(BuildContext context, Size size);
+
 class _AlertTransition extends StatefulWidget {
-  const _AlertTransition({required this.animation, required this.child});
+  const _AlertTransition({
+    required this.animation,
+    required this.origin,
+    required this.child,
+  });
 
   final Animation<double> animation;
+  final AlertScaleOrigin? origin;
   final Widget child;
 
   @override
@@ -205,15 +219,24 @@ class _AlertTransitionState extends State<_AlertTransition> {
     _heldScale = status == AnimationStatus.reverse ? _scale : null;
   }
 
+  Widget _scaled(Alignment alignment) => AnimatedBuilder(
+    animation: widget.animation,
+    builder: (_, child) =>
+        Transform.scale(scale: _scale, alignment: alignment, child: child),
+    child: widget.child,
+  );
+
   @override
   Widget build(BuildContext context) {
+    final origin = widget.origin;
     return LiquidGlassFade(
       opacity: widget.animation,
-      child: AnimatedBuilder(
-        animation: widget.animation,
-        builder: (_, child) => Transform.scale(scale: _scale, child: child),
-        child: widget.child,
-      ),
+      child: origin == null
+          ? _scaled(Alignment.center)
+          : LayoutBuilder(
+              builder: (context, constraints) =>
+                  _scaled(origin(context, constraints.biggest)),
+            ),
     );
   }
 }

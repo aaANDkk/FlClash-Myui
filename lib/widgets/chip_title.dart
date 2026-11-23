@@ -77,8 +77,7 @@ class ChipTitle extends StatelessWidget {
   final String? expireText;
   final TextStyle? style;
 
-  /// Whether [chip] uses the neutral tonal surface (an official count badge)
-  /// instead of the primary-tinted status pill.
+  /// Whether [chip] uses the neutral tonal surface. Profile status opts out.
   final bool chipTonal;
   final String? chipTooltip;
 
@@ -89,7 +88,7 @@ class ChipTitle extends StatelessWidget {
     this.expire,
     this.expireText,
     this.style,
-    this.chipTonal = false,
+    this.chipTonal = true,
     this.chipTooltip,
   });
 

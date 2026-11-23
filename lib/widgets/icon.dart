@@ -1,20 +1,36 @@
 import 'dart:async';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:fl_clash/common/cache.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/plugins/app.dart';
+import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/ui/ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/svg.dart';
 
 const _maxCachedIconBytes = 16 << 20;
+const _maxConcurrentIconDecodes = 4;
 
-// The precache and the widget must resolve equal providers to share one
-// ImageCache entry; 192 physical pixels cover a 48 dp icon box at 4x.
-const _iconDecodeExtent = 192;
+// The decode size is in dp and follows the pixel ratio an image resolves at,
+// so the precache resolves at the view's ratio to share the widget's
+// ImageCache entry.
+const _iconDecodeExtent = 48;
+
+double? _iconDevicePixelRatio() {
+  final dispatcher = ui.PlatformDispatcher.instance;
+  return dispatcher.implicitView?.devicePixelRatio ??
+      dispatcher.views.firstOrNull?.devicePixelRatio;
+}
+
+ImageConfiguration _iconImageConfiguration() {
+  return ImageConfiguration(devicePixelRatio: _iconDevicePixelRatio());
+}
 
 ImageProvider _iconImage(Uint8List bytes) {
   return ResizeImage(
@@ -22,14 +38,110 @@ ImageProvider _iconImage(Uint8List bytes) {
     width: _iconDecodeExtent,
     height: _iconDecodeExtent,
     policy: ResizeImagePolicy.fit,
+    useLogicalSize: true,
   );
+}
+
+@immutable
+class _SvgRasterKey {
+  const _SvgRasterKey(this.bytes, this.maxExtentPx, this.scale);
+
+  final Uint8List bytes;
+  final int maxExtentPx;
+  final double scale;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _SvgRasterKey &&
+      other.bytes == bytes &&
+      other.maxExtentPx == maxExtentPx &&
+      other.scale == scale;
+
+  @override
+  int get hashCode => Object.hash(bytes, maxExtentPx, scale);
+}
+
+/// Rasterizes an SVG icon once into Flutter's [ImageCache] so scrolled or
+/// newly mounted proxy icons paint synchronously on their first frame and
+/// share the same memory-pressure / prewarm lifecycle as raster icons.
+class _SvgRasterImageProvider extends ImageProvider<_SvgRasterKey> {
+  const _SvgRasterImageProvider(this.bytes);
+
+  final Uint8List bytes;
+
+  @override
+  Future<_SvgRasterKey> obtainKey(ImageConfiguration configuration) {
+    final scale = configuration.devicePixelRatio ?? 1.0;
+    return SynchronousFuture(
+      _SvgRasterKey(bytes, (_iconDecodeExtent * scale).ceil(), scale),
+    );
+  }
+
+  @override
+  ImageStreamCompleter loadImage(
+    _SvgRasterKey key,
+    ImageDecoderCallback decode,
+  ) {
+    return OneFrameImageStreamCompleter(
+      _loadAsync(key),
+      informationCollector: () => <DiagnosticsNode>[
+        DiagnosticsProperty<ImageProvider>('Image provider', this),
+        DiagnosticsProperty<_SvgRasterKey>('Image key', key),
+      ],
+    );
+  }
+
+  Future<ImageInfo> _loadAsync(_SvgRasterKey key) async {
+    try {
+      final pictureInfo = await vg.loadPicture(SvgBytesLoader(key.bytes), null);
+      ui.Picture? scaledPicture;
+      try {
+        final size = pictureInfo.size;
+        if (size.isEmpty || !size.width.isFinite || !size.height.isFinite) {
+          throw StateError('Invalid SVG size: $size');
+        }
+        final scaleFactor = math.min(
+          key.maxExtentPx / size.width,
+          key.maxExtentPx / size.height,
+        );
+        final width = math.max(1, (size.width * scaleFactor).round());
+        final height = math.max(1, (size.height * scaleFactor).round());
+        final recorder = ui.PictureRecorder();
+        final canvas = ui.Canvas(recorder);
+        canvas.scale(scaleFactor);
+        canvas.drawPicture(pictureInfo.picture);
+        scaledPicture = recorder.endRecording();
+        final image = await scaledPicture.toImage(width, height);
+        return ImageInfo(image: image, scale: key.scale);
+      } finally {
+        scaledPicture?.dispose();
+        pictureInfo.picture.dispose();
+      }
+    } catch (_) {
+      scheduleMicrotask(() {
+        PaintingBinding.instance.imageCache.evict(key);
+      });
+      rethrow;
+    }
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is _SvgRasterImageProvider && other.bytes == bytes;
+
+  @override
+  int get hashCode => bytes.hashCode;
+}
+
+ImageProvider _rasterIconImage(Uint8List bytes, {required bool isSvg}) {
+  return isSvg ? _SvgRasterImageProvider(bytes) : _iconImage(bytes);
 }
 
 class _IconBytesCache {
   _IconBytesCache(this.maxBytes);
 
   final int maxBytes;
-  final _entries = <String, Uint8List?>{};
+  final _entries = <String, ({Uint8List? bytes, DateTime? validTill})>{};
   var _bytes = 0;
 
   bool contains(String key) => _entries.containsKey(key);
@@ -38,16 +150,25 @@ class _IconBytesCache {
     if (!_entries.containsKey(key)) {
       return null;
     }
-    return _entries[key] = _entries.remove(key);
+    final entry = _entries.remove(key)!;
+    _entries[key] = entry;
+    return entry.bytes;
   }
 
-  void operator []=(String key, Uint8List? value) {
+  Uint8List? freshBytes(String key) {
+    final validTill = _entries[key]?.validTill;
+    return validTill != null && validTill.isAfter(DateTime.now())
+        ? this[key]
+        : null;
+  }
+
+  void put(String key, Uint8List? bytes, {DateTime? validTill}) {
     remove(key);
-    final size = value?.lengthInBytes ?? 0;
+    final size = bytes?.lengthInBytes ?? 0;
     if (size > maxBytes) {
       return;
     }
-    _entries[key] = value;
+    _entries[key] = (bytes: bytes, validTill: validTill);
     _bytes += size;
     while (_bytes > maxBytes) {
       remove(_entries.keys.first);
@@ -55,7 +176,7 @@ class _IconBytesCache {
   }
 
   void remove(String key) {
-    _bytes -= _entries.remove(key)?.lengthInBytes ?? 0;
+    _bytes -= _entries.remove(key)?.bytes?.lengthInBytes ?? 0;
   }
 
   Iterable<String> get keys => _entries.keys;
@@ -76,7 +197,9 @@ Uint8List? _decodeIcon(String src) {
   if (_decodedIcons.contains(src)) {
     return _decodedIcons[src];
   }
-  return _decodedIcons[src] = src.getBase64;
+  final bytes = src.getBase64;
+  _decodedIcons.put(src, bytes);
+  return bytes;
 }
 
 class CommonTargetIcon extends StatelessWidget {
@@ -85,7 +208,14 @@ class CommonTargetIcon extends StatelessWidget {
   /// Shown while [src] is empty, loading or unreadable.
   final Widget? fallback;
 
-  const CommonTargetIcon({super.key, required this.src, this.fallback});
+  final bool rasterizeSvg;
+
+  const CommonTargetIcon({
+    super.key,
+    required this.src,
+    this.fallback,
+    this.rasterizeSvg = false,
+  });
 
   Widget _defaultIcon() {
     return fallback ?? const _ImagePlaceholder();
@@ -103,6 +233,7 @@ class CommonTargetIcon extends StatelessWidget {
         isSvg: src.isSvg,
         fallback: _defaultIcon(),
         loadingWidget: fallback,
+        rasterizeSvg: rasterizeSvg,
       );
     }
 
@@ -110,6 +241,7 @@ class CommonTargetIcon extends StatelessWidget {
       src: src,
       defaultWidget: _defaultIcon(),
       loadingWidget: fallback,
+      rasterizeSvg: rasterizeSvg,
     );
   }
 
@@ -191,6 +323,7 @@ class _BytesImage extends StatefulWidget {
     required this.isSvg,
     required this.fallback,
     this.loadingWidget,
+    this.rasterizeSvg = false,
     this.onError,
   });
 
@@ -198,6 +331,7 @@ class _BytesImage extends StatefulWidget {
   final bool isSvg;
   final Widget fallback;
   final Widget? loadingWidget;
+  final bool rasterizeSvg;
   final VoidCallback? onError;
 
   @override
@@ -210,7 +344,10 @@ class _BytesImageState extends State<_BytesImage> {
   @override
   void didUpdateWidget(covariant _BytesImage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.isSvg != widget.isSvg) _hasRasterFrame = false;
+    if (oldWidget.isSvg != widget.isSvg ||
+        oldWidget.rasterizeSvg != widget.rasterizeSvg) {
+      _hasRasterFrame = false;
+    }
   }
 
   Widget _buildFallback() {
@@ -221,28 +358,42 @@ class _BytesImageState extends State<_BytesImage> {
   @override
   Widget build(BuildContext context) {
     final loading = widget.loadingWidget;
-    return widget.isSvg
-        ? SvgPicture.memory(
-            widget.bytes,
-            placeholderBuilder: loading == null ? null : (_) => loading,
-            errorBuilder: (_, _, _) => _buildFallback(),
-          )
-        : Image(
-            image: _iconImage(widget.bytes),
-            gaplessPlayback: true,
-            frameBuilder: (_, child, frame, wasSynchronouslyLoaded) {
-              _hasRasterFrame |= wasSynchronouslyLoaded || frame != null;
-              return _hasRasterFrame ? child : loading ?? child;
-            },
-            errorBuilder: (_, _, _) => _buildFallback(),
-          );
+    final size = IconTheme.of(context).size ?? 24;
+    if (widget.isSvg && !widget.rasterizeSvg) {
+      return SvgPicture.memory(
+        widget.bytes,
+        width: size,
+        height: size,
+        fit: BoxFit.scaleDown,
+        placeholderBuilder: loading == null ? null : (_) => loading,
+        errorBuilder: (_, _, _) => _buildFallback(),
+      );
+    }
+    return Image(
+      image: _rasterIconImage(widget.bytes, isSvg: widget.isSvg),
+      width: size,
+      height: size,
+      fit: BoxFit.scaleDown,
+      gaplessPlayback: true,
+      frameBuilder: (_, child, frame, wasSynchronouslyLoaded) {
+        _hasRasterFrame |= wasSynchronouslyLoaded || frame != null;
+        return _hasRasterFrame ? child : loading ?? child;
+      },
+      errorBuilder: (_, _, _) => _buildFallback(),
+    );
   }
 }
 
 final _defaultCacheManager = CacheManager(
   Config(
     DefaultCacheManager.key,
-    fileService: HttpFileService()..concurrentFetches = maxConcurrentIconLoads,
+    stalePeriod: const Duration(days: 90),
+    maxNrOfCacheObjects: 1000,
+    fileSystem: IconCacheFileSystem(
+      supportPath: () => appPath.homeDirPath,
+      temporaryPath: () => appPath.tempPath,
+    ),
+    fileService: IconFileService()..concurrentFetches = maxConcurrentIconLoads,
   ),
 );
 
@@ -251,6 +402,15 @@ CacheManager get _cacheManager => _cacheManagerOverride ?? _defaultCacheManager;
 final _iconCacheRevision = ValueNotifier(0);
 final _pendingIconReads = <Future<void>>{};
 Future<void>? _refreshingIcons;
+
+class _InFlightIconLoad {
+  _InFlightIconLoad() : controller = StreamController<Uint8List>.broadcast();
+
+  final StreamController<Uint8List> controller;
+  Uint8List? latest;
+}
+
+final _inFlightIconLoads = <String, _InFlightIconLoad>{};
 
 @visibleForTesting
 set targetIconCacheManager(CacheManager? value) {
@@ -276,11 +436,15 @@ Future<void> _refreshTargetIcons(
 }) async {
   await Future.wait(_pendingIconReads.toList());
   await _cacheManager.emptyCache();
+  final imageConfig = _iconImageConfiguration();
   for (final cache in [_remoteIcons, _decodedIcons]) {
     for (final src in cache.keys.toList()) {
       final bytes = cache[src];
-      if (bytes != null && !src.isSvg) {
-        await _iconImage(bytes).evict();
+      if (bytes != null) {
+        await _rasterIconImage(
+          bytes,
+          isSvg: src.isSvg,
+        ).evict(configuration: imageConfig);
       }
     }
     cache.clear();
@@ -305,22 +469,33 @@ Future<void> _refreshTargetIcons(
             'Pragma': 'no-cache',
           },
         );
-        _remoteIcons[url] = await file.file.readAsBytes();
+        _remoteIcons.put(
+          url,
+          await file.file.readAsBytes(),
+          validTill: file.validTill,
+        );
       }),
   ]);
 }
 
-Stream<Uint8List> _readCachedIcon(String src) {
+typedef _RemoteIconRead = ({Uint8List bytes, DateTime? validTill});
+
+Stream<_RemoteIconRead> _readCachedIcon(String src) {
   return _cacheManager
       .getFileStreamV2(src)
-      .asyncMap((data) => data.file.readAsBytes());
+      .asyncMap(
+        (data) async =>
+            (bytes: await data.file.readAsBytes(), validTill: data.validTill),
+      );
 }
 
 var _readRemoteIcon = _readCachedIcon;
 
 @visibleForTesting
 set readRemoteIcon(Stream<Uint8List> Function(String src)? value) {
-  _readRemoteIcon = value ?? _readCachedIcon;
+  _readRemoteIcon = value == null
+      ? _readCachedIcon
+      : (src) => value(src).map((bytes) => (bytes: bytes, validTill: null));
 }
 
 Stream<Uint8List> _loadRemoteIcon(String src) async* {
@@ -328,42 +503,71 @@ Stream<Uint8List> _loadRemoteIcon(String src) async* {
   if (refresh != null) {
     await refresh;
   }
+  if (_remoteIcons.freshBytes(src) case final bytes?) {
+    yield bytes;
+    return;
+  }
+  final existing = _inFlightIconLoads[src];
+  if (existing != null) {
+    if (existing.latest case final latest?) {
+      yield latest;
+    }
+    if (!existing.controller.isClosed) {
+      yield* existing.controller.stream;
+    }
+    return;
+  }
   final done = Completer<void>();
   _pendingIconReads.add(done.future);
-  final controller = StreamController<Uint8List>();
+  final load = _InFlightIconLoad();
+  _inFlightIconLoads[src] = load;
   // Let an in-flight download finish even if its widget leaves the page,
   // so a cache reset cannot race an older download writing the file back.
   try {
     _readRemoteIcon(src).listen(
-      (bytes) {
+      (read) {
         final current = _remoteIcons[src];
-        controller.add(
-          _remoteIcons[src] = current != null && listEquals(current, bytes)
-              ? current
-              : bytes,
-        );
+        final bytes = current != null && listEquals(current, read.bytes)
+            ? current
+            : read.bytes;
+        _remoteIcons.put(src, bytes, validTill: read.validTill);
+        load.latest = bytes;
+        load.controller.add(bytes);
       },
-      onError: controller.addError,
+      onError: load.controller.addError,
       onDone: () {
+        _inFlightIconLoads.remove(src);
         _pendingIconReads.remove(done.future);
         done.complete();
-        unawaited(controller.close());
+        unawaited(load.controller.close());
       },
     );
   } catch (error, stack) {
+    _inFlightIconLoads.remove(src);
     _pendingIconReads.remove(done.future);
     done.complete();
-    controller.addError(error, stack);
-    unawaited(controller.close());
+    unawaited(load.controller.close());
+    Error.throwWithStackTrace(error, stack);
   }
-  yield* controller.stream;
+  if (load.latest case final latest?) {
+    yield latest;
+  }
+  if (!load.controller.isClosed) {
+    yield* load.controller.stream;
+  }
 }
 
-Future<void> _decodeAhead(Uint8List bytes) {
+Future<void> _decodeAhead(Uint8List bytes, {required bool isSvg}) {
   final completer = Completer<void>();
-  final stream = _iconImage(bytes).resolve(ImageConfiguration.empty);
+  final stream = _rasterIconImage(
+    bytes,
+    isSvg: isSvg,
+  ).resolve(_iconImageConfiguration());
   late final ImageStreamListener listener;
   void finish() {
+    if (completer.isCompleted) {
+      return;
+    }
     stream.removeListener(listener);
     completer.complete();
   }
@@ -377,38 +581,51 @@ Future<void> _decodeAhead(Uint8List bytes) {
 }
 
 Future<void> precacheTargetIcons(Iterable<String> srcs) async {
-  final pending = srcs
-      .toSet()
-      .where(
-        (src) =>
-            src.isNotEmpty &&
-            !src.contains('base64,') &&
-            !_remoteIcons.contains(src),
-      )
-      .map((src) async {
+  final unique = <String>{
+    for (final src in srcs)
+      if (src.isNotEmpty) src,
+  };
+  if (unique.isEmpty) {
+    return;
+  }
+  final pool = TaskPool(_maxConcurrentIconDecodes);
+  await Future.wait([
+    for (final src in unique)
+      pool.run(() async {
         try {
-          await for (final bytes in _loadRemoteIcon(src)) {
-            if (!src.isSvg) {
-              await _decodeAhead(bytes);
+          if (src.contains('base64,')) {
+            final bytes = _decodeIcon(src);
+            if (bytes != null) {
+              await _decodeAhead(bytes, isSvg: src.isSvg);
             }
+            return;
+          }
+          if (_remoteIcons[src] case final cached?) {
+            await _decodeAhead(cached, isSvg: src.isSvg);
+            return;
+          }
+          await for (final bytes in _loadRemoteIcon(src)) {
+            await _decodeAhead(bytes, isSvg: src.isSvg);
           }
         } catch (error) {
           commonPrint.log('Failed to precache icon $src: $error');
         }
-      });
-  await Future.wait(pending);
+      }),
+  ]);
 }
 
 class ImageCacheWidget extends StatefulWidget {
   final String src;
   final Widget defaultWidget;
   final Widget? loadingWidget;
+  final bool rasterizeSvg;
 
   const ImageCacheWidget({
     super.key,
     required this.src,
     required this.defaultWidget,
     this.loadingWidget,
+    this.rasterizeSvg = false,
   });
 
   @override
@@ -494,6 +711,7 @@ class _ImageCacheWidgetState extends State<ImageCacheWidget> {
           isSvg: widget.src.isSvg,
           fallback: widget.defaultWidget,
           loadingWidget: widget.loadingWidget,
+          rasterizeSvg: widget.rasterizeSvg,
           onError: () => _remoteIcons.remove(widget.src),
         );
       },
@@ -511,57 +729,131 @@ class PackageIcon extends StatefulWidget {
   State<PackageIcon> createState() => _PackageIconState();
 }
 
-class _PackageIconState extends State<PackageIcon> {
-  ImageProvider? _icon;
-  int _generation = 0;
+class _PackageIconState extends State<PackageIcon>
+    with _PackageIconLoader<PackageIcon> {
+  @override
+  String packageNameOf(PackageIcon widget) => widget.packageName;
+
+  @override
+  (ImageProvider?, Future<ImageProvider?>?) lookUp(String packageName) => (
+    app?.getCachedPackageIcon(packageName),
+    app?.getPackageIcon(packageName),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = this.icon;
+    if (icon == null) {
+      return SizedBox(width: widget.size, height: widget.size);
+    }
+    return packageIconImage(icon, widget.size);
+  }
+}
+
+/// Shows a package's cached icon at once and the one [lookUp] loads once it
+/// lands, unless the widget has moved to another package by then.
+mixin _PackageIconLoader<T extends StatefulWidget> on State<T> {
+  ImageProvider? icon;
+  var _generation = 0;
+
+  String packageNameOf(T widget);
+
+  (ImageProvider?, Future<ImageProvider?>?) lookUp(String packageName);
 
   @override
   void initState() {
     super.initState();
-    _showCachedIcon();
-    _loadIcon();
+    _resolve();
   }
 
   @override
-  void didUpdateWidget(covariant PackageIcon oldWidget) {
+  void didUpdateWidget(covariant T oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.packageName != widget.packageName) {
-      _showCachedIcon();
-      _loadIcon();
+    if (packageNameOf(oldWidget) != packageNameOf(widget)) {
+      _resolve();
     }
   }
 
-  void _showCachedIcon() {
-    _generation++;
-    _icon = app?.getCachedPackageIcon(widget.packageName);
+  void _resolve() {
+    final generation = ++_generation;
+    final (cached, load) = lookUp(packageNameOf(widget));
+    icon = cached;
+    load?.then((loaded) {
+      if (mounted && generation == _generation) {
+        onLoaded(loaded);
+      }
+    });
   }
 
-  void _loadIcon() {
-    final generation = _generation;
-    app?.getPackageIcon(widget.packageName).then((icon) {
-      if (!mounted ||
-          generation != _generation ||
-          icon == null ||
-          icon == _icon) {
-        return;
-      }
+  void onLoaded(ImageProvider? loaded) {
+    if (loaded != null && loaded != icon) {
       setState(() {
-        _icon = icon;
+        icon = loaded;
       });
+    }
+  }
+}
+
+Widget packageIconImage(ImageProvider icon, double size) =>
+    Image(image: icon, gaplessPlayback: true, width: size, height: size);
+
+/// Null only where the app is known to have no icon; else holds the icon room.
+class OwnPackageIcon extends ConsumerStatefulWidget {
+  final String packageName;
+  final double size;
+  final Widget Function(BuildContext context, Widget? icon) builder;
+
+  const OwnPackageIcon({
+    super.key,
+    required this.packageName,
+    required this.size,
+    required this.builder,
+  });
+
+  @override
+  ConsumerState<OwnPackageIcon> createState() => _OwnPackageIconState();
+}
+
+class _OwnPackageIconState extends ConsumerState<OwnPackageIcon>
+    with _PackageIconLoader<OwnPackageIcon> {
+  var _holdsRoom = false;
+  ImageProvider? _fallback;
+
+  @override
+  String packageNameOf(OwnPackageIcon widget) => widget.packageName;
+
+  @override
+  (ImageProvider?, Future<ImageProvider?>?) lookUp(String packageName) {
+    final source = ref.read(packageIconSourceProvider);
+    final cached = source?.getCachedOwnPackageIcon(packageName);
+    final load = cached == null ? source?.getOwnPackageIcon(packageName) : null;
+    _holdsRoom = load != null;
+    _fallback = null;
+    return (cached?.icon, load);
+  }
+
+  @override
+  void onLoaded(ImageProvider? loaded) {
+    if (loaded != null) {
+      super.onLoaded(loaded);
+      return;
+    }
+    setState(() {
+      _fallback = ref.read(packageIconSourceProvider)?.getCachedPackageIcon('');
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final icon = _icon;
-    if (icon == null) {
-      return SizedBox(width: widget.size, height: widget.size);
-    }
-    return Image(
-      image: icon,
-      gaplessPlayback: true,
-      width: widget.size,
-      height: widget.size,
+    final size = widget.size;
+    final shown = icon ?? _fallback;
+    return widget.builder(
+      context,
+      shown != null
+          ? packageIconImage(shown, size)
+          : _holdsRoom
+          ? SizedBox.square(dimension: size)
+          : null,
     );
   }
 }

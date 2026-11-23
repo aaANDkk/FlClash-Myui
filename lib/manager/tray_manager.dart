@@ -10,7 +10,7 @@ import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/providers/state.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:tray/tray.dart';
+import 'package:rust_api/tray.dart';
 
 class TrayManager extends ConsumerStatefulWidget {
   final Widget child;
@@ -104,8 +104,6 @@ class _TrayManagerState extends ConsumerState<TrayManager> {
 
   void _handleTrayEvent(TrayEvent event) {
     switch (event) {
-      case TrayThemeChanged():
-        _requestUpdate();
       case TrayIconActivated():
         window?.show();
       case TrayMenuRequested():

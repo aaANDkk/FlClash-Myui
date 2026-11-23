@@ -87,14 +87,15 @@ class FloatingHeader extends StatelessWidget {
 
   Gradient _scrimOf(double height) {
     final start = (height - overhang) * fadeStart / height;
+    final baseAlpha = backgroundColor.a * _alpha;
     final stops = <double>[0];
-    final colors = <Color>[backgroundColor.withValues(alpha: _alpha)];
+    final colors = <Color>[backgroundColor.withValues(alpha: baseAlpha)];
     for (var i = 0; i <= _fadeSteps; i++) {
       final t = i / _fadeSteps;
       stops.add(start + (1 - start) * t);
       colors.add(
         backgroundColor.withValues(
-          alpha: _alpha * (1 - Curves.easeInOut.transform(t)),
+          alpha: baseAlpha * (1 - Curves.easeInOut.transform(t)),
         ),
       );
     }
@@ -117,10 +118,12 @@ class FloatingHeader extends StatelessWidget {
           right: 0,
           bottom: -overhang,
           child: IgnorePointer(
-            child: LayoutBuilder(
-              builder: (_, constraints) => DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: _scrimOf(constraints.maxHeight),
+            child: RepaintBoundary(
+              child: LayoutBuilder(
+                builder: (_, constraints) => DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: _scrimOf(constraints.maxHeight),
+                  ),
                 ),
               ),
             ),
@@ -152,9 +155,11 @@ class FloatingHeaderBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        ScrollConfiguration(
-          behavior: const ShowBarScrollBehavior(),
-          child: body,
+        RepaintBoundary(
+          child: ScrollConfiguration(
+            behavior: const ShowBarScrollBehavior(),
+            child: body,
+          ),
         ),
         Positioned(
           top: 0,

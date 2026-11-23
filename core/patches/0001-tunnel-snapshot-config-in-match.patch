@@ -1,0 +1,85 @@
+diff --git a/tunnel/tunnel.go b/tunnel/tunnel.go
+index e301c2a..0000000 100644
+--- a/tunnel/tunnel.go
++++ b/tunnel/tunnel.go
+@@ -316,9 +316,13 @@ func preHandleMetadata(metadata *C.Metadata) error {
+ }
+ 
+ func resolveMetadata(metadata *C.Metadata) (proxy C.Proxy, rule C.Rule, err error) {
++	configMux.RLock()
++	currentProxies := proxies
++	configMux.RUnlock()
++
+ 	if metadata.SpecialProxy != "" {
+ 		var exist bool
+-		proxy, exist = proxies[metadata.SpecialProxy]
++		proxy, exist = currentProxies[metadata.SpecialProxy]
+ 		if !exist {
+ 			err = fmt.Errorf("proxy %s not found", metadata.SpecialProxy)
+ 		}
+@@ -378,7 +382,7 @@ func resolveMetadata(metadata *C.Metadata) (proxy C.Proxy, rule C.Rule, err erro
+ 			}
+ 		},
+ 		CheckPassRule: func(adapterName string) bool {
+-			adapter, ok := proxies[adapterName]
++			adapter, ok := currentProxies[adapterName]
+ 			if !ok {
+ 				return false
+ 			}
+@@ -401,9 +405,9 @@ func resolveMetadata(metadata *C.Metadata) (proxy C.Proxy, rule C.Rule, err erro
+ 
+ 	switch mode {
+ 	case Direct:
+-		proxy = proxies["DIRECT"]
++		proxy = currentProxies["DIRECT"]
+ 	case Global:
+-		proxy = proxies["GLOBAL"]
++		proxy = currentProxies["GLOBAL"]
+ 	// Rule
+ 	default:
+ 		proxy, rule, err = match(metadata, helper)
+@@ -654,16 +658,19 @@ func logMetadata(metadata *C.Metadata, rule C.Rule, remoteConn C.Connection) {
+ 
+ func match(metadata *C.Metadata, helper C.RuleMatchHelper) (C.Proxy, C.Rule, error) {
+ 	configMux.RLock()
+-	defer configMux.RUnlock()
++	currentRules := rules
++	currentSubRules := subRules
++	currentProxies := proxies
++	configMux.RUnlock()
+ 
+ 	var rematchChain []string
+ 	for {
+ 		var rematchProxy C.Proxy
+ 		var rematchRule C.Rule
+ 	GetRules:
+-		for _, rule := range getRules(metadata) {
++		for _, rule := range getRules(metadata, currentRules, currentSubRules) {
+ 			if matched, ada := rule.Match(metadata, helper); matched {
+-				adapter, ok := proxies[ada]
++				adapter, ok := currentProxies[ada]
+ 				if !ok {
+ 					continue
+ 				}
+@@ -707,17 +714,17 @@ func match(metadata *C.Metadata, helper C.RuleMatchHelper) (C.Proxy, C.Rule, err
+ 			log.Debugln("[Rule] rematch proxy %s update metadata to rematch-name=%q sub-rule=%q", rematchProxy.Name(), metadata.InName, metadata.SpecialRules)
+ 			continue
+ 		}
+-		return proxies["DIRECT"], nil, nil
++		return currentProxies["DIRECT"], nil, nil
+ 	}
+ }
+ 
+-func getRules(metadata *C.Metadata) []C.Rule {
+-	if sr, ok := subRules[metadata.SpecialRules]; ok {
++func getRules(metadata *C.Metadata, currentRules []C.Rule, currentSubRules map[string][]C.Rule) []C.Rule {
++	if sr, ok := currentSubRules[metadata.SpecialRules]; ok {
+ 		log.Debugln("[Rule] use %s rules", metadata.SpecialRules)
+ 		return sr
+ 	} else {
+ 		log.Debugln("[Rule] use default rules")
+-		return rules
++		return currentRules
+ 	}
+ }
+ 

@@ -55,7 +55,7 @@ func newTrafficInfo(host, process string, chain []string, up, down int64) *stati
 
 func TestTrafficStatsDefaultsOffWithMonthLimit(t *testing.T) {
 	options := defaultTrafficStatsOptions()
-	if options.Enable || options.RetentionDays != 30 {
+	if options.Enable || options.RetentionMonths != trafficDefaultRetentionMonths {
 		t.Fatalf("unexpected defaults: %+v", options)
 	}
 	collector := newTrafficCollector()
@@ -65,9 +65,9 @@ func TestTrafficStatsDefaultsOffWithMonthLimit(t *testing.T) {
 		t.Fatal("collector should stay idle while disabled")
 	}
 	options.Enable = true
-	options.RetentionDays = 400
+	options.RetentionMonths = 400
 	collector.configure(options, "")
-	if !collector.enabled.Load() || collector.options.RetentionDays != trafficMaxRetention {
+	if !collector.enabled.Load() || collector.options.RetentionMonths != trafficDefaultRetentionMonths {
 		t.Fatalf("unexpected enabled state: %+v", collector.options)
 	}
 	if collector.timer != nil {
@@ -188,31 +188,50 @@ func TestTrafficStatsSplitsDaysByTimezoneAndFlushes(t *testing.T) {
 }
 
 func TestTrafficStatsStoreRoundTripAndPruning(t *testing.T) {
-	useTrafficNow(t, time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC))
-	collector := newTestTrafficCollector(t, 0)
-	options := enabledTrafficOptions(0)
-	options.RetentionDays = 2
-	collector.configure(options, "")
+	// It is April 1 locally and March 31 in UTC. The cutoff should use the local month.
+	useTrafficNow(t, time.Date(2026, 3, 31, 16, 0, 0, 0, time.UTC))
+	cases := []struct {
+		months   int
+		expired  string
+		retained string
+	}{
+		{3, "2025-12-31", "2026-01-01"},
+		{6, "2025-09-30", "2025-10-01"},
+		{12, "2025-03-31", "2025-04-01"},
+	}
+	for _, tc := range cases {
+		t.Run(fmt.Sprint(tc.months), func(t *testing.T) {
+			collector := newTestTrafficCollector(t, 480)
+			options := enabledTrafficOptions(480)
+			options.RetentionMonths = tc.months
+			collector.configure(options, "")
 
-	for _, day := range []string{"2026-10-20", "2026-10-23", "2026-10-24"} {
-		data, err := encodeTrafficStore(&trafficDay{Total: trafficPair{1, 2}})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := writeTrafficStoreBytes(filepath.Join(collector.dir, day+trafficStatsExt), data); err != nil {
-			t.Fatal(err)
-		}
-	}
-	collector.flush()
-	if _, err := os.Stat(filepath.Join(collector.dir, "2026-10-20.dat")); !os.IsNotExist(err) {
-		t.Fatalf("expired day should be removed: err=%v", err)
-	}
-	if _, err := os.Stat(filepath.Join(collector.dir, "2026-10-23.dat")); err != nil {
-		t.Fatalf("retained day missing: %v", err)
-	}
-	raw, err := os.ReadFile(filepath.Join(collector.dir, "2026-10-24.dat"))
-	if err != nil || bytes.Contains(raw, []byte("example.com")) {
-		t.Fatalf("store should be obfuscated: err=%v", err)
+			const today = "2026-04-01"
+			for _, day := range []string{tc.expired, tc.retained, today} {
+				data, err := encodeTrafficStore(&trafficDay{
+					Total: trafficPair{1, 2},
+					Hosts: map[string]*trafficEntry{"example.com": {Traffic: trafficPair{1, 2}}},
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := writeTrafficStoreBytes(filepath.Join(collector.dir, day+trafficStatsExt), data); err != nil {
+					t.Fatal(err)
+				}
+			}
+			collector.flush()
+			if _, err := os.Stat(filepath.Join(collector.dir, tc.expired+trafficStatsExt)); !os.IsNotExist(err) {
+				t.Fatalf("expired day should be removed: err=%v", err)
+			}
+			result := collector.query(TrafficStatsQuery{Start: tc.expired, End: today})
+			if result.Since != tc.retained || result.Up != 2 || result.Down != 4 {
+				t.Fatalf("retained days should survive: since=%s, total=%d/%d", result.Since, result.Up, result.Down)
+			}
+			raw, err := os.ReadFile(filepath.Join(collector.dir, today+trafficStatsExt))
+			if err != nil || bytes.Contains(raw, []byte("example.com")) {
+				t.Fatalf("store should be obfuscated: err=%v", err)
+			}
+		})
 	}
 }
 

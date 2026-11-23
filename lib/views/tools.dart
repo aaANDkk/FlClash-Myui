@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/l10n/l10n.dart';
@@ -10,8 +12,11 @@ import 'package:fl_clash/views/backup_and_restore.dart';
 import 'package:fl_clash/views/config/general.dart';
 import 'package:fl_clash/views/hotkey.dart';
 import 'package:fl_clash/widgets/widgets.dart';
+import 'package:fl_clash/features/about/miuix_bg_effect.dart';
+import 'package:fl_clash/features/ip_quality/ip_lookup_view.dart';
 import 'package:fl_clash/features/speed_test/view.dart';
 import 'package:fl_clash/features/traffic_stats/view.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -28,6 +33,29 @@ class ToolsView extends ConsumerStatefulWidget {
 }
 
 class _ToolViewState extends ConsumerState<ToolsView> {
+  late final ScrollController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = sheetScrollController(context);
+    unawaited(_warmUpAboutShaders());
+  }
+
+  Future<void> _warmUpAboutShaders() async {
+    await SchedulerBinding.instance.endOfFrame;
+    await whenNothingAnimates();
+    if (mounted) {
+      await MiuixBgEffectController.warmUp();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   Widget _buildNavigationMenuItem(NavigationItem navigationItem) {
     return ListItem.open(
       leading: GlyphIcon(navigationItem.glyph),
@@ -73,13 +101,18 @@ class _ToolViewState extends ConsumerState<ToolsView> {
         builder: (_, ref, _) {
           final state = ref.watch(moreToolsSelectorStateProvider);
           final navigation = state.navigationItems;
+          final dns = navigation.indexWhere(
+            (item) => item.label == PageLabel.dns,
+          );
           final resources = navigation.indexWhere(
             (item) => item.label == PageLabel.resources,
           );
           final logs = navigation.indexWhere(
             (item) => item.label == PageLabel.logs,
           );
-          final speedTestIndex = resources >= 0
+          final customToolsIndex = dns >= 0
+              ? dns + 1
+              : resources >= 0
               ? resources
               : logs >= 0
               ? logs
@@ -87,17 +120,23 @@ class _ToolViewState extends ConsumerState<ToolsView> {
           return generateSection(
             items: [
               for (var index = 0; index <= navigation.length; index++) ...[
-                if (index == speedTestIndex) ...[
+                if (index == customToolsIndex) ...[
                   ListItem.open(
-                    leading: const GlyphIcon(AppGlyphs.speed),
-                    title: Text(context.appLocalizations.speedTest),
-                    widget: const SpeedTestView(),
+                    leading: const GlyphIcon(AppGlyphs.location),
+                    title: Text(context.appLocalizations.ipQuery),
+                    widget: const IpLookupView(),
                     forceFull: true,
                   ),
                   ListItem.open(
                     leading: const GlyphIcon(AppGlyphs.dataUsage),
                     title: Text(context.appLocalizations.trafficStats),
                     widget: const TrafficStatsView(),
+                    forceFull: true,
+                  ),
+                  ListItem.open(
+                    leading: const GlyphIcon(AppGlyphs.speed),
+                    title: Text(context.appLocalizations.speedTest),
+                    widget: const SpeedTestView(),
                     forceFull: true,
                   ),
                 ],
@@ -116,6 +155,7 @@ class _ToolViewState extends ConsumerState<ToolsView> {
       body: Builder(
         builder: (context) => CustomScrollView(
           key: toolsStoreKey,
+          controller: _controller,
           slivers: [
             SliverPadding(
               padding: EdgeInsets.only(
@@ -151,14 +191,18 @@ class _LocaleItem extends ConsumerWidget {
     return ListItem<Locale?>.options(
       leading: const GlyphIcon(AppGlyphs.language),
       title: Text(context.appLocalizations.language),
-      options: [null, ...AppLocalizations.delegate.supportedLocales],
+      options: [null, ...AppLocalizations.supportedLocales],
       onChanged: (Locale? locale) {
         ref
             .read(appSettingProvider.notifier)
             .update((state) => state.copyWith(locale: locale?.toString()));
       },
       textBuilder: (locale) => _getLocaleString(context, locale),
-      value: currentLocale,
+      value: currentLocale == null
+          ? null
+          : basicLocaleListResolution([
+              currentLocale,
+            ], AppLocalizations.supportedLocales),
     );
   }
 }

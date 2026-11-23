@@ -2,12 +2,10 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:fl_clash/common/common.dart';
-import 'package:fl_clash/core/core.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/widgets.dart';
 
@@ -15,7 +13,6 @@ import 'edit.dart';
 import 'layout.dart';
 import 'style.dart';
 import 'widget_registry.dart';
-import 'widgets/core_status_button.dart';
 import 'widgets/widgets.dart';
 
 // Narrower columns leave a pair of service cells too tight for a status, so
@@ -37,13 +34,21 @@ class DashboardView extends ConsumerStatefulWidget {
 class _DashboardViewState extends ConsumerState<DashboardView> {
   var _editing = false;
   final _cardKeys = <DashboardWidget, GlobalKey>{};
+  late final ScrollController _controller;
 
   @override
   void initState() {
     super.initState();
+    _controller = sheetScrollController(context);
     if (system.isDesktop) {
       unawaited(ref.read(wakelockProvider.notifier).restore());
     }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   void _setEditing(bool editing) {
@@ -65,8 +70,6 @@ class _DashboardViewState extends ConsumerState<DashboardView> {
       _editing = false;
     }
     final editing = _editing;
-    final showUpdateStatus =
-        !editable && ref.watch(updateDownloadStateProvider) != null;
     final gap = cardSpacingOf(context, ref.watch(viewModeProvider));
     final appLocalizations = context.appLocalizations;
     return Scaffold(
@@ -75,8 +78,24 @@ class _DashboardViewState extends ConsumerState<DashboardView> {
           ? appLocalizations.editDashboard
           : appLocalizations.dashboard,
       actions: [
-        if (showUpdateStatus) const UpdateStatusButton(),
-        if (!editing && coreLib == null) const CoreStatusButton(),
+        if (!editing) const LiveStatusButton(),
+        if (editable && !editing)
+          AppBarActionButton(
+            data: IconButtonData(
+              glyph: AppGlyphs.edit,
+              tooltip: appLocalizations.editDashboard,
+              onPressed: () => _setEditing(true),
+            ),
+          ),
+        if (desktopPlatforms.contains(platform) && !editing)
+          AppBarActionButton(
+            data: IconButtonData(
+              glyph: AppGlyphs.sun,
+              tooltip: appLocalizations.wakelock,
+              isSelected: ref.watch(wakelockProvider),
+              onPressed: () => ref.read(wakelockProvider.notifier).toggle(),
+            ),
+          ),
       ],
       confirmationAction: editing
           ? IconButtonData(
@@ -85,21 +104,6 @@ class _DashboardViewState extends ConsumerState<DashboardView> {
               onPressed: () => _setEditing(false),
             )
           : null,
-      iconActions: [
-        if (editable && !editing)
-          IconButtonData(
-            glyph: AppGlyphs.edit,
-            tooltip: appLocalizations.editDashboard,
-            onPressed: () => _setEditing(true),
-          ),
-        if (desktopPlatforms.contains(platform) && !editing)
-          IconButtonData(
-            glyph: AppGlyphs.sun,
-            tooltip: appLocalizations.wakelock,
-            isSelected: ref.watch(wakelockProvider),
-            onPressed: () => ref.read(wakelockProvider.notifier).toggle(),
-          ),
-      ],
       // The providers learn a resize a frame late, too late for the cards.
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -109,12 +113,15 @@ class _DashboardViewState extends ConsumerState<DashboardView> {
             density: layout,
             scale: scale,
             child: layout.isDesktop
-                ? _DesktopDashboard(
-                    platform: platform,
-                    columns: dashboardColumnsOf(room.width),
-                    gap: gap,
+                ? _DesktopDashboardSnapshot(
+                    child: _DesktopDashboard(
+                      platform: platform,
+                      columns: dashboardColumnsOf(room.width),
+                      gap: gap,
+                    ),
                   )
                 : _MobileDashboard(
+                    controller: _controller,
                     platform: platform,
                     gap: gap,
                     editing: editing,
@@ -124,6 +131,75 @@ class _DashboardViewState extends ConsumerState<DashboardView> {
           );
         },
       ),
+    );
+  }
+}
+
+/// Freezes the multi-card desktop dashboard into a single GPU texture while a
+/// covering side sheet slides in or out, avoiding per-frame re-rasterization of
+/// shadowed cards and live updates underneath the modal barrier.
+class _DesktopDashboardSnapshot extends StatefulWidget {
+  const _DesktopDashboardSnapshot({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_DesktopDashboardSnapshot> createState() =>
+      _DesktopDashboardSnapshotState();
+}
+
+class _DesktopDashboardSnapshotState extends State<_DesktopDashboardSnapshot> {
+  final _snapshot = SnapshotController();
+  Animation<double>? _cover;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final cover = sheetCoverOf(context);
+    if (identical(cover, _cover)) {
+      return;
+    }
+    _detachCover();
+    _cover = cover
+      ..addListener(_syncSnapshot)
+      ..addStatusListener(_handleStatus);
+    _syncSnapshot();
+  }
+
+  void _detachCover() {
+    _cover?.removeListener(_syncSnapshot);
+    _cover?.removeStatusListener(_handleStatus);
+    _cover = null;
+  }
+
+  void _handleStatus(AnimationStatus status) {
+    _syncSnapshot();
+  }
+
+  void _syncSnapshot() {
+    final cover = _cover;
+    final active =
+        cover != null &&
+        (cover.isAnimating || (cover.value > 0.0 && cover.value < 1.0));
+    if (_snapshot.allowSnapshotting != active) {
+      _snapshot.allowSnapshotting = active;
+    }
+  }
+
+  @override
+  void dispose() {
+    _detachCover();
+    _snapshot.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SnapshotWidget(
+      controller: _snapshot,
+      mode: SnapshotMode.permissive,
+      autoresize: true,
+      child: widget.child,
     );
   }
 }
@@ -320,6 +396,7 @@ class _DesktopDashboard extends StatelessWidget {
 
 class _MobileDashboard extends ConsumerWidget {
   const _MobileDashboard({
+    required this.controller,
     required this.platform,
     required this.gap,
     required this.editing,
@@ -327,6 +404,7 @@ class _MobileDashboard extends ConsumerWidget {
     required this.onDone,
   });
 
+  final ScrollController controller;
   final SupportPlatform platform;
   final double gap;
   final bool editing;
@@ -341,6 +419,7 @@ class _MobileDashboard extends ConsumerWidget {
     final top = context.contentTopPadding;
     final bottom = 16 + context.bottomInset;
     return CustomScrollView(
+      controller: controller,
       // A viewport per card lays them all out and holds the scroll end still.
       scrollCacheExtent: editing
           ? ScrollCacheExtent.viewport(DashboardWidget.values.length.toDouble())
@@ -370,18 +449,13 @@ class _MobileDashboard extends ConsumerWidget {
               sliver: SliverToBoxAdapter(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
+                  spacing: gap,
                   children: [
-                    UpdateStatusSlot(gap: gap),
-                    Column(
-                      spacing: gap,
-                      children: [
-                        for (final widget in widgets)
-                          RepaintBoundary(
-                            key: cardKeyOf(widget),
-                            child: widget.card,
-                          ),
-                      ],
-                    ),
+                    for (final widget in widgets)
+                      RepaintBoundary(
+                        key: cardKeyOf(widget),
+                        child: widget.card,
+                      ),
                   ],
                 ),
               ),

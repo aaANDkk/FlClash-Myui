@@ -1162,6 +1162,71 @@ void main() {
     return picked;
   }
 
+  Future<List<String>> pumpSheetPageMenu(WidgetTester tester) async {
+    final picked = <String>[];
+    await tester.pumpWidget(
+      TestApp(
+        homeBuilder: (child) => HostScaffold(body: child),
+        child: Padding(
+          padding: const EdgeInsets.only(left: 60, top: 300),
+          child: SheetPagesNavigator(
+            onGenerateInitialRoutes: (_, _) => [
+              PageRouteBuilder<void>(
+                pageBuilder: (_, _, _) => Align(
+                  alignment: Alignment.topLeft,
+                  child: PopupAnchor(
+                    targetBuilder: (open) =>
+                        TextButton(onPressed: open, child: const Text('menu')),
+                    popupBuilder: (_) => PopupMenu(
+                      items: [
+                        for (final label in ['one', 'two', 'three'])
+                          PopupMenuItem(
+                            label: label,
+                            onPressed: () => picked.add(label),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    return picked;
+  }
+
+  testWidgets('a menu over a sheet page opens at its button', (tester) async {
+    await pumpSheetPageMenu(tester);
+    final button = tester.getRect(find.text('menu'));
+
+    await tester.tap(find.text('menu'));
+    await tester.pumpAndSettle();
+
+    final menu = tester.getRect(find.byType(PopupMenu));
+    expect(menu.left, lessThan(button.right));
+    expect(menu.right, greaterThan(button.left));
+    expect((menu.center.dy - button.center.dy).abs(), lessThan(120));
+  });
+
+  testWidgets('a press on a sheet page button slides on into its menu', (
+    tester,
+  ) async {
+    final picked = await pumpSheetPageMenu(tester);
+
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.text('menu')),
+    );
+    await tester.pumpAndSettle();
+    await gesture.moveTo(tester.getCenter(find.text('two')));
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(picked, ['two']);
+  });
+
   testWidgets('a press on the button opens its menu to slide on into', (
     tester,
   ) async {

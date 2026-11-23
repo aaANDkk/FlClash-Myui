@@ -3,11 +3,12 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:fl_clash/common/app_localizations.dart';
+import 'package:fl_clash/common/exception.dart';
 import 'package:fl_clash/common/l10n_labels.dart';
 import 'package:fl_clash/common/request.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/form/form.dart';
-import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/pages/editor.dart';
 import 'package:fl_clash/providers/providers.dart';
@@ -16,7 +17,7 @@ import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/about.dart';
 import 'package:fl_clash/views/config/rules.dart';
 import 'package:fl_clash/views/config/scripts.dart';
-import 'package:fl_clash/views/profiles/extend/standard.dart';
+import 'package:fl_clash/views/profiles/extend/added_rules.dart';
 import 'package:fl_clash/views/proxies/proxies.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/gestures.dart';
@@ -167,7 +168,7 @@ void main() {
       ),
     );
     await tester.pump();
-    final l10n = AppLocalizations.current;
+    final l10n = currentAppLocalizations;
 
     await openProxiesMenu(tester);
     expect(inMenu(find.text(l10n.iconStyle)), findsOneWidget);
@@ -205,7 +206,7 @@ void main() {
       ),
     );
     await tester.pump();
-    final l10n = AppLocalizations.current;
+    final l10n = currentAppLocalizations;
 
     await openProxiesMenu(tester);
     await tester.tap(inMenu(find.text(l10n.sort)));
@@ -247,7 +248,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const TestApp(child: AboutView()),
+        child: const TestApp(child: AboutView(dynamicBackground: false)),
       ),
     );
     await tester.pump();
@@ -285,7 +286,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const TestApp(child: AboutView()),
+        child: const TestApp(child: AboutView(dynamicBackground: false)),
       ),
     );
     await tester.pump();
@@ -568,7 +569,7 @@ void main() {
           child: ProfileIdProvider(
             profileId: profile.id,
             child: const HostScaffold(
-              body: CustomScrollView(slivers: [StandardContent()]),
+              body: CustomScrollView(slivers: [AddedRulesContent()]),
             ),
           ),
         ),
@@ -576,7 +577,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byType(StandardContent), findsOneWidget);
+    expect(find.byType(AddedRulesContent), findsOneWidget);
     expect(find.text('added0.com'), findsOneWidget);
     expect(tester.takeException(), null);
 
@@ -590,63 +591,289 @@ void main() {
     expect(tester.takeException(), null);
   });
 
-  testWidgets('standard extension picks a MATCH-TARGET from the profile', (
-    tester,
-  ) async {
-    final profile = Profile.normal();
-    final container = _containerFor(
+  group('the exits of a profile', () {
+    Rule exitRule(int id, String exit) => Rule(
+      id: id,
+      ruleAction: RuleAction.DOMAIN,
+      content: '$id.example',
+      ruleTarget: exit,
+      customExit: true,
+    );
+
+    const outbounds = ClashConfig(
+      proxies: [Proxy(name: 'HK', type: 'ss')],
+      proxyGroups: [ProxyGroup(id: 1, name: 'Final', type: GroupType.Selector)],
+    );
+
+    Future<ProviderContainer> pumpExits(
+      WidgetTester tester, {
+      required Profile profile,
+      List<Rule> own = const [],
+      List<Rule> global = const [],
+      List<int> disabled = const [],
+      ClashConfig config = outbounds,
+      AsyncValue<ClashConfig?> scripted = const AsyncData(null),
+    }) async {
+      final container = _containerFor(
+        tester,
+        profiles: [profile],
+        overrides: [
+          currentProfileIdProvider.overrideWithBuild((_, _) => profile.id),
+          profileRulesProvider.overrideWith2(
+            (_) => _TestProfileAddedRules(own),
+          ),
+          globalRulesProvider.overrideWith(() => _TestGlobalRules(global)),
+          profileDisabledRuleIdsProvider.overrideWith2(
+            (_) => _TestProfileDisabledRuleIds(disabled),
+          ),
+          clashConfigProvider(profile.id).overrideWithValue(AsyncData(config)),
+          scriptOutboundsProvider(profile.id).overrideWithValue(scripted),
+          profileMatchTargetProvider(
+            profile.id,
+          ).overrideWithValue(const AsyncData('Final')),
+        ],
+      );
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: TestApp(
+            child: ProfileIdProvider(
+              profileId: profile.id,
+              child: const HostScaffold(
+                body: CustomScrollView(slivers: [AddedRulesContent()]),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      return container;
+    }
+
+    Finder exitRow(String exit) => find
+        .ancestor(of: find.text(exit), matching: find.byType(ListItem<dynamic>))
+        .first;
+
+    Finder inRow(String exit, String text) =>
+        find.descendant(of: exitRow(exit), matching: find.text(text));
+
+    testWidgets('lists each exit the rules in force go to, once, on default '
+        'and where that goes', (tester) async {
+      final l10n = currentAppLocalizations;
+      await pumpExits(
+        tester,
+        profile: Profile.normal(),
+        own: [
+          exitRule(1, 'Media'),
+          exitRule(2, 'AI'),
+          exitRule(3, 'Media'),
+          Rule.parse('DOMAIN,plain.example,Final', id: 4),
+        ],
+        global: [exitRule(5, 'Media'), exitRule(6, 'Off')],
+        disabled: [6],
+      );
+
+      expect(find.text(l10n.outboundExit), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(ExitsSection),
+          matching: find.byType(ListItem<dynamic>),
+        ),
+        findsNWidgets(2),
+      );
+      for (final exit in ['Media', 'AI']) {
+        expect(inRow(exit, l10n.exitDefault), findsOneWidget);
+        expect(inRow(exit, 'Final'), findsOneWidget);
+      }
+      expect(find.text('Off'), findsNothing);
+      expect(tester.takeException(), null);
+    });
+
+    testWidgets('a profile with no exit shows no section', (tester) async {
+      await pumpExits(
+        tester,
+        profile: Profile.normal(),
+        own: [Rule.parse('DOMAIN,plain.example,DIRECT', id: 1)],
+      );
+
+      expect(find.text(currentAppLocalizations.outboundExit), findsNothing);
+    });
+
+    testWidgets('the exits line up with the rows above them', (tester) async {
+      await pumpExits(
+        tester,
+        profile: Profile.normal(),
+        global: [exitRule(1, 'Media')],
+      );
+
+      final global = tester.getRect(
+        exitRow(currentAppLocalizations.controlGlobalAddedRules),
+      );
+      final exit = tester.getRect(exitRow('Media'));
+      expect(exit.left, global.left);
+      expect(exit.right, global.right);
+    });
+
+    testWidgets('the global added rules row sits under the header as a first '
+        'row does, and a section gap apart from the profile own rules', (
       tester,
-      profiles: [profile],
-      overrides: [
-        currentProfileIdProvider.overrideWithBuild((_, _) => profile.id),
-        profileRulesProvider.overrideWith2(
-          (_) => _TestProfileAddedRules(const []),
+    ) async {
+      final global = currentAppLocalizations.controlGlobalAddedRules;
+      await pumpExits(tester, profile: Profile.normal());
+
+      expect(
+        tester.getRect(exitRow(global)).top,
+        tester.getRect(find.byType(ListHeader)).bottom,
+      );
+
+      await pumpExits(
+        tester,
+        profile: Profile.normal(),
+        own: [Rule.parse('DOMAIN,plain.example,DIRECT', id: 1)],
+      );
+
+      expect(
+        tester.getRect(exitRow(global)).top,
+        tester.getRect(find.byType(RuleItem)).bottom +
+            tester.getSize(find.byType(ListSectionGap)).height,
+      );
+    });
+
+    testWidgets('a group of its name is where a default exit goes, while a '
+        'picked target holds until it is put back on default', (tester) async {
+      final l10n = currentAppLocalizations;
+      final container = await pumpExits(
+        tester,
+        profile: Profile.normal().copyWith(exitTargets: {'AI': 'HK'}),
+        own: [exitRule(1, 'Media'), exitRule(2, 'AI')],
+        config: const ClashConfig(
+          proxies: [Proxy(name: 'HK', type: 'ss')],
+          proxyGroups: [
+            ProxyGroup(id: 1, name: 'Media', type: GroupType.Selector),
+            ProxyGroup(id: 2, name: 'AI', type: GroupType.Selector),
+          ],
         ),
-        globalRulesProvider.overrideWith(() => _TestGlobalRules(const [])),
-        profileDisabledRuleIdsProvider.overrideWith2(
-          (_) => _TestProfileDisabledRuleIds(const []),
+      );
+
+      expect(inRow('Media', l10n.exitDefault), findsOneWidget);
+      expect(inRow('Media', 'Media'), findsNWidgets(2));
+      expect(inRow('AI', 'HK'), findsOneWidget);
+      expect(inRow('AI', l10n.exitDefault), findsNothing);
+
+      await tester.tap(exitRow('AI'));
+      await tester.pumpAndSettle();
+      final sheet = find.byType(SelectionSheet<String>);
+      expect(
+        find.descendant(of: sheet, matching: find.text(l10n.exitDefault)),
+        findsOneWidget,
+      );
+      await tester.tap(
+        find.descendant(of: sheet, matching: find.text(l10n.exitDefault)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(container.read(profilesProvider).first.exitTargets, isEmpty);
+      expect(inRow('AI', l10n.exitDefault), findsOneWidget);
+      expect(inRow('AI', 'AI'), findsNWidgets(2));
+      expect(tester.takeException(), null);
+    });
+
+    testWidgets('a picked target that is gone shows red over where the exit '
+        'falls back to', (tester) async {
+      await pumpExits(
+        tester,
+        profile: Profile.normal().copyWith(exitTargets: {'Media': 'Gone'}),
+        own: [exitRule(1, 'Media')],
+      );
+
+      final gone = tester.element(find.text('Gone'));
+      expect(
+        tester.widget<Text>(find.text('Gone')).style?.color,
+        gone.colorScheme.error,
+      );
+      expect(inRow('Media', 'Final'), findsOneWidget);
+    });
+
+    testWidgets('picks a target for an exit into the mapping', (tester) async {
+      final container = await pumpExits(
+        tester,
+        profile: Profile.normal(),
+        own: [exitRule(1, 'Media')],
+      );
+
+      await tester.tap(exitRow('Media'));
+      await tester.pumpAndSettle();
+      expect(find.byType(SelectionSheet<String>), findsOneWidget);
+      await tester.tap(find.text('HK'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SelectionSheet<String>), findsNothing);
+      expect(container.read(profilesProvider).first.exitTargets, {
+        'Media': 'HK',
+      });
+      expect(inRow('Media', 'HK'), findsOneWidget);
+      expect(tester.takeException(), null);
+    });
+
+    testWidgets('a script profile picks from the groups its script leaves', (
+      tester,
+    ) async {
+      await pumpExits(
+        tester,
+        profile: Profile.normal().copyWith(scriptId: 7),
+        own: [exitRule(1, 'Media')],
+        config: const ClashConfig(
+          proxyGroups: [
+            ProxyGroup(id: 1, name: 'Before', type: GroupType.Selector),
+          ],
         ),
-        clashConfigProvider(profile.id).overrideWithValue(
-          const AsyncData(
-            ClashConfig(
-              proxies: [Proxy(name: 'HK', type: 'ss')],
-              proxyGroups: [
-                ProxyGroup(id: 1, name: 'Proxy', type: GroupType.Selector),
-              ],
-            ),
+        scripted: const AsyncData(
+          ClashConfig(
+            proxyGroups: [
+              ProxyGroup(id: 2, name: 'After', type: GroupType.URLTest),
+            ],
           ),
         ),
-      ],
-    );
+      );
+      await tester.tap(exitRow('Media'));
+      await tester.pumpAndSettle();
 
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: TestApp(
-          child: ProfileIdProvider(
-            profileId: profile.id,
-            child: const HostScaffold(
-              body: CustomScrollView(slivers: [StandardContent()]),
-            ),
-          ),
+      final sheet = find.byType(SelectionSheet<String>);
+      expect(
+        find.descendant(of: sheet, matching: find.text('After')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: sheet, matching: find.text('Before')),
+        findsNothing,
+      );
+      expect(tester.takeException(), null);
+    });
+
+    testWidgets('a script that fails leaves only default', (tester) async {
+      final container = await pumpExits(
+        tester,
+        profile: Profile.normal().copyWith(
+          scriptId: 7,
+          exitTargets: {'Media': 'HK'},
         ),
-      ),
-    );
-    await tester.pump();
-    final l10n = AppLocalizations.current;
-    expect(find.text(l10n.followProfile), findsOneWidget);
+        own: [exitRule(1, 'Media')],
+        scripted: const AsyncError(
+          MessageException('main is not a function'),
+          StackTrace.empty,
+        ),
+      );
+      final l10n = currentAppLocalizations;
+      await tester.tap(exitRow('Media'));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text(l10n.matchTarget));
-    await tester.pumpAndSettle();
-    expect(find.byType(SelectionSheet<String>), findsOneWidget);
-    expect(find.text('Proxy'), findsOneWidget);
-
-    await tester.tap(find.text('HK'));
-    await tester.pumpAndSettle();
-    expect(find.byType(SelectionSheet<String>), findsNothing);
-    expect(container.read(profilesProvider).first.matchTarget, 'HK');
-    expect(find.text('HK'), findsOneWidget);
-    expect(tester.takeException(), null);
+      expect(find.byType(SelectionSheet<String>), findsNothing);
+      expect(find.text(l10n.scriptFailed), findsOneWidget);
+      await tester.tap(find.text(l10n.exitDefault).last);
+      await tester.pumpAndSettle();
+      expect(container.read(profilesProvider).first.exitTargets, isEmpty);
+      expect(tester.takeException(), null);
+    });
   });
 
   testWidgets('the global added rules page opens where they are added in a '
@@ -677,14 +904,14 @@ void main() {
           child: ProfileIdProvider(
             profileId: profile.id,
             child: const HostScaffold(
-              body: CustomScrollView(slivers: [StandardContent()]),
+              body: CustomScrollView(slivers: [AddedRulesContent()]),
             ),
           ),
         ),
       ),
     );
     await tester.pump();
-    final l10n = AppLocalizations.current;
+    final l10n = currentAppLocalizations;
 
     await tester.tap(find.text(l10n.controlGlobalAddedRules));
     await tester.pumpAndSettle();
@@ -693,6 +920,58 @@ void main() {
 
     expect(find.byType(AddedRulesView), findsOneWidget);
     expect(find.text(l10n.editGlobalRules), findsOneWidget);
+    expect(tester.takeException(), null);
+  });
+  testWidgets('the global added rules row counts the ones this profile keeps '
+      'and the page opens their editor from a row', (tester) async {
+    final profile = Profile.normal();
+    const rules = [
+      Rule(id: 1, ruleAction: RuleAction.DOMAIN, content: 'a.com'),
+      Rule(id: 2, ruleAction: RuleAction.DOMAIN, content: 'b.com'),
+    ];
+    final container = _containerFor(
+      tester,
+      profiles: [profile],
+      overrides: [
+        currentProfileIdProvider.overrideWithBuild((_, _) => profile.id),
+        profileRulesProvider.overrideWith2(
+          (_) => _TestProfileAddedRules(const []),
+        ),
+        globalRulesProvider.overrideWith(() => _TestGlobalRules(rules)),
+        profileDisabledRuleIdsProvider.overrideWith2(
+          (_) => _TestProfileDisabledRuleIds(const [2]),
+        ),
+        clashConfigProvider(
+          profile.id,
+        ).overrideWithValue(const AsyncData(ClashConfig())),
+      ],
+    );
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: TestApp(
+          child: ProfileIdProvider(
+            profileId: profile.id,
+            child: const HostScaffold(
+              body: CustomScrollView(slivers: [AddedRulesContent()]),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    final l10n = currentAppLocalizations;
+
+    expect(find.text('1/2'), findsOneWidget);
+    await tester.tap(find.text(l10n.controlGlobalAddedRules));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.editGlobalRules), findsOneWidget);
+    expect(find.byTooltip(l10n.goToConfigureAddedRules), findsNothing);
+    await tester.tap(find.text(l10n.goToConfigureAddedRules));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AddedRulesView), findsOneWidget);
     expect(tester.takeException(), null);
   });
 }

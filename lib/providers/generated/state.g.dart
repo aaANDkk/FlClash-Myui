@@ -89,7 +89,7 @@ final class CoreOptionsProvider
   }
 }
 
-String _$coreOptionsHash() => r'43945407c97ebce7e8106973f53ca83ce95c861a';
+String _$coreOptionsHash() => r'eda5c10501a808d6b6cc575e0841155d88dfc2ba';
 
 @ProviderFor(setupPatch)
 final setupPatchProvider = SetupPatchProvider._();
@@ -397,48 +397,6 @@ final class GetHotKeyActionFamily extends $Family
   String toString() => r'getHotKeyActionProvider';
 }
 
-@ProviderFor(shouldPatchSystemDns)
-final shouldPatchSystemDnsProvider = ShouldPatchSystemDnsProvider._();
-
-final class ShouldPatchSystemDnsProvider
-    extends $FunctionalProvider<bool, bool, bool>
-    with $Provider<bool> {
-  ShouldPatchSystemDnsProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'shouldPatchSystemDnsProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$shouldPatchSystemDnsHash();
-
-  @$internal
-  @override
-  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
-      $ProviderElement(pointer);
-
-  @override
-  bool create(Ref ref) {
-    return shouldPatchSystemDns(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(bool value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<bool>(value),
-    );
-  }
-}
-
-String _$shouldPatchSystemDnsHash() =>
-    r'f74bcdbae504e9528b2e960b8620d097c27f3ca9';
-
 @ProviderFor(sharedState)
 final sharedStateProvider = SharedStateProvider._();
 
@@ -517,7 +475,7 @@ final class VpnRouteAddressProvider
   }
 }
 
-String _$vpnRouteAddressHash() => r'bae2530b73b71ecff16aadfc395e60996d739d41';
+String _$vpnRouteAddressHash() => r'2994a2c0890fa22e06c30af4703e052b3c056c90';
 
 @ProviderFor(vpnOptions)
 final vpnOptionsProvider = VpnOptionsProvider._();
@@ -555,7 +513,7 @@ final class VpnOptionsProvider
   }
 }
 
-String _$vpnOptionsHash() => r'c00e87278b32dd8977ed136aace10dccfe05508d';
+String _$vpnOptionsHash() => r'8572d43f4359f7089aa0aae9adee755ee224b06b';
 
 @ProviderFor(AccessControlState)
 final accessControlStateProvider = AccessControlStateProvider._();
@@ -649,6 +607,64 @@ final class SuspendProvider extends $FunctionalProvider<bool, bool, bool>
 }
 
 String _$suspendHash() => r'9ab9210f4f3c70f63d9858d492a9c09b3fb24bf1';
+
+/// Keeps a start on screen for [minimumStart] so a fast restart does not flash.
+
+@ProviderFor(HeldCoreStatus)
+final heldCoreStatusProvider = HeldCoreStatusProvider._();
+
+/// Keeps a start on screen for [minimumStart] so a fast restart does not flash.
+final class HeldCoreStatusProvider
+    extends $NotifierProvider<HeldCoreStatus, CoreStatus> {
+  /// Keeps a start on screen for [minimumStart] so a fast restart does not flash.
+  HeldCoreStatusProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'heldCoreStatusProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$heldCoreStatusHash();
+
+  @$internal
+  @override
+  HeldCoreStatus create() => HeldCoreStatus();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CoreStatus value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CoreStatus>(value),
+    );
+  }
+}
+
+String _$heldCoreStatusHash() => r'c456d81c1da0e7075c4d96d4ff0307ffd05a42a7';
+
+/// Keeps a start on screen for [minimumStart] so a fast restart does not flash.
+
+abstract class _$HeldCoreStatus extends $Notifier<CoreStatus> {
+  CoreStatus build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<CoreStatus, CoreStatus>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<CoreStatus, CoreStatus>,
+              CoreStatus,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
 
 @ProviderFor(DynamicColor)
 final dynamicColorProvider = DynamicColorProvider._();
@@ -1954,7 +1970,7 @@ final class ProxyStateProvider
   }
 }
 
-String _$proxyStateHash() => r'76a71ab5da07dca9aeb351282c5c03ab222d0760';
+String _$proxyStateHash() => r'9d3d35d421564843613dbeece688731baae12b45';
 
 /// Watching the delay map instead would drop nodes one probe at a time, and
 /// reading it on any other rebuild would drop them whenever something
@@ -3453,83 +3469,6 @@ final class ProfileFamily extends $Family
   String toString() => r'profileProvider';
 }
 
-@ProviderFor(extendType)
-final extendTypeProvider = ExtendTypeFamily._();
-
-final class ExtendTypeProvider
-    extends $FunctionalProvider<ExtendType, ExtendType, ExtendType>
-    with $Provider<ExtendType> {
-  ExtendTypeProvider._({
-    required ExtendTypeFamily super.from,
-    required int? super.argument,
-  }) : super(
-         retry: null,
-         name: r'extendTypeProvider',
-         isAutoDispose: true,
-         dependencies: null,
-         $allTransitiveDependencies: null,
-       );
-
-  @override
-  String debugGetCreateSourceHash() => _$extendTypeHash();
-
-  @override
-  String toString() {
-    return r'extendTypeProvider'
-        ''
-        '($argument)';
-  }
-
-  @$internal
-  @override
-  $ProviderElement<ExtendType> $createElement($ProviderPointer pointer) =>
-      $ProviderElement(pointer);
-
-  @override
-  ExtendType create(Ref ref) {
-    final argument = this.argument as int?;
-    return extendType(ref, argument);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(ExtendType value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<ExtendType>(value),
-    );
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return other is ExtendTypeProvider && other.argument == argument;
-  }
-
-  @override
-  int get hashCode {
-    return argument.hashCode;
-  }
-}
-
-String _$extendTypeHash() => r'166b866a116caa0e93de80b9a59e23697508d219';
-
-final class ExtendTypeFamily extends $Family
-    with $FunctionalFamilyOverride<ExtendType, int?> {
-  ExtendTypeFamily._()
-    : super(
-        retry: null,
-        name: r'extendTypeProvider',
-        dependencies: null,
-        $allTransitiveDependencies: null,
-        isAutoDispose: true,
-      );
-
-  ExtendTypeProvider call(int? profileId) =>
-      ExtendTypeProvider._(argument: profileId, from: this);
-
-  @override
-  String toString() => r'extendTypeProvider';
-}
-
 @ProviderFor(clashConfig)
 final clashConfigProvider = ClashConfigFamily._();
 
@@ -3605,6 +3544,256 @@ final class ClashConfigFamily extends $Family
   String toString() => r'clashConfigProvider';
 }
 
+/// The groups a script leaves for a MATCH target; null without a script.
+
+@ProviderFor(scriptOutbounds)
+final scriptOutboundsProvider = ScriptOutboundsFamily._();
+
+/// The groups a script leaves for a MATCH target; null without a script.
+
+final class ScriptOutboundsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<ClashConfig?>,
+          ClashConfig?,
+          FutureOr<ClashConfig?>
+        >
+    with $FutureModifier<ClashConfig?>, $FutureProvider<ClashConfig?> {
+  /// The groups a script leaves for a MATCH target; null without a script.
+  ScriptOutboundsProvider._({
+    required ScriptOutboundsFamily super.from,
+    required int super.argument,
+  }) : super(
+         retry: _noRetry,
+         name: r'scriptOutboundsProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$scriptOutboundsHash();
+
+  @override
+  String toString() {
+    return r'scriptOutboundsProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<ClashConfig?> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<ClashConfig?> create(Ref ref) {
+    final argument = this.argument as int;
+    return scriptOutbounds(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is ScriptOutboundsProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$scriptOutboundsHash() => r'ee0dec9a980bed9f0b2b9f35567391abd126cb8a';
+
+/// The groups a script leaves for a MATCH target; null without a script.
+
+final class ScriptOutboundsFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<ClashConfig?>, int> {
+  ScriptOutboundsFamily._()
+    : super(
+        retry: _noRetry,
+        name: r'scriptOutboundsProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// The groups a script leaves for a MATCH target; null without a script.
+
+  ScriptOutboundsProvider call(int profileId) =>
+      ScriptOutboundsProvider._(argument: profileId, from: this);
+
+  @override
+  String toString() => r'scriptOutboundsProvider';
+}
+
+@ProviderFor(profileMatchTarget)
+final profileMatchTargetProvider = ProfileMatchTargetFamily._();
+
+final class ProfileMatchTargetProvider
+    extends $FunctionalProvider<AsyncValue<String?>, String?, FutureOr<String?>>
+    with $FutureModifier<String?>, $FutureProvider<String?> {
+  ProfileMatchTargetProvider._({
+    required ProfileMatchTargetFamily super.from,
+    required int super.argument,
+  }) : super(
+         retry: _noRetry,
+         name: r'profileMatchTargetProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$profileMatchTargetHash();
+
+  @override
+  String toString() {
+    return r'profileMatchTargetProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<String?> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<String?> create(Ref ref) {
+    final argument = this.argument as int;
+    return profileMatchTarget(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is ProfileMatchTargetProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$profileMatchTargetHash() =>
+    r'b42cc6c842bb53ac2928a0b2c4abf7943c5e3c54';
+
+final class ProfileMatchTargetFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<String?>, int> {
+  ProfileMatchTargetFamily._()
+    : super(
+        retry: _noRetry,
+        name: r'profileMatchTargetProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  ProfileMatchTargetProvider call(int profileId) =>
+      ProfileMatchTargetProvider._(argument: profileId, from: this);
+
+  @override
+  String toString() => r'profileMatchTargetProvider';
+}
+
+/// What the user set over the profile: a custom profile's own settings over
+/// the app's TUN overrides, or the app's overrides for any other profile.
+
+@ProviderFor(profileOverrides)
+final profileOverridesProvider = ProfileOverridesFamily._();
+
+/// What the user set over the profile: a custom profile's own settings over
+/// the app's TUN overrides, or the app's overrides for any other profile.
+
+final class ProfileOverridesProvider
+    extends
+        $FunctionalProvider<
+          ProfileOverrides,
+          ProfileOverrides,
+          ProfileOverrides
+        >
+    with $Provider<ProfileOverrides> {
+  /// What the user set over the profile: a custom profile's own settings over
+  /// the app's TUN overrides, or the app's overrides for any other profile.
+  ProfileOverridesProvider._({
+    required ProfileOverridesFamily super.from,
+    required int? super.argument,
+  }) : super(
+         retry: null,
+         name: r'profileOverridesProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$profileOverridesHash();
+
+  @override
+  String toString() {
+    return r'profileOverridesProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $ProviderElement<ProfileOverrides> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  ProfileOverrides create(Ref ref) {
+    final argument = this.argument as int?;
+    return profileOverrides(ref, argument);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ProfileOverrides value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ProfileOverrides>(value),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is ProfileOverridesProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$profileOverridesHash() => r'2df5e22d0d782b85bf22a0206b6066c26e77bd18';
+
+/// What the user set over the profile: a custom profile's own settings over
+/// the app's TUN overrides, or the app's overrides for any other profile.
+
+final class ProfileOverridesFamily extends $Family
+    with $FunctionalFamilyOverride<ProfileOverrides, int?> {
+  ProfileOverridesFamily._()
+    : super(
+        retry: null,
+        name: r'profileOverridesProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// What the user set over the profile: a custom profile's own settings over
+  /// the app's TUN overrides, or the app's overrides for any other profile.
+
+  ProfileOverridesProvider call(int? profileId) =>
+      ProfileOverridesProvider._(argument: profileId, from: this);
+
+  @override
+  String toString() => r'profileOverridesProvider';
+}
+
 @ProviderFor(setupState)
 final setupStateProvider = SetupStateFamily._();
 
@@ -3659,7 +3848,7 @@ final class SetupStateProvider
   }
 }
 
-String _$setupStateHash() => r'e8c7cc4742b6e4cf4227071dc01ec6a943334dd0';
+String _$setupStateHash() => r'c3e1a96ff46caa5697b540385eb576098af89318';
 
 final class SetupStateFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<SetupState>, int?> {

@@ -122,8 +122,9 @@ func (d *probeDialer) remember(conn *routedConn) {
 }
 
 // A connection that never reached the tracker, a failed one, is matched
-// again for where it would have left.
-func (d *probeDialer) hits(proxyName string) []RouteHit {
+// again for where it would have left, unless the probe was cancelled or the
+// tunnel is suspended mid-apply.
+func (d *probeDialer) hits(ctx context.Context, proxyName string) []RouteHit {
 	d.mu.Lock()
 	dials := slices.Clone(d.dials)
 	d.mu.Unlock()
@@ -132,8 +133,10 @@ func (d *probeDialer) hits(proxyName string) []RouteHit {
 		hit := RouteHit{Host: dial.address, Proxy: proxyName}
 		if route := dial.resolve(); route != nil {
 			hit.Exit = exitOfChains(route.chains)
-		} else {
+		} else if ctx.Err() == nil && (proxyName != "" || tunnel.Status() != tunnel.Suspend) {
 			hit.Exit = resolveExit(dial.address, proxyName)
+		} else {
+			continue
 		}
 		hits = withHit(hits, hit)
 	}
@@ -282,7 +285,7 @@ func runProbe(parent context.Context, req probeRequest) *ProbeResult {
 		}
 	}
 	defer func() {
-		result.hits = dialer.hits(req.proxyName)
+		result.hits = dialer.hits(parent, req.proxyName)
 		req.recorder.add(result.hits)
 	}()
 	tlsConfig, err := ca.GetTLSConfig(ca.Option{})

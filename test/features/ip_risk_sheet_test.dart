@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:fl_clash/features/ip_quality/ip_quality_sheet.dart';
+import 'package:fl_clash/features/ip_quality/ip_locate.dart';
 import 'package:dio/dio.dart';
 import 'package:fl_clash/features/ip_quality/risk_model.dart';
 import 'package:fl_clash/features/ip_quality/risk_parser.dart';
@@ -62,52 +63,53 @@ const sampleRisk = IpRisk(
 );
 
 void main() {
-  testWidgets('only the small edit button opens and updates the IP', (
+  testWidgets('the IP card copies the address and shows a success banner', (
     tester,
   ) async {
-    final queried = <String>[];
+    String? copied;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          copied = (call.arguments as Map)['text'] as String;
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
     await tester.pumpWidget(
       TestApp(
         locale: const Locale('en'),
         overrides: [
-          ipRiskProvider.overrideWith((_, ip) async {
-            queried.add(ip);
-            return IpRisk(ip: ip, score: 0, level: IpRiskLevel.low);
-          }),
+          ipLocateProvider.overrideWith(
+            (_, ip) async => IpLocateInfo(ip: ip, asn: sampleRisk.asn),
+          ),
+          ipRiskProvider.overrideWith((_, ip) async => sampleRisk),
         ],
         child: const IpRiskSheet(ip: '158.247.202.50'),
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('158.247.202.50'));
-    await tester.pumpAndSettle();
-    expect(find.byType(app_ui.InputDialog), findsNothing);
-    final edit = find.byTooltip('Edit');
+
+    final l = tester.element(find.byType(IpRiskSheet)).appLocalizations;
+    final copy = find.byTooltip(l.copy);
+    expect(find.byTooltip(l.edit), findsNothing);
     expect(
-      find.ancestor(of: edit, matching: find.byType(app_ui.MinIconButtonTheme)),
+      find.ancestor(of: copy, matching: find.byType(app_ui.MinIconButtonTheme)),
       findsOneWidget,
     );
-    await tester.tap(edit);
+    await tester.tap(copy);
     await tester.pumpAndSettle();
-    expect(find.byType(app_ui.InputDialog), findsOneWidget);
-    final submit = tester
-        .element(find.byType(app_ui.InputDialog))
-        .appLocalizations
-        .submit;
-    await tester.enterText(find.byType(EditableText), '192.168.1.1');
-    await tester.tap(find.text(submit));
-    await tester.pumpAndSettle();
-    expect(find.byType(app_ui.InputDialog), findsOneWidget);
-    expect(queried, ['158.247.202.50']);
-    await tester.enterText(find.byType(EditableText), '8.8.8.8');
-    await tester.tap(find.text(submit));
-    await tester.pumpAndSettle();
-    expect(find.byType(app_ui.InputDialog), findsNothing);
-    expect(find.text('8.8.8.8'), findsOneWidget);
-    expect(queried, ['158.247.202.50', '8.8.8.8']);
-    expect(tester.takeException(), isNull);
+    expect(copied, sampleRisk.ip);
+    expect(find.text(l.copySuccess), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
   });
+
   testWidgets('unknown hosting mark shows a question, distinct from no', (
     tester,
   ) async {
@@ -173,7 +175,12 @@ void main() {
     await tester.pumpWidget(
       TestApp(
         locale: const Locale('en'),
-        overrides: [ipRiskProvider(home.ip).overrideWith((_) async => home)],
+        overrides: [
+          ipLocateProvider.overrideWith(
+            (_, ip) async => IpLocateInfo(ip: ip, company: home.isp),
+          ),
+          ipRiskProvider(home.ip).overrideWith((_) async => home),
+        ],
         child: const IpRiskSheet(ip: '1.2.3.4'),
       ),
     );
@@ -225,25 +232,33 @@ void main() {
     expect(note, contains('fraudsters'));
     expect(
       find.ancestor(
-        of: find.text('Source Scamalytics'),
+        of: find.text('Source Scamalytics and IPLocate.io'),
         matching: find.byType(app_ui.ListFooter),
       ),
       findsOneWidget,
     );
     expect(
-      tester.getTopLeft(find.text('Source Scamalytics')).dx,
+      tester.getTopLeft(find.text('Source Scamalytics and IPLocate.io')).dx,
       greaterThan(tester.getTopLeft(find.byType(RiskScoreCard)).dx),
     );
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('IP details keeps hiding but has no recheck action', (
+  testWidgets('IP details keeps hiding and has no toolbar refresh', (
     tester,
   ) async {
     await tester.pumpWidget(
       TestApp(
         locale: const Locale('en'),
         overrides: [
+          ipLocateProvider.overrideWith(
+            (_, ip) async => IpLocateInfo(
+              ip: ip,
+              company: sampleRisk.organization,
+              network: sampleRisk.isp,
+              asn: sampleRisk.asn,
+            ),
+          ),
           ipRiskProvider(sampleRisk.ip).overrideWith((_) async => sampleRisk),
         ],
         child: const IpRiskSheet(ip: '158.247.202.50'),
@@ -253,6 +268,7 @@ void main() {
     expect(find.byTooltip('Hide IP'), findsOneWidget);
     expect(find.byTooltip('Check again'), findsNothing);
     expect(find.byGlyph(AppGlyphs.refresh), findsNothing);
+    expect(find.text('Source Scamalytics and IPLocate.io'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
@@ -325,6 +341,14 @@ void main() {
             child: child,
           ),
           overrides: [
+            ipLocateProvider.overrideWith(
+              (_, ip) async => IpLocateInfo(
+                ip: ip,
+                company: sampleRisk.organization,
+                network: sampleRisk.isp,
+                asn: sampleRisk.asn,
+              ),
+            ),
             ipRiskProvider(sampleRisk.ip).overrideWith((_) async => sampleRisk),
           ],
           child: const RepaintBoundary(
@@ -422,7 +446,7 @@ void main() {
   }
 
   testWidgets(
-    'failed risk card retries inline with loading and card transition',
+    'failed risk card retries inline without confirmation or layout changes',
     (tester) async {
       var attempts = 0;
       Completer<IpRisk>? retryCompleter;
@@ -430,6 +454,14 @@ void main() {
         TestApp(
           locale: const Locale('en'),
           overrides: [
+            ipLocateProvider.overrideWith(
+              (_, ip) async => IpLocateInfo(
+                ip: ip,
+                company: sampleRisk.organization,
+                network: sampleRisk.isp,
+                asn: sampleRisk.asn,
+              ),
+            ),
             ipRiskProvider(sampleRisk.ip).overrideWith((_) async {
               attempts++;
               if (attempts == 1) {
@@ -446,23 +478,13 @@ void main() {
       final l = tester.element(find.byType(IpRiskSheet)).appLocalizations;
       expect(find.text(l.ipRiskFailed), findsOneWidget);
       expect(find.byGlyph(AppGlyphs.error), findsOneWidget);
-      expect(
-        find.widgetWithText(app_ui.FilledButton, l.retry),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(
-          of: find.byType(app_ui.FilledButton),
-          matching: find.byGlyph(AppGlyphs.refresh),
-        ),
-        findsOneWidget,
-      );
-
-      final errorCardFinder = find.ancestor(
+      expect(find.widgetWithText(app_ui.FilledButton, l.retry), findsOneWidget);
+      expect(find.byTooltip('Check again'), findsNothing);
+      final errorCard = find.ancestor(
         of: find.text(l.ipRiskFailed),
         matching: find.byType(app_ui.Card),
       );
-      final beforeCardRect = tester.getRect(errorCardFinder);
+      final beforeRect = tester.getRect(errorCard);
 
       retryCompleter = Completer<IpRisk>();
       await tester.tap(find.widgetWithText(app_ui.FilledButton, l.retry));
@@ -470,7 +492,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
 
       expect(find.text('158.247.202.50'), findsOneWidget);
-      expect(tester.getRect(errorCardFinder), beforeCardRect);
+      expect(find.text(l.ipRiskFailed), findsOneWidget);
+      expect(tester.getRect(errorCard), beforeRect);
+      expect(find.byType(app_ui.InputDialog), findsNothing);
       expect(find.byType(app_ui.ActivityIndicator), findsOneWidget);
 
       retryCompleter.complete(sampleRisk);
@@ -485,13 +509,21 @@ void main() {
   );
 
   testWidgets(
-    'instant retry failure holds spinner briefly without flashing or bouncing card',
+    'instant retry failure holds inline loading without bouncing the error card',
     (tester) async {
       var attempts = 0;
       await tester.pumpWidget(
         TestApp(
           locale: const Locale('en'),
           overrides: [
+            ipLocateProvider.overrideWith(
+              (_, ip) async => IpLocateInfo(
+                ip: ip,
+                company: sampleRisk.organization,
+                network: sampleRisk.isp,
+                asn: sampleRisk.asn,
+              ),
+            ),
             ipRiskProvider(sampleRisk.ip).overrideWith((_) async {
               attempts++;
               throw const FormatException('offline');
@@ -503,25 +535,20 @@ void main() {
       await tester.pumpAndSettle();
 
       final l = tester.element(find.byType(IpRiskSheet)).appLocalizations;
-      final errorCardFinder = find.ancestor(
-        of: find.text(l.ipRiskFailed),
-        matching: find.byType(app_ui.Card),
-      );
-      final beforeCardRect = tester.getRect(errorCardFinder);
-
       await tester.tap(find.widgetWithText(app_ui.FilledButton, l.retry));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
       expect(attempts, 2);
-      expect(tester.getRect(errorCardFinder), beforeCardRect);
+      expect(find.text(l.ipRiskFailed), findsOneWidget);
       expect(find.byType(app_ui.ActivityIndicator), findsOneWidget);
 
       await tester.pump(const Duration(milliseconds: 350));
       await tester.pumpAndSettle();
 
-      expect(tester.getRect(errorCardFinder), beforeCardRect);
+      expect(find.text(l.ipRiskFailed), findsOneWidget);
       expect(find.widgetWithText(app_ui.FilledButton, l.retry), findsOneWidget);
+      expect(find.byTooltip('Check again'), findsNothing);
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );
@@ -545,6 +572,14 @@ void main() {
         TestApp(
           locale: const Locale('en'),
           overrides: [
+            ipLocateProvider.overrideWith(
+              (_, ip) async => IpLocateInfo(
+                ip: ip,
+                company: longRisk.organization,
+                network: longRisk.isp,
+                asn: 'AS9999',
+              ),
+            ),
             ipRiskProvider(longRisk.ip).overrideWith((_) async => longRisk),
           ],
           child: const IpRiskSheet(ip: '58.247.1.2'),
@@ -555,21 +590,26 @@ void main() {
       final sheetCtx = tester.element(find.byType(IpRiskSheet));
       final l = sheetCtx.appLocalizations;
       expect(find.text('Shanghai · Hongkou (Hongkou Qu)'), findsOneWidget);
-      expect(find.text('AS4811'), findsOneWidget);
-      expect(find.text(l.ipOrganization), findsOneWidget);
+      expect(find.text('AS9999'), findsOneWidget);
+      expect(find.text(l.isp), findsOneWidget);
       expect(find.text(l.operatorOrAsn), findsNothing);
       expect(
         find.text('Shanghai Information Network Co., Ltd.'),
         findsOneWidget,
       );
       expect(find.textContaining('· AS4811'), findsNothing);
-      final asnBox = tester.widget<DecoratedBox>(
-        find
-            .ancestor(
-              of: find.text('AS4811'),
-              matching: find.byType(DecoratedBox),
-            )
-            .first,
+      final asnPill = find
+          .ancestor(
+            of: find.text('AS9999'),
+            matching: find.byType(DecoratedBox),
+          )
+          .first;
+      final asnBox = tester.widget<DecoratedBox>(asnPill);
+      expect(
+        tester
+            .getTopRight(find.text('Shanghai \u00b7 Hongkou (Hongkou Qu)'))
+            .dx,
+        closeTo(tester.getTopRight(asnPill).dx, 1),
       );
       expect(
         (asnBox.decoration as ShapeDecoration).color,
@@ -580,10 +620,73 @@ void main() {
       );
       expect(countryFinder, findsOneWidget);
       expect(find.byType(app_ui.Divider), findsNWidgets(2));
+      expect(find.text('AS4811'), findsNothing);
+      expect(find.text('ASN'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('AS9999')).dx,
+        greaterThan(tester.getTopLeft(countryFinder).dx),
+      );
+      expect(
+        tester.getTopLeft(find.text('AS9999')).dy,
+        lessThan(tester.getTopLeft(countryFinder).dy),
+      );
       expect(
         tester.getTopLeft(find.text('Shanghai · Hongkou (Hongkou Qu)')).dy,
         greaterThan(tester.getTopLeft(countryFinder).dy),
       );
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets(
+    'proxyName resolves exit IP without showing node name and retries on failure',
+    (tester) async {
+      var exitAttempts = 0;
+      await tester.pumpWidget(
+        TestApp(
+          locale: const Locale('en'),
+          overrides: [
+            ipLocateProvider.overrideWith(
+              (_, ip) async => IpLocateInfo(
+                ip: ip,
+                company: sampleRisk.organization,
+                network: sampleRisk.isp,
+                asn: sampleRisk.asn,
+              ),
+            ),
+            proxyExitIpProvider.overrideWith((_, proxy) async {
+              expect(proxy, 'HK-01');
+              exitAttempts++;
+              if (exitAttempts == 1) {
+                throw Exception('exit probe failed');
+              }
+              return sampleRisk.ip;
+            }),
+            ipRiskProvider(sampleRisk.ip).overrideWith((_) async => sampleRisk),
+          ],
+          child: const IpRiskSheet(proxyName: 'HK-01'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final sheetCtx = tester.element(find.byType(IpRiskSheet));
+      final l = sheetCtx.appLocalizations;
+      expect(exitAttempts, 1);
+      expect(find.text('--'), findsOneWidget);
+      expect(find.text('HK-01'), findsNothing);
+      expect(find.text(l.ipRiskFailed), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(app_ui.FilledButton, l.retry));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+
+      expect(exitAttempts, 2);
+      expect(find.byGlyph(AppGlyphs.location), findsOneWidget);
+      expect(find.text(sampleRisk.ip), findsOneWidget);
+      expect(find.text('HK-01'), findsNothing);
+      expect(find.text('${sampleRisk.displayScore}'), findsOneWidget);
+      expect(find.text(l.ipRiskMedium), findsOneWidget);
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );

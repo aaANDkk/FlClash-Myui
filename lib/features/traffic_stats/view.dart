@@ -135,6 +135,7 @@ class _TrafficStatsViewState extends ConsumerState<TrafficStatsView>
   }
 
   bool _hasAnyData(TrafficStatsResult result) =>
+      result.runningSeconds > 0 ||
       result.total > 0 ||
       result.series.any((p) => p.total > 0) ||
       result.hosts.isNotEmpty ||
@@ -162,7 +163,6 @@ class _TrafficStatsViewState extends ConsumerState<TrafficStatsView>
     return TrafficStatsScope(
       child: Scaffold(
         title: l.trafficStats,
-        groupIconActions: false,
         iconActions: [
           IconButtonData(
             glyph: AppGlyphs.sync,
@@ -234,7 +234,7 @@ class _TrafficStatsViewState extends ConsumerState<TrafficStatsView>
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Expanded(
-                                flex: 5,
+                                flex: 4,
                                 child: TrafficStatsOverviewCard(
                                   result: result,
                                   fillHeight: true,

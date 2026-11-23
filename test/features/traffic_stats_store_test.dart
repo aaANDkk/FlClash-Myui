@@ -26,7 +26,7 @@ void main() {
         store.updateSettings((s) => s.copyWith(enable: true)),
         store.updateSettings((s) => s.copyWith(detail: false)),
         store.updateSettings(
-          (s) => s.copyWith(siteIcon: false, retentionDays: 14),
+          (s) => s.copyWith(siteIcon: false, retentionMonths: 6),
         ),
       ]);
 
@@ -38,7 +38,7 @@ void main() {
       expect(saved.enable, isTrue);
       expect(saved.detail, isFalse);
       expect(saved.siteIcon, isFalse);
-      expect(saved.retentionDays, 14);
+      expect(saved.retentionMonths, 6);
 
       container.invalidate(trafficStatsStoreProvider);
       final reloaded = await container.read(trafficStatsStoreProvider.future);
@@ -46,23 +46,30 @@ void main() {
     },
   );
 
-  test('store clamps retention days and tolerates damaged preferences', () async {
-    await mockPreferences({
-      'traffic_stats_settings': jsonEncode({
-        'enable': true,
-        'retentionDays': 999,
-      }),
-    });
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
+  test(
+    'store migrates legacy retention days and tolerates damaged preferences',
+    () async {
+      await mockPreferences({
+        'traffic_stats_settings': jsonEncode({
+          'enable': true,
+          'retentionDays': 30,
+        }),
+      });
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
 
-    final loaded = await container.read(trafficStatsStoreProvider.future);
-    expect(loaded.enable, isTrue);
-    expect(loaded.retentionDays, 30);
+      final loaded = await container.read(trafficStatsStoreProvider.future);
+      expect(loaded.enable, isTrue);
+      expect(loaded.retentionMonths, 3);
+      expect(
+        TrafficStatsSettings.fromJson({'retentionMonths': 999}).retentionMonths,
+        3,
+      );
 
-    await mockPreferences({'traffic_stats_settings': '{invalid-json'});
-    container.invalidate(trafficStatsStoreProvider);
-    final fallback = await container.read(trafficStatsStoreProvider.future);
-    expect(fallback, const TrafficStatsSettings());
-  });
+      await mockPreferences({'traffic_stats_settings': '{invalid-json'});
+      container.invalidate(trafficStatsStoreProvider);
+      final fallback = await container.read(trafficStatsStoreProvider.future);
+      expect(fallback, const TrafficStatsSettings());
+    },
+  );
 }

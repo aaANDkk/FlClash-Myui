@@ -121,6 +121,24 @@ class _IconSetsViewState extends ConsumerState<IconSetsView> {
 
   List<PopupMenuItem> _buildMenuItems(IconSet iconSet) {
     final appLocalizations = context.appLocalizations;
+    if (iconSet.isBuiltIn) {
+      return [
+        PopupMenuItem(
+          glyph: AppGlyphs.sync,
+          label: appLocalizations.sync,
+          onPressed: () {
+            _run(() => _iconSetsAction.sync(iconSet), title: iconSet.name);
+          },
+        ),
+        PopupMenuItem(
+          glyph: AppGlyphs.link,
+          label: appLocalizations.projectUrl,
+          onPressed: () {
+            dialogs.openUrl(builtInIconSetProjectUrl);
+          },
+        ),
+      ];
+    }
     return [
       if (iconSet.isRemote)
         PopupMenuItem(
@@ -172,7 +190,9 @@ class _IconSetsViewState extends ConsumerState<IconSetsView> {
               chip: iconSet.icons.length.compact,
             ),
             subtitle: Text(
-              iconSet.isRemote
+              iconSet.isBuiltIn
+                  ? appLocalizations.builtIn
+                  : iconSet.isRemote
                   ? appLocalizations.remote
                   : appLocalizations.local,
               style: context.listCaptionStyle,

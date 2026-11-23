@@ -131,32 +131,29 @@ class _PressRegionState extends State<PressRegion> {
   }
 
   Widget _painted(BuildContext context) {
-    if (widget.overlay == null) {
-      if (widget.fill == null) {
-        return widget.child;
-      }
-      return DecoratedBox(
-        decoration: ShapeDecoration(
-          color: widget.fill,
-          shape: widget.shape ?? const RoundedSuperellipseBorder(),
-        ),
-        child: widget.child,
-      );
-    }
     final shape = widget.shape ?? const RoundedSuperellipseBorder();
-    final overlay = TweenAnimationBuilder<Color?>(
-      tween: ColorTween(end: _overlayColor(context) ?? const Color(0x00000000)),
-      duration: _overlayFade,
-      builder: (context, color, child) =>
-          CustomPaint(painter: _OverlayPainter(color, shape), child: child),
-      child: widget.child,
-    );
-    return widget.fill == null
-        ? overlay
-        : DecoratedBox(
-            decoration: ShapeDecoration(color: widget.fill, shape: shape),
-            child: overlay,
+    final content = widget.overlay == null
+        ? widget.child
+        : TweenAnimationBuilder<Color?>(
+            tween: ColorTween(
+              end: _overlayColor(context) ?? const Color(0x00000000),
+            ),
+            duration: _overlayFade,
+            builder: (context, color, child) => CustomPaint(
+              painter: _OverlayPainter(color, shape),
+              child: child,
+            ),
+            child: widget.child,
           );
+    // Keep the outer DecoratedBox mounted across null/non-null fill transitions
+    // so subtree states such as AnimatedGlyph preserve their animation controllers.
+    return DecoratedBox(
+      decoration: ShapeDecoration(
+        color: widget.fill,
+        shape: shape,
+      ),
+      child: content,
+    );
   }
 
   @override

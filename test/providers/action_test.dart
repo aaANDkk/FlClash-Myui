@@ -1,10 +1,10 @@
 import 'dart:async';
 
+import 'package:fl_clash/common/app_localizations.dart';
 import 'package:fl_clash/core/controller.dart';
 import 'package:fl_clash/core/desktop/model.dart';
 import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/enum/enum.dart';
-import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/action.dart';
 import 'package:fl_clash/providers/app.dart';
@@ -134,10 +134,7 @@ void main() {
     );
 
     test('putScript re-applies only a current profile running that script', () {
-      final profile = Profile.normal().copyWith(
-        extendType: ExtendType.script,
-        scriptId: 1,
-      );
+      final profile = Profile.normal().copyWith(scriptId: 1);
       final setupAction = _ApplyRecordingSetupAction();
       final container = scriptsContainer(profile, setupAction);
       final action = container.read(scriptsActionProvider.notifier);
@@ -154,18 +151,48 @@ void main() {
 
       container
           .read(profilesProvider.notifier)
-          .put(profile.copyWith(extendType: ExtendType.standard));
+          .put(profile.copyWith(scriptId: null));
       action.putScript(script(1));
       expect(setupAction.applyCount, 1);
+    });
+
+    test('deleteScript takes the script off every profile running it', () {
+      final current = Profile.normal(label: 'current').copyWith(scriptId: 1);
+      final other = Profile.normal(label: 'other').copyWith(scriptId: 1);
+      final unrelated = Profile.normal(
+        label: 'unrelated',
+      ).copyWith(scriptId: 2);
+      final setupAction = _ApplyRecordingSetupAction();
+      final container = scriptsContainer(current, setupAction);
+      container.read(profilesProvider.notifier).put(other);
+      container.read(profilesProvider.notifier).put(unrelated);
+      final action = container.read(scriptsActionProvider.notifier);
+      action.putScript(script(1));
+      action.putScript(script(2));
+      final appliesBefore = setupAction.applyCount;
+
+      action.deleteScript(1);
+
+      expect(container.read(scriptsProvider).value?.map((item) => item.id), [
+        2,
+      ]);
+      expect(
+        {
+          for (final profile in container.read(profilesProvider))
+            profile.label: profile.scriptId,
+        },
+        {'current': null, 'other': null, 'unrelated': 2},
+      );
+      expect(setupAction.applyCount, appliesBefore + 1);
+
+      action.deleteScript(2);
+      expect(setupAction.applyCount, appliesBefore + 1);
     });
 
     test(
       'updateScript releases the updating key when the download fails',
       () async {
-        final profile = Profile.normal().copyWith(
-          extendType: ExtendType.script,
-          scriptId: 1,
-        );
+        final profile = Profile.normal().copyWith(scriptId: 1);
         final setupAction = _ApplyRecordingSetupAction();
         final container = scriptsContainer(profile, setupAction);
         final remote = script(1, url: 'bad-url');
@@ -284,6 +311,27 @@ void main() {
       await expectLater(action.reportNetworkChange(), completes);
     });
 
+    test('a core that fails to start keeps why for the stopped card', () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      loadAppLocalizations(const Locale('en'));
+      final container = ProviderContainer(
+        overrides: [coreActionProvider.overrideWith(_TestCoreAction.new)],
+      );
+      addTearDown(container.dispose);
+      final coreAction =
+          container.read(coreActionProvider.notifier) as _TestCoreAction;
+      coreAction.startCompleter = Completer()
+        ..completeError(StateError('launch refused'));
+
+      await coreAction.startCore();
+
+      expect(container.read(coreStatusProvider), CoreStatus.disconnected);
+      expect(
+        container.read(coreStopReasonProvider),
+        'Bad state: launch refused',
+      );
+    });
+
     test('applies the profile after restarting a stopped core', () async {
       final container = ProviderContainer(
         overrides: [
@@ -349,6 +397,53 @@ void main() {
 
         expect(applied, isFalse);
         expect(setupAction.setRunningCount, 1);
+      },
+    );
+
+    test('a restart resumes a run a lost Core session ended', () async {
+      final container = ProviderContainer(
+        overrides: [
+          coreActionProvider.overrideWith(_TestCoreAction.new),
+          setupActionProvider.overrideWith(_TestSetupAction.new),
+        ],
+      );
+      addTearDown(container.dispose);
+      final coreAction =
+          container.read(coreActionProvider.notifier) as _TestCoreAction;
+      final setupAction =
+          container.read(setupActionProvider.notifier) as _TestSetupAction;
+      setupAction.resumeOnRestart();
+
+      await coreAction.restartCore();
+
+      expect(setupAction.setRunningCount, 1);
+      expect(setupAction.applyProfileCount, 0);
+    });
+
+    test(
+      'starting on a stopped Core restarts it and resumes the run',
+      () async {
+        final container = ProviderContainer(
+          overrides: [
+            coreActionProvider.overrideWith(_TestCoreAction.new),
+            setupActionProvider.overrideWith(_TestSetupAction.new),
+            commonActionProvider.overrideWith(_RaceCommonAction.new),
+          ],
+        );
+        addTearDown(container.dispose);
+        final coreAction =
+            container.read(coreActionProvider.notifier) as _TestCoreAction;
+        final setupAction =
+            container.read(setupActionProvider.notifier) as _TestSetupAction;
+        container.read(coreStatusProvider.notifier).value =
+            CoreStatus.disconnected;
+
+        container.read(commonActionProvider.notifier).toggleRunning();
+        await pumpEventQueue();
+
+        expect(coreAction.lifecycleRestartCount, 1);
+        expect(setupAction.setRunningCount, 1);
+        expect(container.read(coreStatusProvider), CoreStatus.connected);
       },
     );
 
@@ -850,7 +945,7 @@ void main() {
 
     test('a failed authorization leaves tun and system DNS off', () async {
       TestWidgetsFlutterBinding.ensureInitialized();
-      await AppLocalizations.load(const Locale('en'));
+      loadAppLocalizations(const Locale('en'));
       late _AuthorizationSetupAction setupAction;
       final container = ProviderContainer(
         overrides: [
@@ -869,7 +964,6 @@ void main() {
       expect(await setupAction.requestAdmin(true), isTrue);
 
       expect(container.read(patchClashConfigProvider).tun.enable, isFalse);
-      expect(container.read(shouldPatchSystemDnsProvider), isFalse);
       expect(
         await setupAction.requestAdmin(
           container.read(patchClashConfigProvider).tun.enable,
@@ -921,6 +1015,11 @@ class _MemoryScripts extends Scripts {
   @override
   void put(Script script) {
     state = AsyncData([...value.where((item) => item.id != script.id), script]);
+  }
+
+  @override
+  void del(int id) {
+    state = AsyncData([...value.where((item) => item.id != id)]);
   }
 }
 

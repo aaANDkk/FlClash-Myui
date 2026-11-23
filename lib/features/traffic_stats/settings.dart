@@ -78,14 +78,10 @@ class TrafficStatsSettingsView extends ConsumerWidget {
                   ListItem<int>.options(
                     title: Text(l.trafficStatsRetention),
                     options: trafficStatsRetentionOptions,
-                    value: trafficStatsRetentionOptions.contains(
-                      settings.retentionDays,
-                    )
-                        ? settings.retentionDays
-                        : 30,
-                    textBuilder: (value) => l.trafficStatsDays(value),
+                    value: settings.retentionMonths,
+                    textBuilder: l.trafficStatsMonths,
                     onChanged: (value) => notifier.updateSettings(
-                      (s) => s.copyWith(retentionDays: value),
+                      (s) => s.copyWith(retentionMonths: value),
                     ),
                   ),
                 ],

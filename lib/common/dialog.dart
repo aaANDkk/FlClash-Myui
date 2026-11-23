@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/widgets/widgets.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -129,8 +131,8 @@ class Dialogs {
   }
 
   Future<void> showFailureDetails(List<UpdatingMessage> failures) {
-    return showSheet(
-      context: _context,
+    return showNestedSheet(
+      _context,
       builder: (_) => _FailureDetailsSheet(failures: failures),
     );
   }
@@ -220,6 +222,16 @@ class Dialogs {
     );
   }
 
+  Future<void> copyToClipboard(BuildContext context, String text) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    if (context.mounted) {
+      showBanner(
+        context.appLocalizations.copySuccess,
+        level: BannerLevel.success,
+      );
+    }
+  }
+
   void showBanner(
     String text, {
     BannerLevel level = BannerLevel.info,
@@ -255,6 +267,17 @@ class Dialogs {
           },
         );
     }
+  }
+
+  void showMixedPortReset(Object value, int port) {
+    commonPrint.log(
+      'mixed-port $value reset to $port',
+      logLevel: LogLevel.warning,
+    );
+    showBanner(
+      currentAppLocalizations.mixedPortReset(value, port),
+      level: BannerLevel.warning,
+    );
   }
 
   Future<void> openUrl(String url) async {

@@ -70,6 +70,7 @@ class _FakeTrafficStatsClient implements TrafficStatsClient {
 }
 
 TrafficStatsResult _sampleResult() => TrafficStatsResult(
+  runningSeconds: 8 * 3600 + 36 * 60,
   up: 400 * 1024 * 1024,
   down: 1600 * 1024 * 1024,
   proxyUp: 300 * 1024 * 1024,
@@ -164,6 +165,137 @@ void _setScreen(WidgetTester tester, double width, double height) {
 
 void main() {
   test(
+    'running time JSON supports older records and rejects negative values',
+    () {
+      expect(TrafficStatsResult.fromJson(const {}).runningSeconds, 0);
+      expect(
+        TrafficStatsResult.fromJson(const {
+          'running-seconds': -1,
+        }).runningSeconds,
+        0,
+      );
+      final sample = _sampleResult();
+      expect(
+        TrafficStatsResult.fromJson(sample.toJson()).runningSeconds,
+        30960,
+      );
+    },
+  );
+
+  for (final width in [360.0, 430.0, 1080.0]) {
+    for (final brightness in Brightness.values) {
+      for (final scale in [1.0, 2.0]) {
+        testWidgets(
+          'approved gray blocks stay aligned at $width $brightness scale $scale',
+          (tester) async {
+            _setScreen(tester, width, 900);
+            final sample = _sampleResult();
+            await tester.pumpWidget(
+              _app(
+                _FakeTrafficStatsClient(result: sample),
+                locale: const Locale('zh', 'CN'),
+                page: app_ui.Theme(
+                  data: app_ui.ThemeData(brightness: brightness),
+                  child: MediaQuery(
+                    data: MediaQueryData(
+                      size: Size(width, 900),
+                      textScaler: TextScaler.linear(scale),
+                    ),
+                    child: TrafficStatsScope(
+                      child: app_ui.Scaffold(
+                        title: 'Overview',
+                        body: SingleChildScrollView(
+                          padding: const EdgeInsets.all(16),
+                          child: TrafficStatsOverviewCard(result: sample),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+            await tester.pumpAndSettle();
+            final tile = find.byKey(
+              const ValueKey('traffic-stats-running-time'),
+            );
+            final context = tester.element(tile);
+            final decoration =
+                tester.widget<DecoratedBox>(tile).decoration as ShapeDecoration;
+            expect(decoration.color, DashboardColors.of(context).tone);
+            expect(decoration.shape, app_ui.AppShape.lg);
+            final proxy = find.byKey(
+              const ValueKey('traffic-stats-proxy-total'),
+            );
+            final direct = find.byKey(
+              const ValueKey('traffic-stats-direct-total'),
+            );
+            for (final block in [proxy, direct]) {
+              final fill =
+                  tester.widget<DecoratedBox>(block).decoration
+                      as ShapeDecoration;
+              expect(fill.color, DashboardColors.of(context).tone);
+              expect(fill.shape, app_ui.AppShape.md);
+              final valueText = find.descendant(
+                of: block,
+                matching: find.byWidgetPredicate(
+                  (w) => w is Text && w.textSpan != null,
+                ),
+              );
+              expect(valueText, findsOneWidget);
+              expect(
+                tester.getTopRight(valueText).dx,
+                closeTo(tester.getTopRight(block).dx - 12, .1),
+              );
+            }
+            expect(
+              tester.getTopLeft(proxy).dx,
+              closeTo(tester.getTopLeft(direct).dx, .01),
+            );
+            expect(
+              tester.getTopRight(tile).dx,
+              lessThan(tester.getTopLeft(proxy).dx),
+            );
+            expect(
+              tester.getSize(proxy).height,
+              closeTo(tester.getSize(direct).height, .01),
+            );
+            expect(
+              tester.getTopLeft(tile).dy,
+              closeTo(tester.getTopLeft(proxy).dy, .01),
+            );
+            expect(
+              tester.getBottomLeft(tile).dy,
+              closeTo(tester.getBottomLeft(direct).dy, .01),
+            );
+            final l = context.appLocalizations;
+            final title = find.descendant(
+              of: tile,
+              matching: find.text(l.trafficStatsRunningTime),
+            );
+            final clock = find.descendant(
+              of: tile,
+              matching: find.byWidgetPredicate(
+                (w) => w is GlyphIcon && w.glyph == AppGlyphs.clock,
+              ),
+            );
+            expect(
+              tester.widget<Text>(title).style!.color,
+              tester.widget<GlyphIcon>(clock).color,
+            );
+            expect(
+              find.text(
+                '8 ${l.trafficStatsHourUnit} 36 ${l.trafficStatsMinuteUnit}',
+              ),
+              findsOneWidget,
+            );
+            expect(tester.takeException(), isNull);
+          },
+        );
+      }
+    }
+  }
+
+  test(
     'date range and stepping helpers compute day, week, and month cleanly',
     () {
       final anchor = DateTime(2026, 11, 11); // Wednesday
@@ -239,6 +371,7 @@ void main() {
     const Size(360, 720),
     const Size(430, 840),
     const Size(1080, 820),
+    const Size(1600, 900),
   ]) {
     testWidgets(
       'populated dashboard lays out cleanly at ${size.width.toInt()}x${size.height.toInt()} and does not open sheet on domain tap',
@@ -264,59 +397,17 @@ void main() {
               0.01,
             ),
           );
-          final ovCtx = tester.element(overview);
-          final l = ovCtx.appLocalizations;
-          final headerBottom = tester
-              .getBottomLeft(
-                find
-                    .ancestor(
-                      of: find.descendant(
-                        of: overview,
-                        matching: find.text(l.trafficStatsOverview),
-                      ),
-                      matching: find.byType(Row),
-                    )
-                    .first,
-              )
-              .dy;
-          final statsGroup = find
-              .ancestor(
-                of: find.descendant(
-                  of: overview,
-                  matching: find.text(l.trafficStatsTotal),
-                ),
-                matching: find.byType(Column),
-              )
-              .first;
-          final statsTop = tester.getTopLeft(statsGroup).dy;
-          final statsBottom = tester.getBottomLeft(statsGroup).dy;
-          final dividerFinder = find.descendant(
-            of: overview,
-            matching: find.byType(app_ui.Divider),
-          );
-          expect(dividerFinder, findsOneWidget);
-          final dividerTop = tester.getTopLeft(dividerFinder).dy;
-          final dividerBottom = tester.getBottomLeft(dividerFinder).dy;
-          final legendTop = tester
-              .getTopLeft(
-                find
-                    .ancestor(
-                      of: find.descendant(
-                        of: overview,
-                        matching: find.text(
-                          trafficStatsFormatBytes(_sampleResult().proxyTotal),
-                        ),
-                      ),
-                      matching: find.byType(Row),
-                    )
-                    .first,
-              )
-              .dy;
+          final trendWidth = tester
+              .getSize(find.byType(TrafficStatsTrendCard))
+              .width;
           expect(
-            statsTop - headerBottom,
-            closeTo(dividerTop - statsBottom, 1.0),
+            tester.getSize(overview).width / trendWidth,
+            closeTo(4 / 6, .01),
           );
-          expect(legendTop, greaterThan(dividerBottom));
+          final uptime = find.byKey(
+            const ValueKey('traffic-stats-running-time'),
+          );
+          expect(tester.getSize(uptime).height, closeTo(88, 1));
         }
         expect(
           find.descendant(
@@ -619,16 +710,13 @@ void main() {
         ),
         findsOneWidget,
       );
-      final insetTiles = find.descendant(
-        of: overview,
-        matching: find.byWidgetPredicate(
-          (w) =>
-              w is Container &&
-              w.decoration is ShapeDecoration &&
-              (w.decoration as ShapeDecoration).shape == app_ui.AppShape.lg,
-        ),
-      );
-      expect(insetTiles, findsNothing);
+      for (final key in [
+        'traffic-stats-running-time',
+        'traffic-stats-proxy-total',
+        'traffic-stats-direct-total',
+      ]) {
+        expect(find.byKey(ValueKey(key)), findsOneWidget);
+      }
       final legendDots = tester
           .widgetList<DecoratedBox>(
             find.descendant(
@@ -655,24 +743,16 @@ void main() {
       final overviewRing = tester.widget<RingChart>(
         find.descendant(of: overview, matching: find.byType(RingChart)),
       );
-      expect(overviewRing.trackColor, DashboardColors.of(overviewCtx).track);
+      expect(overviewRing.trackColor, DashboardColors.of(overviewCtx).tone2);
       expect(overviewRing.size, lessThanOrEqualTo(86));
       final overviewDividerFinder = find.descendant(
         of: overview,
         matching: find.byType(app_ui.Divider),
       );
-      expect(overviewDividerFinder, findsOneWidget);
-      expect(
-        tester.widget<app_ui.Divider>(overviewDividerFinder).thickness,
-        app_ui.Divider.separatorThicknessOf(overviewCtx),
-      );
-      expect(
-        tester.getBottomLeft(overviewDividerFinder).dy,
-        lessThanOrEqualTo(tester.getTopLeft(proxyRowFinder).dy),
-      );
+      expect(overviewDividerFinder, findsNothing);
       expect(
         tester.widget<Text>(proxyLabelFinder).style?.fontSize,
-        app_ui.AppTextStyle.subheadline.size,
+        app_ui.AppTextStyle.footnote.size,
       );
       expect(
         tester.widget<Text>(proxyValueFinder).style?.fontSize,

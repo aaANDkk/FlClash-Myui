@@ -1,9 +1,9 @@
 import 'dart:io';
 
+import 'package:fl_clash/common/app_localizations.dart';
 import 'package:fl_clash/core/core.dart';
 import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/enum/enum.dart';
-import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/manager/core_manager.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/action.dart';
@@ -32,7 +32,6 @@ const _nullProfileSetupState = SetupState(
   profileId: null,
   profileLastUpdateDate: null,
   profileType: ProfileType.file,
-  extendType: ExtendType.standard,
   rules: [],
   proxyGroups: [],
   addedRules: [],
@@ -75,6 +74,13 @@ class _ApplyRecordingSetupAction extends SetupAction {
   void applyProfileDebounce({bool silence = false, bool force = false}) {
     applies++;
   }
+}
+
+class _LostRecordingSetupAction extends SetupAction {
+  int lostCount = 0;
+
+  @override
+  void onCoreLost() => lostCount++;
 }
 
 _MockCoreHandlerInterface _coreInterface() {
@@ -148,7 +154,7 @@ void main() {
         options: CoreOptions(testUrl: ''),
       ),
     );
-    await AppLocalizations.load(const Locale('en'));
+    loadAppLocalizations(const Locale('en'));
     profileSwitchTempDir = Directory.systemTemp.createTempSync(
       'core_manager_test',
     );
@@ -216,6 +222,30 @@ void main() {
     expect(find.text('boom'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('a crash ends the run here without telling the Core to stop', (
+    tester,
+  ) async {
+    final coreInterface = _coreInterface();
+    final setup = _LostRecordingSetupAction();
+    final container = await _pumpCoreManager(
+      tester,
+      coreInterface,
+      overrides: [setupActionProvider.overrideWith(() => setup)],
+    );
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    container.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+
+    coreEventManager.sendEvent(_crash);
+    await tester.pump();
+
+    expect(container.read(coreStatusProvider), CoreStatus.disconnected);
+    expect(setup.lostCount, 1);
+    verifyNever(() => coreInterface.stopListener());
+
+    await tester.pumpWidget(const SizedBox());
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
   });
 
   testWidgets('a crash is ignored when the core is not connected', (
@@ -579,13 +609,69 @@ void main() {
 
       container.read(currentProfileIdProvider.notifier).value = b.id;
       container.read(currentProfileIdProvider.notifier).value = c.id;
-      await _waitForSetupToSettle(tester, () => setupCalls >= 2);
+      await _waitForSetupToSettle(tester, () => setupCalls >= 1);
 
       expect(container.read(currentProfileIdProvider), c.id);
-      expect(setupCalls, 2);
+      expect(setupCalls, 1);
 
       await tester.pumpWidget(const SizedBox.shrink());
     });
+
+    testWidgets(
+      'rapidly switching 10 profiles collapses into a single setup and flushes immediately on leaving page',
+      (tester) async {
+        final coreInterface = _coreInterface();
+        when(() => coreInterface.getExternalProviders()).thenAnswer(
+          (_) async => [],
+        );
+        when(() => coreInterface.getProxies()).thenAnswer(
+          (_) async => const ProxiesData(proxies: {}, all: []),
+        );
+        final appliedProfileIds = <int?>[];
+        final profiles = [
+          for (var i = 0; i < 11; i++) Profile.normal(label: 'p$i'),
+        ];
+        late ProviderContainer container;
+        when(() => coreInterface.setupConfig(any())).thenAnswer((_) async {
+          appliedProfileIds.add(container.read(currentProfileIdProvider));
+        });
+        container = await _pumpCoreManager(
+          tester,
+          coreInterface,
+          overrides: [
+            initProvider.overrideWithBuild((_, _) => true),
+            currentPageLabelProvider.overrideWithBuild(
+              (_, _) => PageLabel.profiles,
+            ),
+            profilesProvider.overrideWith(() => TestProfiles(profiles)),
+            currentProfileIdProvider.overrideWithBuild(
+              (_, _) => profiles.first.id,
+            ),
+            setupStateProvider.overrideWith((_, _) => _nullProfileSetupState),
+          ],
+        );
+        globalState.container = container;
+
+        for (var i = 1; i < profiles.length; i++) {
+          container.read(currentProfileIdProvider.notifier).value =
+              profiles[i].id;
+        }
+        expect(appliedProfileIds, isEmpty);
+
+        // Navigating to Proxies flushes the pending switch immediately.
+        container.read(currentPageLabelProvider.notifier).value =
+            PageLabel.proxies;
+        await _waitForSetupToSettle(
+          tester,
+          () => appliedProfileIds.isNotEmpty,
+        );
+
+        expect(container.read(currentProfileIdProvider), profiles.last.id);
+        expect(appliedProfileIds, [profiles.last.id]);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
 
     testWidgets(
       'a missing profile id recovers to a fallback without looping when '

@@ -2,6 +2,7 @@ package com.follow.clash.plugins
 
 import com.follow.clash.ServiceController
 import com.follow.clash.ServiceState
+import com.follow.clash.StartFailure
 import com.follow.clash.common.Components
 import com.follow.clash.common.GlobalState
 import com.follow.clash.core.Core
@@ -58,7 +59,8 @@ class ServicePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         when (call.method) {
             "init" -> initialize(result)
             "shutdown" -> shutdown(result)
-            "getRunTime" -> getRunTime(result)
+            "getRunningService" -> getRunningService(result)
+            "isRunRequested" -> result.success(ServiceState.isRunRequested)
             "syncState" -> syncState(call, result)
             "start" -> start(call, result)
             "stop" -> stop(call, result)
@@ -98,9 +100,15 @@ class ServicePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         }
     }
 
-    private fun getRunTime(result: MethodChannel.Result) {
+    private fun getRunningService(result: MethodChannel.Result) {
         scope.launch {
-            result.success(ServiceState.awaitRunTime())
+            val runtime = ServiceState.awaitRunningService()
+            result.success(runtime?.let {
+                mapOf(
+                    "startedAt" to it.startedAtMillis,
+                    "options" to gson.toJson(it.options),
+                )
+            })
         }
     }
 
@@ -132,10 +140,13 @@ class ServicePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
     }
 
     // Read on the platform thread, where start and stop arrive: revision and intent are one instant.
-    fun notifyStopped() {
+    internal fun notifyStopped(failure: StartFailure?) {
         scope.launch(Dispatchers.Main) {
             if (!ServiceState.isRunRequested) {
-                channel.invokeMethod("stopped", commandRevision)
+                channel.invokeMethod(
+                    "stopped",
+                    mapOf("revision" to commandRevision, "failure" to failure?.code),
+                )
             }
         }
     }

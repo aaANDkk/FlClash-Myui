@@ -135,6 +135,60 @@ void main() {
     expect(controller.offset, controller.position.maxScrollExtent);
   });
 
+  testWidgets('a fractional inset above the list does not anchor it at the '
+      'end', (tester) async {
+    tester.view.physicalSize = const Size(1184, 2560);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final controller = ScrollController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: CustomScrollView(
+          controller: controller,
+          slivers: [
+            const SliverPadding(padding: EdgeInsets.only(top: 85.2 / 3)),
+            SliverPrismList(
+              itemCount: 3,
+              anchorAtEnd: true,
+              itemBuilder: (_, index) =>
+                  SizedBox(height: 400, child: Text('$index')),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    expect(controller.offset, 0);
+    expect(controller.position.maxScrollExtent, greaterThan(0));
+  });
+
+  testWidgets('a list anchored at its end keeps the end in view as rows '
+      'settle', (tester) async {
+    final controller = ScrollController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: PrismListView(
+          controller: controller,
+          itemCount: 200,
+          estimatedItemExtent: 50,
+          anchorAtEnd: true,
+          itemBuilder: (_, index) =>
+              SizedBox(height: 100, child: Text('$index')),
+        ),
+      ),
+    );
+
+    controller.jumpTo(controller.position.maxScrollExtent);
+    await tester.pump();
+
+    expect(controller.offset, controller.position.maxScrollExtent);
+    expect(find.text('199'), findsOneWidget);
+  });
+
   testWidgets('a fixed row extent places a jump exactly', (tester) async {
     final controller = ScrollController();
     addTearDown(controller.dispose);

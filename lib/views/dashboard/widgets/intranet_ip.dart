@@ -4,21 +4,10 @@ import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/views/dashboard/layout.dart';
 import 'package:fl_clash/views/dashboard/style.dart';
 import 'package:fl_clash/widgets/widgets.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/widgets.dart';
 
 import 'card.dart';
-
-Future<void> copyToClipboard(BuildContext context, String text) async {
-  await Clipboard.setData(ClipboardData(text: text));
-  if (context.mounted) {
-    dialogs.showBanner(
-      context.appLocalizations.copySuccess,
-      level: BannerLevel.success,
-    );
-  }
-}
 
 typedef _LanRowMetrics = ({
   EdgeInsets padding,
@@ -91,7 +80,7 @@ class IntranetIpCard extends ConsumerWidget {
                   tooltip: appLocalizations.copy,
                   onPressed: address == null
                       ? null
-                      : () => copyToClipboard(context, address),
+                      : () => dialogs.copyToClipboard(context, address),
                 ),
               ),
             ],

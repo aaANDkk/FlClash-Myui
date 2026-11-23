@@ -15,6 +15,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -114,6 +115,7 @@ private class FakeHost(override val scope: CoroutineScope) : ServiceStateHost {
     var startCalls = 0
     var stopCalls = 0
     var stoppedNotifications = 0
+    val stopFailures = mutableListOf<StartFailure?>()
     var lastInitParams: String? = null
     var lastSetupParams: String? = null
 
@@ -139,8 +141,9 @@ private class FakeHost(override val scope: CoroutineScope) : ServiceStateHost {
 
     override fun app(): AppGateway? = app
 
-    override fun notifyStopped() {
+    override fun notifyStopped(failure: StartFailure?) {
         stoppedNotifications++
+        stopFailures += failure
     }
 
     override suspend fun quickSetup(initParams: String, setupParams: String): Result<String> {
@@ -158,7 +161,10 @@ private class FakeHost(override val scope: CoroutineScope) : ServiceStateHost {
         if (!startSucceeds) {
             return false
         }
-        runtime = ServiceRuntime(vpn = runsAsVpn ?: options.enable, startedAtMillis = STARTED_AT)
+        runtime = ServiceRuntime(
+            options = options.copy(enable = runsAsVpn ?: options.enable),
+            startedAtMillis = STARTED_AT,
+        )
         return true
     }
 
@@ -201,18 +207,23 @@ class ServiceStateMachineTest {
     }
 
     @Test
-    fun `the run time is reported only while a run is both requested and up`() = runTest {
+    fun `the running service is reported only while a run is both requested and up`() = runTest {
         val host = FakeHost(backgroundScope)
         val machine = ServiceStateMachine(host)
         machine.syncSharedState(configuredState())
 
-        assertEquals(0L, machine.awaitRunTime())
+        assertNull(machine.awaitRunningService())
 
         machine.requestStart().await()
-        assertEquals(STARTED_AT, machine.awaitRunTime())
+        val running = machine.awaitRunningService()
+        assertEquals(STARTED_AT, running?.startedAtMillis)
+        assertEquals(host.lastStartOptions, running?.options)
+
+        machine.syncSharedState(configuredState().copy(vpnOptions = null))
+        assertEquals(running, machine.awaitRunningService())
 
         machine.requestStop().await()
-        assertEquals(0L, machine.awaitRunTime())
+        assertNull(machine.awaitRunningService())
     }
 
     @Test
@@ -225,7 +236,7 @@ class ServiceStateMachineTest {
         val stop = machine.requestStop()
 
         assertEquals(RunState.STOPPING, machine.runState.value)
-        assertEquals(0L, machine.awaitRunTime())
+        assertNull(machine.awaitRunningService())
         assertTrue(stop.await())
         assertEquals(RunState.STOPPED, machine.runState.value)
     }
@@ -251,7 +262,7 @@ class ServiceStateMachineTest {
         assertFalse(machine.requestStart().await())
         assertEquals(RunState.STOPPED, machine.runState.value)
         assertFalse(machine.isRunRequested)
-        assertEquals(1, host.stoppedNotifications)
+        assertEquals(listOf(StartFailure.SERVICE), host.stopFailures)
     }
 
     @Test
@@ -320,7 +331,7 @@ class ServiceStateMachineTest {
 
         assertFalse(machine.requestStart().await())
         assertEquals(0, host.startCalls)
-        assertEquals(1, host.stoppedNotifications)
+        assertEquals(listOf(StartFailure.VPN_PERMISSION), host.stopFailures)
     }
 
     /** Flutter opened the Core's listeners before asking, and may be gone before it hears back. */

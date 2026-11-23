@@ -828,6 +828,16 @@ abstract class MitmModule with _$MitmModule {
 
     /// Its scripts FlClash runs, which turning it on asks about first.
     @Default(0) int scripts,
+
+    /// Network changes, skipped verification or limited clients, which
+    /// turning it on also asks about.
+    @Default(false) bool asksConsent,
+
+    /// The user's answer to what turning it on asks about: once agreed, its
+    /// updates bring new scripts without asking; false once they declined or
+    /// turned it off. Null until asked, and again once an update turns it off
+    /// for something it was never agreed to.
+    bool? accepted,
     required DateTime lastUpdateTime,
   }) = _MitmModule;
 }
@@ -838,6 +848,10 @@ extension MitmModuleExt on MitmModule {
   String get fileName => '$id.txt';
 
   String get updatingKey => 'mitm_module_$id';
+
+  bool get asksBeforeTurningOn => scripts > 0 || asksConsent;
+
+  bool get awaitsConsent => !enabled && accepted == null && asksBeforeTurningOn;
 }
 
 @freezed
@@ -988,7 +1002,16 @@ abstract class IconSet with _$IconSet {
   }) = _IconSet;
 }
 
+const builtInIconSetId = -1;
+const builtInIconSetName = 'Qure-Style-SVG';
+const builtInIconSetUrl =
+    'https://raw.githubusercontent.com/aaANDkk/Qure_Style_SVG/main/Other/Qure-Style-SVG.json';
+const builtInIconSetProjectUrl = 'https://github.com/aaANDkk/Qure_Style_SVG';
+const builtInIconSetAssetPath = 'assets/data/qure_style_svg.json';
+
 extension IconSetExt on IconSet {
+  bool get isBuiltIn => id == builtInIconSetId || url == builtInIconSetUrl;
+
   bool get isRemote => url.isNotEmpty;
 
   String get cover => icons.firstOrNull?.url ?? '';

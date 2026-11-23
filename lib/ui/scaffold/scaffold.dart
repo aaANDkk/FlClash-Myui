@@ -53,6 +53,9 @@ class Scaffold extends StatefulWidget {
   final bool isLoading;
   final List<Widget>? actions;
 
+  /// Reports of the page's state that stand before its buttons and never fold.
+  final List<Widget> statusActions;
+
   final IconButtonData? primaryAction;
 
   /// Folded into the overflow menu once the bar would hold more than three
@@ -79,6 +82,7 @@ class Scaffold extends StatefulWidget {
   final ValueListenable<List<ScaffoldKeyword>>? keywords;
   final bool? resizeToAvoidBottomInset;
   final VoidCallback? backAction;
+  final List<BoxShadow> leadingShadows;
 
   /// Puts the toggle of the sort mode in the bar.
   final bool canSort;
@@ -91,7 +95,9 @@ class Scaffold extends StatefulWidget {
     this.titleWidget,
     this.titleMenuItems = const [],
     this.actions,
+    this.statusActions = const [],
     this.backAction,
+    this.leadingShadows = const [],
     this.isLoading = false,
     this.searchState,
     this.searchActions = const [],
@@ -484,7 +490,19 @@ class ScaffoldState extends State<Scaffold>
             child: AnimatedOpacity(
               opacity: hidden ? 0 : 1,
               duration: context.motionDuration(kThemeAnimationDuration),
-              child: BarItemPresence(child: ElasticPress(child: button)),
+              child: BarItemPresence(
+                child: ElasticPress(
+                  child: widget.leadingShadows.isEmpty
+                      ? button
+                      : DecoratedBox(
+                          decoration: ShapeDecoration(
+                            shape: AppShape.full,
+                            shadows: widget.leadingShadows,
+                          ),
+                          child: button,
+                        ),
+                ),
+              ),
             ),
           ),
         ),
@@ -585,11 +603,18 @@ class ScaffoldState extends State<Scaffold>
         ...widget.iconActions,
       ],
       confirmation: atFoot ? null : widget.confirmationAction,
-      widgetCount: widgets.length + selection.slots,
+      widgetCount:
+          widget.statusActions.length + widgets.length + selection.slots,
       menuItems: widget.menuItems,
     );
     final shown = [?lead, ...fold.shown];
-    final grouped = widget.groupIconActions && shown.length > 1
+    final totalButtons =
+        shown.length +
+        selection.buttons +
+        widgets.length +
+        (fold.overflow.isEmpty ? 0 : 1);
+    final grouped =
+        widget.groupIconActions && totalButtons >= 3 && shown.length > 1
         ? shown.take(_maxGroupedActions)
         : null;
     final actions = [
@@ -634,7 +659,10 @@ class ScaffoldState extends State<Scaffold>
         ),
       );
     }
-    return genActions(actions, edge: AppBarActionEdge.container);
+    return genActions([
+      for (final action in widget.statusActions) ElasticPress(child: action),
+      ...actions,
+    ], edge: AppBarActionEdge.container);
   }
 
   Widget _buildBarSearch({required bool fills}) {

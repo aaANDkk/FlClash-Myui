@@ -434,7 +434,7 @@ class _UsageMeter extends StatelessWidget {
         SizedBox(
           height: 12,
           child: CustomPaint(
-            painter: _WavyProgressPainter(
+            painter: WavyProgressPainter(
               value: usage.share,
               active: usage.share >= _nearlyUsedShare
                   ? DashboardColors.of(context).warn
@@ -450,8 +450,8 @@ class _UsageMeter extends StatelessWidget {
 
 /// The M3 Expressive wavy linear indicator: a wave up to [value], a gap,
 /// then a flat track ending in a stop dot.
-class _WavyProgressPainter extends CustomPainter {
-  const _WavyProgressPainter({
+class WavyProgressPainter extends CustomPainter {
+  const WavyProgressPainter({
     required this.value,
     required this.active,
     required this.track,
@@ -505,7 +505,7 @@ class _WavyProgressPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_WavyProgressPainter oldDelegate) =>
+  bool shouldRepaint(WavyProgressPainter oldDelegate) =>
       oldDelegate.value != value ||
       oldDelegate.active != active ||
       oldDelegate.track != track;

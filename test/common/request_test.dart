@@ -5,8 +5,10 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
-import 'package:fl_clash/common/constant.dart';
+import 'package:fl_clash/common/app_update.dart';
+import 'package:fl_clash/common/constant.dart' show downloadTimeoutDuration;
 import 'package:fl_clash/common/exception.dart';
+import 'package:fl_clash/common/release_asset.dart';
 import 'package:fl_clash/common/request.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -53,7 +55,7 @@ class _PathAdapter implements HttpClientAdapter {
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
-    return byPath[options.uri.path]!();
+    return byPath[options.uri.path]?.call() ?? ResponseBody.fromString('', 404);
   }
 
   @override
@@ -155,7 +157,15 @@ void main() {
   });
 
   group('downloadVerifiedRelease', () {
-    const name = 'FlClash-1.2.3-android-arm64-v8a.apk';
+    const tag = 'v0.9.4';
+    const pathPrefix = '/aaANDkk/FlClash-Myui/releases/download/$tag';
+    final name = releaseAssetName(
+      line: appReleaseLine,
+      version: '0.9.4',
+      os: ReleaseOs.android,
+      arch: ReleaseArch.arm64,
+      extension: 'apk',
+    );
     final package = utf8.encode('package');
     final digest = sha256.convert(package).toString();
     late Directory directory;
@@ -169,22 +179,20 @@ void main() {
     Request requestServing(String sums, List<int> asset) {
       return Request()
         ..releaseDio.httpClientAdapter = _PathAdapter({
-          '/$repository/releases/download/v1.2.3/SHA256SUMS': () =>
-              ResponseBody.fromString(sums, 200),
-          '/$repository/releases/download/v1.2.3/$name': () =>
-              ResponseBody.fromBytes(asset, 200),
+          '$pathPrefix/SHA256SUMS': () => ResponseBody.fromString(sums, 200),
+          '$pathPrefix/$name': () => ResponseBody.fromBytes(asset, 200),
         });
     }
 
     Future<String> download(Request request) {
       return request.downloadVerifiedRelease(
-        tag: 'v1.2.3',
+        tag: tag,
         name: name,
         directory: directory.path,
       );
     }
 
-    test('keeps a file matching the published digest', () async {
+    test('checks the file against the public release SHA256SUMS', () async {
       final request = requestServing('$digest  ./$name\n', package);
 
       final path = await download(request);

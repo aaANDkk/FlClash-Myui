@@ -179,7 +179,9 @@ void main() {
     );
   }
 
-  testWidgets('two bar buttons share one pressable group', (tester) async {
+  testWidgets('two bar buttons stand apart without a third button', (
+    tester,
+  ) async {
     final bar = await _pumpBar(
       tester,
       view: _desktop,
@@ -193,8 +195,43 @@ void main() {
         body: SizedBox(),
       ),
     );
+    final first = find.widgetWithGlyph(IconButton, AppGlyphs.sync);
+    final second = find.widgetWithGlyph(IconButton, AppGlyphs.sort);
+
+    expect(find.byType(TonalButtonGroup), findsNothing);
+    expect(
+      tester.getRect(_container(second)).left -
+          tester.getRect(_container(first)).right,
+      AppBarActionEdge.container.gap,
+    );
+    expect(
+      bar.right - tester.getRect(_container(second)).right,
+      appBarActionInset(false),
+    );
+  });
+
+  testWidgets('three bar buttons share one pressable group on the first two', (
+    tester,
+  ) async {
+    final bar = await _pumpBar(
+      tester,
+      view: _desktop,
+      platform: TargetPlatform.android,
+      child: const Scaffold(
+        title: 'Title',
+        iconActions: [
+          IconButtonData(glyph: AppGlyphs.sync, onPressed: _noop),
+          IconButtonData(glyph: AppGlyphs.sort, onPressed: _noop),
+          IconButtonData(glyph: AppGlyphs.edit, onPressed: _noop),
+        ],
+        body: SizedBox(),
+      ),
+    );
     final group = find.byType(TonalButtonGroup);
     final leading = tester.getRect(_container(_back));
+    final trailing = tester.getRect(
+      _container(find.widgetWithGlyph(IconButton, AppGlyphs.edit)),
+    );
 
     expect(group, findsOneWidget);
     expect(
@@ -206,7 +243,11 @@ void main() {
       findsOneWidget,
     );
     expect(tester.getSize(group).height, leading.height);
-    expect(bar.right - tester.getRect(group).right, appBarActionInset(false));
+    expect(
+      trailing.left - tester.getRect(group).right,
+      AppBarActionEdge.container.gap,
+    );
+    expect(bar.right - trailing.right, appBarActionInset(false));
   });
 
   testWidgets('on glass a group is one pane, and a lone button its own', (
@@ -223,6 +264,7 @@ void main() {
           iconActions: [
             IconButtonData(glyph: AppGlyphs.sync, onPressed: _noop),
             IconButtonData(glyph: AppGlyphs.sort, onPressed: _noop),
+            IconButtonData(glyph: AppGlyphs.edit, onPressed: _noop),
           ],
           body: SizedBox(),
         ),
@@ -254,6 +296,7 @@ void main() {
         iconActions: [
           IconButtonData(glyph: AppGlyphs.sync, onPressed: _noop),
           IconButtonData(glyph: AppGlyphs.sort, onPressed: _noop),
+          IconButtonData(glyph: AppGlyphs.edit, onPressed: _noop),
         ],
         body: SizedBox(),
       ),
@@ -303,6 +346,9 @@ void main() {
           searchState: AppBarSearchState(onSearch: (_) {}),
           iconActions: const [
             IconButtonData(glyph: AppGlyphs.sync, onPressed: _noop),
+          ],
+          menuItems: const [
+            PopupMenuItem(label: 'Settings', onPressed: _noop),
           ],
           body: const SizedBox(),
         ),

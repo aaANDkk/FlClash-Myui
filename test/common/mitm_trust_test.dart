@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/mitm_trust.dart';
 import 'package:fl_clash/enum/enum.dart';
-import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/plugins/app.dart';
 import 'package:flutter/widgets.dart';
@@ -114,7 +113,7 @@ void main() {
   });
 
   group('Android', () {
-    setUpAll(() => AppLocalizations.load(const Locale('en')));
+    setUpAll(() => loadAppLocalizations(const Locale('en')));
 
     void locate(
       _MockApp app, {
@@ -206,7 +205,10 @@ void main() {
         () => app.removeCaCertificateWithRoot(any()),
       ).thenAnswer((_) async => true);
 
-      expect(await AndroidMitmTrustStore(app).remove(_ca), isTrue);
+      expect(
+        await AndroidMitmTrustStore(app).remove(_ca),
+        MitmRemoveOutcome.removed,
+      );
       verify(() => app.removeCaCertificateWithRoot(any())).called(1);
     });
 
@@ -217,7 +219,23 @@ void main() {
         () => app.removeCaCertificateWithRoot(any()),
       ).thenAnswer((_) async => true);
 
-      expect(await AndroidMitmTrustStore(app).remove(_ca), isFalse);
+      expect(
+        await AndroidMitmTrustStore(app).remove(_ca),
+        MitmRemoveOutcome.userStore,
+      );
+    });
+
+    test('a system CA without su is left for the root manager', () async {
+      final app = _MockApp();
+      locate(app, system: true);
+      when(
+        () => app.removeCaCertificateWithRoot(any()),
+      ).thenAnswer((_) async => false);
+
+      expect(
+        await AndroidMitmTrustStore(app).remove(_ca),
+        MitmRemoveOutcome.needsRoot,
+      );
     });
   });
 
@@ -305,7 +323,7 @@ void main() {
     });
 
     test('removing deletes the CA by its hash', () async {
-      expect(await store().remove(_ca), isTrue);
+      expect(await store().remove(_ca), MitmRemoveOutcome.removed);
 
       expect(processes.argumentsOf('/usr/bin/security').single, [
         'delete-certificate',
@@ -333,7 +351,7 @@ void main() {
     });
 
     test('removing deletes the CA by its SHA-1', () async {
-      expect(await store().remove(_ca), isTrue);
+      expect(await store().remove(_ca), MitmRemoveOutcome.removed);
 
       expect(processes.argumentsOf('certutil').single, [
         '-user',
@@ -401,7 +419,7 @@ void main() {
         await touch('/home/.pki/nssdb/cert9.db');
         listDatabases(stays: false);
 
-        expect(await store().remove(_ca), isTrue);
+        expect(await store().remove(_ca), MitmRemoveOutcome.removed);
 
         expect(elevated, [
           ['/bin/sh', '-c', LinuxMitmTrustStore.removeScript, 'flclash'],
@@ -409,7 +427,7 @@ void main() {
       });
 
       test('asks for no elevation for a CA the bundle does not hold', () async {
-        expect(await store().remove(_ca), isTrue);
+        expect(await store().remove(_ca), MitmRemoveOutcome.removed);
 
         expect(elevated, isEmpty);
       });
@@ -418,41 +436,78 @@ void main() {
         files[LinuxMitmTrustStore.bundles.first] = _pem;
         elevation = false;
 
-        expect(await store().remove(_ca), isFalse);
+        expect(await store().remove(_ca), MitmRemoveOutcome.failed);
       });
 
       test('reports a database it could not clear', () async {
         await touch('/home/.pki/nssdb/cert9.db');
         listDatabases(stays: true);
 
-        expect(await store().remove(_ca), isFalse);
+        expect(await store().remove(_ca), MitmRemoveOutcome.failed);
       });
 
       test('reports databases no certutil can reach', () async {
         await touch('/home/.pki/nssdb/cert9.db');
 
-        expect(await store(certutil: false).remove(_ca), isFalse);
+        expect(
+          await store(certutil: false).remove(_ca),
+          MitmRemoveOutcome.failed,
+        );
       });
     });
+
+    void listTrust(String flags) {
+      processes.handle('${root.path}/bin/certutil', (arguments) {
+        if (arguments.contains('-a')) {
+          return ProcessResult(0, 0, _pem, '');
+        }
+        return ProcessResult(
+          0,
+          0,
+          '\nCertificate Nickname                                         '
+              'Trust Attributes\n'
+              '                                                             '
+              'SSL,S/MIME,JAR/XPI\n\n'
+              '${LinuxMitmTrustStore.nickname} #2                           '
+              'CT,C,C\n'
+              '${LinuxMitmTrustStore.nickname}                              '
+              '$flags\n',
+          '',
+        );
+      });
+    }
 
     test('a CA in the system bundle and every browser is trusted', () async {
       files[LinuxMitmTrustStore.bundles.first] = 'other\n$_pem';
       await touch('/home/.pki/nssdb/cert9.db');
-      processes.stub('${root.path}/bin/certutil', stdout: _pem);
+      listTrust('C,,');
 
       final check = await store().check(_ca, issueLeaf);
 
       expect(check.trust, MitmTrust.ready);
       expect(check.missingStores, isEmpty);
-      expect(processes.argumentsOf('${root.path}/bin/certutil').single, [
-        '-d',
-        'sql:${database('/.pki/nssdb')}',
-        '-L',
-        '-n',
-        LinuxMitmTrustStore.nickname,
-        '-a',
+      expect(check.untrustedStores, isEmpty);
+      final db = 'sql:${database('/.pki/nssdb')}';
+      expect(processes.argumentsOf('${root.path}/bin/certutil'), [
+        ['-d', db, '-L', '-n', LinuxMitmTrustStore.nickname, '-a'],
+        ['-d', db, '-L'],
       ]);
     });
+
+    test(
+      'a browser that holds the CA without SSL trust is told apart',
+      () async {
+        files[LinuxMitmTrustStore.bundles.first] = _pem;
+        await touch('/home/.pki/nssdb/cert9.db');
+        listTrust('c,C,C');
+
+        final check = await store().check(_ca, issueLeaf);
+
+        expect(check.trust, MitmTrust.untrusted);
+        expect(check.missingStores, isEmpty);
+        expect(check.untrustedStores, ['Chrome']);
+      },
+    );
 
     test('a browser without the CA leaves it partly trusted', () async {
       files[LinuxMitmTrustStore.bundles.last] = _pem;

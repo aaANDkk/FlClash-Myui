@@ -81,10 +81,12 @@ void main() {
     WidgetTester tester,
     List<PopupMenuItem> items, {
     int? maxVisibleItems,
+    LiquidGlassQuality? liquidGlass,
   }) async {
     late PopupOpen open;
     await tester.pumpWidget(
       TestApp(
+        liquidGlass: liquidGlass,
         homeBuilder: (child) => HostScaffold(body: Center(child: child)),
         child: PopupAnchor(
           targetBuilder: (value) {
@@ -98,6 +100,38 @@ void main() {
     );
     return open;
   }
+
+  testWidgets('glass popup rows skip painting a clear resting fill', (
+    tester,
+  ) async {
+    final open = await pumpMenu(tester, [
+      for (var index = 0; index < 6; index++)
+        PopupMenuItem(label: 'Item $index', onPressed: () {}),
+    ], liquidGlass: LiquidGlassQuality.ultra);
+    open();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    final rows = find.descendant(
+      of: find.byType(PopupMenu),
+      matching: find.byType(PressRegion),
+    );
+    expect(rows, findsNWidgets(6));
+    var draws = 0;
+    for (final row in tester.renderObjectList(rows)) {
+      expect(
+        row,
+        paints..everything((method, arguments) {
+          if (method == #drawRSuperellipse &&
+              (arguments.last as Paint).color.a == 0) {
+            draws++;
+          }
+          return true;
+        }),
+      );
+    }
+    expect(draws, 0);
+  });
 
   testWidgets('opening pushes the popup above the target', (tester) async {
     final open = await pumpBox(tester);

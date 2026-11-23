@@ -43,9 +43,12 @@ class _CoreContainerState extends ConsumerState<CoreManager>
     // the previous one hides the error and looks like the switch was lost.
     ref.listenManual(currentProfileIdProvider, (prev, next) {
       if (prev == next) return;
-      runAfterFrame(() {
-        unawaited(ref.read(setupActionProvider.notifier).fullSetup());
-      });
+      ref.read(setupActionProvider.notifier).switchProfileDebounce();
+    });
+    ref.listenManual(currentPageLabelProvider, (prev, next) {
+      if (prev != next) {
+        ref.read(setupActionProvider.notifier).flushPendingProfileSwitch();
+      }
     });
     ref.listenManual(updateParamsProvider, (prev, next) {
       if (prev != next) {
@@ -73,7 +76,7 @@ class _CoreContainerState extends ConsumerState<CoreManager>
       },
     );
     ref.listenManual(mitmModulesProvider, (prev, next) {
-      if (mitmFeature &&
+      if (rsFeature &&
           prev?.value != null &&
           next.hasValue &&
           ref.read(patchClashConfigProvider).mitm.enable) {
@@ -238,6 +241,8 @@ class _CoreContainerState extends ConsumerState<CoreManager>
       return;
     }
     ref.read(coreStatusProvider.notifier).value = CoreStatus.disconnected;
+    ref.read(coreStopReasonProvider.notifier).value = message;
+    ref.read(setupActionProvider.notifier).onCoreLost();
     if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
       dialogs.showBanner(message, level: BannerLevel.error);
     }

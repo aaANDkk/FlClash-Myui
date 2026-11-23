@@ -8,7 +8,6 @@ import 'package:prism_ui/inherited.dart';
 import 'package:prism_ui/navigator_resizable.dart';
 import 'package:prism_ui/page_transition.dart';
 import 'package:prism_ui/pop_scope.dart';
-import 'package:prism_ui/shape.dart';
 import 'package:prism_ui/sheet_header.dart';
 import 'package:prism_ui/sheet.dart';
 import 'package:prism_ui/sheet_navigator.dart';
@@ -24,9 +23,23 @@ class PagedSheetRoute<T> extends PageRoute<T>
         ResizableNavigatorRouteMixin<T>,
         DeferredPushRouteMixin<T>,
         CardRouteMixin<T> {
-  PagedSheetRoute({required this.builder});
+  PagedSheetRoute({required this.builder, this.onPopFirst});
 
   final WidgetBuilder builder;
+
+  /// Takes a pop of the sheet's first page, which has no page to go back to;
+  /// given to that page alone, as a popping route no longer reads as first.
+  final ValueChanged<Object?>? onPopFirst;
+
+  @override
+  bool didPop(T? result) {
+    final onPopFirst = this.onPopFirst;
+    if (onPopFirst != null) {
+      onPopFirst(result);
+      return false;
+    }
+    return super.didPop(result);
+  }
 
   ScrollController? _sheetScroll;
 
@@ -97,16 +110,17 @@ class PagedSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final type = SheetProvider.of(context)?.type;
+    final isBottomSheet = type == SheetType.bottomSheet;
     final pages = NavigatorResizable(child: child);
     return Surface(
       color: _sheetColorOf(context),
-      shape: type == SheetType.bottomSheet
+      shape: isBottomSheet
           ? RoundedSuperellipseBorder(
               borderRadius: bottomSheetRadiusOf(context),
             )
-          : AppShape.none,
-      clipBehavior: Clip.antiAlias,
-      child: type == SheetType.bottomSheet
+          : null,
+      clipBehavior: isBottomSheet ? Clip.antiAlias : Clip.hardEdge,
+      child: isBottomSheet
           ? Stack(
               children: [
                 pages,
@@ -220,7 +234,7 @@ class _NestedPagedSheetState extends State<NestedPagedSheet> {
       child: SheetPagesNavigator(
         key: _navigatorKey,
         onGenerateInitialRoutes: (_, _) => [
-          PagedSheetRoute(builder: widget.builder),
+          PagedSheetRoute(builder: widget.builder, onPopFirst: _popSheet),
         ],
       ),
     );

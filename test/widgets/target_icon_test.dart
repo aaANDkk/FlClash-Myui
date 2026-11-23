@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' as io;
 import 'dart:ui' as ui;
 
 import 'package:file/memory.dart';
+import 'package:fl_clash/common/cache.dart';
 import 'package:fl_clash/models/models.dart' hide FileInfo;
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
@@ -17,12 +19,37 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:path/path.dart' show join;
 
 import '../helpers/glyph_finders.dart';
 import '../helpers/test_app.dart';
 import '../helpers/test_database_providers.dart';
 
 class _MockIconCache extends Mock implements CacheManager {}
+
+class _MockFileService extends Mock implements FileService {}
+
+class _FakeFileServiceResponse implements FileServiceResponse {
+  _FakeFileServiceResponse(this.validTill);
+
+  @override
+  Stream<List<int>> get content => const Stream.empty();
+
+  @override
+  int? get contentLength => 0;
+
+  @override
+  int get statusCode => 200;
+
+  @override
+  final DateTime validTill;
+
+  @override
+  String? get eTag => null;
+
+  @override
+  String get fileExtension => '.png';
+}
 
 Future<void> _pump(WidgetTester tester, Widget icon) {
   return tester.pumpWidget(
@@ -35,6 +62,89 @@ Future<void> _pump(WidgetTester tester, Widget icon) {
 }
 
 void main() {
+  test(
+    'IconFileService floors short cache expiries while preserving longer ones',
+    () async {
+      final inner = _MockFileService();
+      final service = IconFileService(
+        inner: inner,
+        minCacheDuration: const Duration(days: 7),
+      );
+      final now = DateTime.now();
+      when(() => inner.get('https://example.com/short.png')).thenAnswer(
+        (_) async =>
+            _FakeFileServiceResponse(now.add(const Duration(minutes: 5))),
+      );
+      when(() => inner.get('https://example.com/long.png')).thenAnswer(
+        (_) async => _FakeFileServiceResponse(now.add(const Duration(days: 30))),
+      );
+
+      final shortRes = await service.get('https://example.com/short.png');
+      final longRes = await service.get('https://example.com/long.png');
+
+      expect(
+        shortRes.validTill.isAfter(now.add(const Duration(days: 6))),
+        isTrue,
+      );
+      expect(
+        longRes.validTill.isAfter(now.add(const Duration(days: 29))),
+        isTrue,
+      );
+    },
+  );
+
+  test(
+    'resolveProxyGroupIcon applies matching icon rules before group icons',
+    () {
+      final rules = [
+        IconRule(pattern: 'HK|香港', icon: 'https://example.com/hk.svg'),
+      ];
+      expect(
+        resolveProxyGroupIcon('🇭🇰 香港节点', 'https://example.com/old.png', rules),
+        'https://example.com/hk.svg',
+      );
+      expect(
+        resolveProxyGroupIcon('🇯🇵 日本节点', 'https://example.com/jp.png', rules),
+        'https://example.com/jp.png',
+      );
+    },
+  );
+
+  test(
+    'icon files survive a fresh cache instance after temporary cleanup',
+    () async {
+      final root = await io.Directory.systemTemp.createTemp('icon-storage');
+      addTearDown(() => root.delete(recursive: true));
+      final support = join(root.path, 'support');
+      final temporary = join(root.path, 'temporary');
+      final legacy = await io.Directory(
+        join(temporary, DefaultCacheManager.key),
+      ).create(recursive: true);
+      await io.File(join(legacy.path, 'cached.png')).writeAsBytes(_onePixelPng);
+
+      IconCacheFileSystem openCache() => IconCacheFileSystem(
+        supportPath: () async => support,
+        temporaryPath: () async => temporary,
+      );
+
+      final cache = openCache();
+      final migrated = await cache.createFile('cached.png');
+      expect(await migrated.readAsBytes(), _onePixelPng);
+      expect(await legacy.exists(), isFalse);
+
+      final downloaded = await cache.createFile('downloaded.png');
+      await downloaded.writeAsBytes(_onePixelPng);
+      await io.Directory(temporary).delete(recursive: true);
+
+      final reopened = openCache();
+      for (final name in ['cached.png', 'downloaded.png']) {
+        final file = await reopened.createFile(name);
+        expect(await file.readAsBytes(), _onePixelPng);
+        expect(file.parent.path, join(support, 'target_icons'));
+      }
+    },
+  );
+
   test('refresh removes disk icons and downloads PNG and SVG again, '
       'without restoring unused icons from earlier sessions', () async {
     final manager = _MockIconCache();
@@ -267,6 +377,131 @@ void main() {
     });
 
     tearDown(() => readRemoteIcon = null);
+
+    testWidgets('reuses a fresh icon after backgrounding and remounting', (
+      tester,
+    ) async {
+      readRemoteIcon = null;
+      final manager = _MockIconCache();
+      targetIconCacheManager = manager;
+      addTearDown(() => targetIconCacheManager = null);
+      const src = 'https://example.com/restored-group.png';
+      final file = MemoryFileSystem().file('/restored-group.png')
+        ..writeAsBytesSync(_onePixelPng);
+      when(() => manager.getFileFromCache(src)).thenAnswer(
+        (_) async => FileInfo(
+          file,
+          FileSource.Cache,
+          DateTime.now().add(const Duration(hours: 1)),
+          src,
+        ),
+      );
+
+      const icon = CommonTargetIcon(src: src, fallback: GroupMonogram('proxy'));
+      await _pump(tester, icon);
+      await tester.pump();
+      expect(find.byType(Image), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      imageCache.clear();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+
+      await _pump(tester, icon);
+      expect(find.byType(Image), findsOneWidget);
+      verify(() => manager.getFileFromCache(src)).called(1);
+      verifyNoMoreInteractions(manager);
+    });
+
+    testWidgets(
+      'precacheTargetIcons re-warms raster PNG and SVG icons after memory '
+      'pressure without re-reading disk cache',
+      (tester) async {
+        readRemoteIcon = null;
+        final manager = _MockIconCache();
+        targetIconCacheManager = manager;
+        addTearDown(() => targetIconCacheManager = null);
+        const pngSrc = 'https://example.com/prewarm-after-trim.png';
+        const svgSrc = 'https://example.com/prewarm-after-trim.svg';
+        final fs = MemoryFileSystem();
+        final pngFile = fs.file('/prewarm.png')..writeAsBytesSync(_onePixelPng);
+        final svgFile = fs.file('/prewarm.svg')..writeAsBytesSync(_svg);
+        final validTill = DateTime.now().add(const Duration(days: 7));
+        when(() => manager.getFileFromCache(pngSrc)).thenAnswer(
+          (_) async => FileInfo(pngFile, FileSource.Cache, validTill, pngSrc),
+        );
+        when(() => manager.getFileFromCache(svgSrc)).thenAnswer(
+          (_) async => FileInfo(svgFile, FileSource.Cache, validTill, svgSrc),
+        );
+
+        await tester.runAsync(() => precacheTargetIcons([pngSrc, svgSrc]));
+        verify(() => manager.getFileFromCache(pngSrc)).called(1);
+        verify(() => manager.getFileFromCache(svgSrc)).called(1);
+
+        // Simulate Android background memory pressure wiping ImageCache.
+        imageCache.clear();
+        expect(imageCache.currentSize, 0);
+
+        // AppLifecycleState.resumed triggers precacheTargetIcons again.
+        await tester.runAsync(() => precacheTargetIcons([pngSrc, svgSrc]));
+        expect(imageCache.currentSize, 2);
+        verifyNoMoreInteractions(manager);
+
+        await _pump(
+          tester,
+          const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CommonTargetIcon(
+                src: pngSrc,
+                fallback: GroupMonogram('Alpha'),
+                rasterizeSvg: true,
+              ),
+              CommonTargetIcon(
+                src: svgSrc,
+                fallback: GroupMonogram('Beta'),
+                rasterizeSvg: true,
+              ),
+            ],
+          ),
+        );
+        expect(find.text('A'), findsNothing);
+        expect(find.text('B'), findsNothing);
+        final rawImages = tester.widgetList<RawImage>(find.byType(RawImage));
+        expect(rawImages, hasLength(2));
+        expect(rawImages.every((img) => img.image != null), isTrue);
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+
+    testWidgets('deduplicates concurrent loads for the same icon URL', (
+      tester,
+    ) async {
+      final controller = StreamController<Uint8List>();
+      addTearDown(() => unawaited(controller.close()));
+      var calls = 0;
+      readRemoteIcon = (_) {
+        calls++;
+        return controller.stream;
+      };
+      const src = 'https://example.com/dedup-icon.png';
+
+      final precache = precacheTargetIcons([src]);
+      await _pump(
+        tester,
+        const CommonTargetIcon(src: src, fallback: GroupMonogram('Dedup')),
+      );
+      expect(calls, 1);
+
+      await tester.runAsync(() async {
+        controller.add(Uint8List.fromList(_onePixelPng));
+        await controller.close();
+        await precache;
+      });
+      await tester.pump();
+
+      expect(find.byType(Image), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
 
     testWidgets('refresh replaces a displayed cached image with new pixels', (
       tester,
@@ -542,9 +777,62 @@ void main() {
       await _pump(tester, const CommonTargetIcon(src: src));
       await tester.pump();
 
-      expect(tester.widget<RawImage>(find.byType(RawImage)).image!.width, 192);
+      expect(
+        tester.widget<RawImage>(find.byType(RawImage)).image!.width,
+        (48 * tester.view.devicePixelRatio).ceil(),
+      );
       expect(imageCache.currentSize, 1);
     });
+
+    for (final (kind, src, bytes, rasterizeSvg) in [
+      ('a raster icon', 'https://example.com/small.png', _onePixelPng, false),
+      ('an svg icon', 'https://example.com/star.svg', _svg, false),
+      ('a rasterized svg icon', 'https://example.com/star.svg', _svg, true),
+      ('an unreadable icon', 'https://example.com/broken.png', _broken, false),
+    ]) {
+      testWidgets('$kind keeps the icon size from loading to loaded', (
+        tester,
+      ) async {
+        final load = StreamController<Uint8List>();
+        readRemoteIcon = (_) => load.stream;
+        await _pump(
+          tester,
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CommonTargetIcon(
+                src: src,
+                fallback: const GroupMonogram('p'),
+                rasterizeSvg: rasterizeSvg,
+              ),
+              const Text('name'),
+            ],
+          ),
+        );
+        final name = tester.getTopLeft(find.text('name'));
+        void expectSteady(String phase) {
+          expect(
+            tester.getSize(find.byType(CommonTargetIcon)),
+            const Size.square(32),
+            reason: phase,
+          );
+          expect(tester.getTopLeft(find.text('name')), name, reason: phase);
+        }
+
+        expectSteady('loading');
+        load.add(Uint8List.fromList(bytes));
+        await tester.pump();
+        expectSteady('read, not decoded');
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 100)),
+        );
+        await tester.pump();
+        expectSteady('decoded');
+        await load.close();
+        await tester.pump();
+        expectSteady('loaded');
+      });
+    }
 
     testWidgets('keeps the group fallback when a load ends without an image', (
       tester,
@@ -595,6 +883,13 @@ Future<Uint8List> _squarePng(int size) async {
   final data = await image.toByteData(format: ui.ImageByteFormat.png);
   return data!.buffer.asUint8List();
 }
+
+final _svg = utf8.encode(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">'
+  '<rect width="24" height="24"/></svg>',
+);
+
+final _broken = Uint8List.fromList([1, 2, 3]);
 
 final _onePixelPng = base64Decode(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',

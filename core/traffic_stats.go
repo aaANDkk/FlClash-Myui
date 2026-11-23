@@ -23,8 +23,6 @@ const (
 	trafficFlushInterval   = 5 * time.Minute
 	trafficScreenOffFlush  = 15 * time.Minute
 	trafficDayLayout       = "2006-01-02"
-	trafficDefaultRetention = 30
-	trafficMaxRetention    = 30
 	trafficHostLimit       = 200
 	trafficSubLimit        = 20
 	trafficProcessLimit    = 100
@@ -36,18 +34,20 @@ const (
 	trafficSweepThreshold  = 256
 )
 
+const trafficDefaultRetentionMonths = 3
+
 type trafficStatsOptions struct {
-	Enable        bool
-	Detail        bool
-	RetentionDays int
-	TzOffset      int
+	Enable          bool
+	Detail          bool
+	RetentionMonths int
+	TzOffset        int
 }
 
 func defaultTrafficStatsOptions() trafficStatsOptions {
 	return trafficStatsOptions{
-		Enable:        false,
-		Detail:        true,
-		RetentionDays: trafficDefaultRetention,
+		Enable:          false,
+		Detail:          true,
+		RetentionMonths: trafficDefaultRetentionMonths,
 	}
 }
 
@@ -70,14 +70,15 @@ type trafficEntry struct {
 }
 
 type trafficDay struct {
-	Total     trafficPair              `json:"total"`
-	Proxy     trafficPair              `json:"proxy"`
-	Hours     [24]trafficPair          `json:"hours"`
-	Hosts     map[string]*trafficEntry `json:"hosts,omitempty"`
-	Processes map[string]*trafficEntry `json:"processes,omitempty"`
-	Nodes     map[string]*trafficEntry `json:"nodes,omitempty"`
-	Profiles  map[string]*trafficEntry `json:"profiles,omitempty"`
-	Rules     map[string]*trafficEntry `json:"rules,omitempty"`
+	RunningTime time.Duration            `json:"running-time,omitempty"`
+	Total       trafficPair              `json:"total"`
+	Proxy       trafficPair              `json:"proxy"`
+	Hours       [24]trafficPair          `json:"hours"`
+	Hosts       map[string]*trafficEntry `json:"hosts,omitempty"`
+	Processes   map[string]*trafficEntry `json:"processes,omitempty"`
+	Nodes       map[string]*trafficEntry `json:"nodes,omitempty"`
+	Profiles    map[string]*trafficEntry `json:"profiles,omitempty"`
+	Rules       map[string]*trafficEntry `json:"rules,omitempty"`
 }
 
 type trafficConnKey struct {
@@ -100,21 +101,23 @@ type trafficConn struct {
 }
 
 type trafficCollector struct {
-	mu        sync.Mutex
-	writeMu   sync.Mutex
-	enabled   atomic.Bool
-	dir       string
-	days      map[string]*trafficDay
-	dirty     map[string]bool
-	conns     map[string]*trafficConn
-	options   trafficStatsOptions
-	profile   string
-	sweeping  atomic.Bool
-	cleaned   string
-	timer     *time.Timer
-	timerDue  time.Time
-	screenOff bool
-	suspended bool
+	mu           sync.Mutex
+	writeMu      sync.Mutex
+	enabled      atomic.Bool
+	dir          string
+	days         map[string]*trafficDay
+	dirty        map[string]bool
+	conns        map[string]*trafficConn
+	options      trafficStatsOptions
+	profile      string
+	sweeping     atomic.Bool
+	cleaned      string
+	timer        *time.Timer
+	timerDue     time.Time
+	screenOff    bool
+	suspended    bool
+	running      bool
+	runningSince time.Time
 }
 
 var (
@@ -159,10 +162,10 @@ func flushTrafficStats() {
 
 func handleConfigureTrafficStats(params TrafficStatsConfigParams) error {
 	options := trafficStatsOptions{
-		Enable:        params.Enable,
-		Detail:        params.Detail,
-		RetentionDays: params.RetentionDays,
-		TzOffset:      params.TzOffset,
+		Enable:          params.Enable,
+		Detail:          params.Detail,
+		RetentionMonths: params.RetentionMonths,
+		TzOffset:        params.TzOffset,
 	}
 	trafficStats.configure(options, params.Profile)
 	if params.ScreenOn != nil {
@@ -189,26 +192,80 @@ func (c *trafficCollector) init(dir string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.dir != dir {
+		c.runningSince = time.Time{}
 		c.dir = dir
 		c.days = map[string]*trafficDay{}
 		c.dirty = map[string]bool{}
 		c.cleaned = ""
 	}
 	c.updateTimerLocked()
+	c.syncRunningTimeLocked()
 }
 
 func (c *trafficCollector) configure(options trafficStatsOptions, profile string) {
-	if options.RetentionDays <= 0 || options.RetentionDays > trafficMaxRetention {
-		options.RetentionDays = trafficMaxRetention
+	switch options.RetentionMonths {
+	case 3, 6, 12:
+	default:
+		options.RetentionMonths = trafficDefaultRetentionMonths
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if options.RetentionDays != c.options.RetentionDays {
+	c.settleRunningTimeLocked(trafficNow())
+	if options.RetentionMonths != c.options.RetentionMonths {
 		c.cleaned = ""
 	}
 	c.options = options
 	c.profile = profile
 	c.updateTimerLocked()
+	c.syncRunningTimeLocked()
+}
+
+func (c *trafficCollector) settleRunningTimeLocked(now time.Time) {
+	if c.runningSince.IsZero() {
+		return
+	}
+	// Service uptime includes device sleep. Go's monotonic clock can stop
+	// during suspend (notably on Android/Linux), unlike the calendar clock.
+	// Strip it from both endpoints before comparing or subtracting them.
+	now = now.Round(0)
+	start := c.runningSince.Round(0)
+	if !now.After(start) {
+		// Do not move the checkpoint backwards and later count that span twice
+		// if the system clock is corrected while the service is running.
+		return
+	}
+	c.runningSince = now
+	zone := time.FixedZone("traffic", c.options.TzOffset*60)
+	for start.Before(now) {
+		local := start.In(zone)
+		end := time.Date(local.Year(), local.Month(), local.Day()+1, 0, 0, 0, 0, zone)
+		if now.Before(end) {
+			end = now
+		}
+		key := local.Format(trafficDayLayout)
+		c.dayLocked(key).RunningTime += end.Sub(start)
+		c.dirty[key] = true
+		start = end
+	}
+}
+
+func (c *trafficCollector) syncRunningTimeLocked() {
+	if c.enabled.Load() && c.running && !c.suspended {
+		if c.runningSince.IsZero() {
+			c.runningSince = trafficNow().Round(0)
+		}
+		c.armLocked()
+	} else {
+		c.runningSince = time.Time{}
+	}
+}
+
+func (c *trafficCollector) setRunning(running bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.settleRunningTimeLocked(trafficNow())
+	c.running = running
+	c.syncRunningTimeLocked()
 }
 
 func (c *trafficCollector) updateTimerLocked() {
@@ -269,7 +326,7 @@ func (c *trafficCollector) tick() {
 	c.flush()
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if len(c.conns) > 0 {
+	if len(c.conns) > 0 || !c.runningSince.IsZero() {
 		c.armLocked()
 	}
 }
@@ -286,9 +343,11 @@ func (c *trafficCollector) setScreenOn(on bool) {
 
 func (c *trafficCollector) setSuspended(suspended bool) {
 	c.mu.Lock()
+	c.settleRunningTimeLocked(trafficNow())
 	if suspended {
 		changed := !c.suspended
 		c.suspended = true
+		c.syncRunningTimeLocked()
 		c.stopTimerLocked()
 		c.mu.Unlock()
 		if changed {
@@ -302,6 +361,7 @@ func (c *trafficCollector) setSuspended(suspended bool) {
 		return
 	}
 	c.suspended = false
+	c.syncRunningTimeLocked()
 	if len(c.dirty) > 0 || len(c.conns) > 0 {
 		c.armLocked()
 	}
@@ -640,6 +700,7 @@ func (c *trafficCollector) flush() {
 		data []byte
 	}
 	c.mu.Lock()
+	c.settleRunningTimeLocked(trafficNow())
 	if c.dir == "" {
 		c.mu.Unlock()
 		return
@@ -664,7 +725,9 @@ func (c *trafficCollector) flush() {
 	cutoff := ""
 	if c.cleaned != today {
 		c.cleaned = today
-		cutoff = now.AddDate(0, 0, -c.options.RetentionDays+1).Format(trafficDayLayout)
+		// Keep full past calendar months in addition to the current month.
+		cutoff = time.Date(now.Year(), now.Month()-time.Month(c.options.RetentionMonths), 1,
+			0, 0, 0, 0, now.Location()).Format(trafficDayLayout)
 	}
 	c.mu.Unlock()
 
@@ -711,6 +774,8 @@ func (c *trafficCollector) clear() {
 	c.days = map[string]*trafficDay{}
 	c.dirty = map[string]bool{}
 	c.conns = map[string]*trafficConn{}
+	c.runningSince = time.Time{}
+	c.syncRunningTimeLocked()
 	if c.enabled.Load() {
 		c.baselineLocked()
 	}
@@ -863,6 +928,9 @@ func (c *trafficCollector) loadDays(keys []string) map[string]*trafficDay {
 
 func (c *trafficCollector) query(query TrafficStatsQuery) TrafficStatsResult {
 	c.sample()
+	c.mu.Lock()
+	c.settleRunningTimeLocked(trafficNow())
+	c.mu.Unlock()
 	result := TrafficStatsResult{
 		Series:    []TrafficStatsPoint{},
 		Hosts:     []TrafficStatsItem{},
@@ -882,7 +950,7 @@ func (c *trafficCollector) query(query TrafficStatsQuery) TrafficStatsResult {
 		}
 	}
 	for key, day := range c.days {
-		if day.Total.sum() > 0 && (result.Since == "" || key < result.Since) {
+		if (day.Total.sum() > 0 || day.RunningTime > 0) && (result.Since == "" || key < result.Since) {
 			result.Since = key
 		}
 	}
@@ -907,6 +975,7 @@ func (c *trafficCollector) query(query TrafficStatsQuery) TrafficStatsResult {
 	nodes := map[string]*trafficAggregate{}
 	profiles := map[string]*trafficAggregate{}
 	rules := map[string]*trafficAggregate{}
+	var runningTime time.Duration
 	for _, key := range days {
 		day := dayOf(key)
 		if day == nil {
@@ -919,6 +988,7 @@ func (c *trafficCollector) query(query TrafficStatsQuery) TrafficStatsResult {
 		result.Down += day.Total[1]
 		result.ProxyUp += day.Proxy[0]
 		result.ProxyDown += day.Proxy[1]
+		runningTime += day.RunningTime
 		if len(days) > 1 {
 			result.Series = append(result.Series, TrafficStatsPoint{Label: key, Up: day.Total[0], Down: day.Total[1]})
 		}
@@ -931,6 +1001,7 @@ func (c *trafficCollector) query(query TrafficStatsQuery) TrafficStatsResult {
 			result.RuleHits += entry.Hits
 		}
 	}
+	result.RunningSeconds = int64(runningTime / time.Second)
 	if len(days) == 1 {
 		day := dayOf(days[0])
 		for hour := range 24 {

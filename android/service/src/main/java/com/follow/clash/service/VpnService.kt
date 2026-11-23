@@ -111,10 +111,12 @@ class VpnService : SystemVpnService(), ManagedService {
         }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Android starts always-on VPN through this callback instead of FlClash's bound-service
-        // path. Notify the app layer so it can restore Core and fully initialize the VPN service.
-        notifyVpnStartRequested()
-        return super.onStartCommand(intent, flags, startId)
+        // Android starts always-on VPN or sticky restarts through this callback.
+        // Skip the broadcast when the tunnel is already running from the bound start path.
+        if (!isTunRunning()) {
+            notifyVpnStartRequested()
+        }
+        return START_STICKY
     }
 
     override fun onRevoke() {
@@ -122,8 +124,10 @@ class VpnService : SystemVpnService(), ManagedService {
         notifyVpnRevoked()
     }
 
-    private fun handleStart(options: VpnOptions) {
-        val fd = with(Builder()) {
+    private fun isTunRunning(): Boolean = synchronized(tunLock) { tunRunning }
+
+    private fun establishTun(options: VpnOptions): Int {
+        fun tryEstablish(): Int? = with(Builder()) {
             addAddressAndRoutes(options)
             addDnsServers(options)
             setMtu(options.tunMtu)
@@ -147,8 +151,39 @@ class VpnService : SystemVpnService(), ManagedService {
                 )
             }
             establish()?.detachFd()
-                ?: error("VPN establishment was rejected by the system")
         }
+
+        val firstAttempt = runCatching { tryEstablish() }
+        val firstFd = firstAttempt.getOrNull()
+        if (firstFd != null && firstFd > 0) {
+            return firstFd
+        }
+        GlobalState.log(
+            "First VPN establish attempt failed (${firstAttempt.exceptionOrNull()?.message ?: "null fd"}), retrying...",
+        )
+        Thread.sleep(ESTABLISH_RETRY_DELAY_MS)
+        val retryFd = tryEstablish()
+            ?: error("VPN establishment was rejected by the system")
+        check(retryFd > 0) { "VPN establishment returned an invalid descriptor: $retryFd" }
+        return retryFd
+    }
+
+    private fun protectSocket(fd: Int): Boolean {
+        repeat(PROTECT_MAX_ATTEMPTS) { attempt ->
+            val protected = runCatching { protect(fd) }.getOrDefault(false)
+            if (protected) {
+                return true
+            }
+            if (attempt + 1 < PROTECT_MAX_ATTEMPTS) {
+                Thread.sleep(PROTECT_RETRY_DELAY_MS)
+            }
+        }
+        GlobalState.log("Unable to protect socket fd $fd after $PROTECT_MAX_ATTEMPTS attempts")
+        return false
+    }
+
+    private fun handleStart(options: VpnOptions) {
+        val fd = establishTun(options)
         synchronized(tunLock) {
             tunRunning = true
             try {
@@ -160,7 +195,7 @@ class VpnService : SystemVpnService(), ManagedService {
                 check(
                     Core.startTun(
                         fd = fd,
-                        protect = this::protect,
+                        protect = this::protectSocket,
                         resolveUid = this::resolveUid,
                         resolvePackage = this::resolvePackage,
                         stack = options.stack,
@@ -302,5 +337,8 @@ class VpnService : SystemVpnService(), ManagedService {
         private const val NET_ANY = "0.0.0.0"
         private const val NET_ANY6 = "::"
         private const val LOCAL_HOST = "127.0.0.1"
+        private const val ESTABLISH_RETRY_DELAY_MS = 300L
+        private const val PROTECT_MAX_ATTEMPTS = 5
+        private const val PROTECT_RETRY_DELAY_MS = 60L
     }
 }

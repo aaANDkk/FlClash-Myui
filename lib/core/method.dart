@@ -60,6 +60,8 @@ enum CoreMethod {
   probeOutboundIp('probe.outboundIp'),
   probeServices('probe.services'),
   ipCountry('ip.country'),
+  ipCacheGet('ip.cacheGet'),
+  ipCacheSet('ip.cacheSet'),
   mitmCertificate('mitm.certificate'),
   mitmGenerateCertificate('mitm.generateCertificate'),
   mitmValidate('mitm.validate'),

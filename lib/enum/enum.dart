@@ -200,7 +200,7 @@ enum CoreEventType {
   dialerLoop,
 }
 
-enum FindProcessMode { always, off }
+enum FindProcessMode { always, strict }
 
 enum InterfaceNameMode { clear, follow, custom }
 
@@ -281,8 +281,12 @@ enum DnsOverrideKey with OverrideKey {
   /// groups or rule sets, which change with every update.
   static const normalProfileKeys = {
     listen,
+    useHosts,
+    useSystemHosts,
     ipv6,
+    respectRules,
     preferH3,
+    cacheAlgorithm,
     enhancedMode,
     fakeIpFilter,
     fakeIpFilterMode,
@@ -432,6 +436,7 @@ enum FunctionTag {
   updateConfig,
   updateGroups,
   applyProfile,
+  switchProfile,
   savePreferences,
   changeProxy,
   updateDelay,
@@ -782,8 +787,6 @@ extension RulePayloadErrorExt on RulePayloadError {
   }
 }
 
-enum ExtendType { standard, script }
-
 enum RuleTarget {
   DIRECT('DIRECT'),
   REJECT('REJECT'),
@@ -849,6 +852,9 @@ enum MitmList {
   headerRewrite('header-rewrite'),
   bodyRewrite('body-rewrite'),
   mapLocal('map-local'),
+  requestBodyMock('request-body-mock'),
+  clientSourceAddress('client-source-address'),
+  skipVerifyHostname('skip-server-cert-verify-hostname'),
   script('script');
 
   final String key;
@@ -860,8 +866,26 @@ enum MitmTrust { notGenerated, notInstalled, untrusted, ready }
 
 enum MitmInstallOutcome { installed, untilReboot, prompted, saved }
 
+/// [userStore]: only the user can take it out, in Android's settings.
+/// [needsRoot]: Android's system store holds it and su was unavailable.
+enum MitmRemoveOutcome { removed, userStore, needsRoot, failed }
+
 enum CoreStatus { connecting, connected, disconnected }
 
 enum RequestFeed { recent, live }
 
 enum UpdatingScope { core, local }
+
+/// Why the Android service gave up a start, by the code `ServiceStateMachine`
+/// sends with its stopped report.
+enum ServiceStartFailure {
+  vpnPermission('vpn_permission'),
+  service('service');
+
+  final String code;
+
+  const ServiceStartFailure(this.code);
+
+  static ServiceStartFailure? fromCode(Object? code) =>
+      values.where((it) => it.code == code).firstOrNull;
+}

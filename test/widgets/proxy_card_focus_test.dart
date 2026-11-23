@@ -1,5 +1,8 @@
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/features/ip_quality/ip_quality_sheet.dart';
+import 'package:fl_clash/features/ip_quality/risk_model.dart';
+import 'package:fl_clash/features/ip_quality/risk_provider.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
@@ -304,4 +307,45 @@ void main() {
 
     expect(_RecordingProxiesAction.tested, ['proxy 0']);
   });
+
+  testWidgets(
+    'long pressing a proxy card offers speed test and IP purity sheet actions',
+    (tester) async {
+      container.dispose();
+      container = ProviderContainer(
+        overrides: [
+          profilesProvider.overrideWith(TestProfiles.new),
+          proxiesActionProvider.overrideWith(_RecordingProxiesAction.new),
+          proxyExitIpProvider.overrideWith((_, _) async => '1.1.1.1'),
+          ipRiskProvider('1.1.1.1').overrideWith(
+            (_) async => const IpRisk(
+              ip: '1.1.1.1',
+              score: 0,
+              level: IpRiskLevel.low,
+            ),
+          ),
+        ],
+      );
+      globalState.container = container;
+      container.read(viewSizeProvider.notifier).value = const Size(900, 600);
+
+      await pumpCards(tester, ProxyCardType.standard);
+
+      await tester.longPress(find.byType(ProxyCard).first);
+      await tester.pumpAndSettle();
+
+      final l = tester.element(find.byType(ProxyCard).first).appLocalizations;
+      expect(find.text(l.select), findsOneWidget);
+      expect(find.text(l.addToLocalProxies), findsOneWidget);
+      expect(find.text(l.speedTest), findsOneWidget);
+      expect(find.text(l.ipRiskCheck), findsOneWidget);
+
+      await tester.tap(find.text(l.ipRiskCheck));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(IpRiskSheet), findsOneWidget);
+      expect(find.text('1.1.1.1'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 }

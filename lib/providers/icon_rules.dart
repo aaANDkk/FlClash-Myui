@@ -126,13 +126,13 @@ final iconRulesProvider = NotifierProvider<IconRulesNotifier, List<IconRule>>(
   IconRulesNotifier.new,
 );
 
-/// The icon shown for the group [groupName]: the one a rule picks, else the one
-/// the profile configured for it, else none.
-final proxyGroupIconProvider = Provider.family<String, String>((ref, name) {
-  final configured = ref.watch(
-    groupsProvider.select((state) => state.getGroup(name)?.icon ?? ''),
-  );
-  final rules = ref.watch(iconRulesProvider);
+/// Resolves the effective icon for a proxy group named [name] given its
+/// profile-[configured] icon and the ordered regex [rules].
+String resolveProxyGroupIcon(
+  String name,
+  String configured,
+  List<IconRule> rules,
+) {
   if (rules.isEmpty || name.isEmpty) {
     return configured;
   }
@@ -142,4 +142,14 @@ final proxyGroupIconProvider = Provider.family<String, String>((ref, name) {
     }
   }
   return configured;
+}
+
+/// The icon shown for the group [groupName]: the one a rule picks, else the one
+/// the profile configured for it, else none.
+final proxyGroupIconProvider = Provider.family<String, String>((ref, name) {
+  final configured = ref.watch(
+    groupsProvider.select((state) => state.getGroup(name)?.icon ?? ''),
+  );
+  final rules = ref.watch(iconRulesProvider);
+  return resolveProxyGroupIcon(name, configured, rules);
 });

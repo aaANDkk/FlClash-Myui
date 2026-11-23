@@ -179,6 +179,7 @@ Widget _app(
         const MoreToolsSelectorState(navigationItems: []),
       ),
       runTimeProvider.overrideWithBuild((_, _) => running ? 1 : null),
+      selectedMapProvider.overrideWith((_) => const {}),
       groupsProvider.overrideWithValue([
         Group(
           type: GroupType.Selector,
@@ -565,15 +566,13 @@ void main() {
       _app(client, running: true, nodeName: longName, fontFamily: 'Ahem'),
     );
     await tester.pumpAndSettle();
-    final view = tester.widget<app_ui.Scaffold>(
-      find
-          .descendant(
-            of: find.byType(SpeedTestView),
-            matching: find.byType(app_ui.Scaffold),
-          )
-          .first,
+    expect(
+      find.descendant(
+        of: find.byType(SpeedTestView),
+        matching: find.byType(app_ui.TonalButtonGroup),
+      ),
+      findsNothing,
     );
-    expect(view.groupIconActions, isFalse);
     await tester.tap(find.byKey(const ValueKey('speed-test-outbound-picker')));
     await tester.pumpAndSettle();
     await tester.tap(find.text(longName).hitTestable());
@@ -662,7 +661,7 @@ void main() {
                       w is DecoratedBox &&
                       w.decoration is BoxDecoration &&
                       (w.decoration as BoxDecoration).color ==
-                          DashboardColors.of(viewCtx).track,
+                          DashboardColors.of(viewCtx).tone2,
                 ),
               ),
             )
@@ -1233,6 +1232,153 @@ void main() {
       expect(tester.getTopLeft(find.byType(SpeedTestGauge)).dy, beforeDy);
       expect(find.text(l.speedTestErrorUnavailable), findsOneWidget);
       await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets(
+    'showSpeedTestSheet opens sheet pre-bound to proxyName even when stopped',
+    (tester) async {
+      _size(tester, 430, 1600);
+      final client = _Client();
+      addTearDown(client.dispose);
+      await tester.pumpWidget(
+        _app(
+          client,
+          running: false,
+          page: Builder(
+            builder: (ctx) => app_ui.FilledButton(
+              onPressed: () => showSpeedTestSheet(ctx, proxyName: 'Node A'),
+              child: const Text('Open'),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(app_ui.NestedPagedSheet), findsOneWidget);
+      expect(find.byType(SpeedTestView), findsOneWidget);
+      expect(client.probed.last, 'Node A');
+      await tester.dragUntilVisible(
+        find.byType(SpeedTestConnectionCard),
+        find.descendant(
+          of: find.byType(SpeedTestView),
+          matching: find.byType(ListView),
+        ),
+        const Offset(0, -200),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<SpeedTestConnectionCard>(
+              find.byType(SpeedTestConnectionCard),
+            )
+            .outbound,
+        'Node A',
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    },
+  );
+
+  testWidgets(
+    'speed test sheet shows concrete leaf node when bound to a strategy group',
+    (tester) async {
+      _size(tester, 430, 1600);
+      final client = _Client()
+        ..probeCompleter = Completer<SpeedTestState>();
+      addTearDown(client.dispose);
+      await tester.pumpWidget(
+        _app(
+          client,
+          running: true,
+          page: const SpeedTestView(initialProxy: 'Group'),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        tester
+            .widget<SpeedTestConnectionCard>(
+              find.byType(SpeedTestConnectionCard),
+            )
+            .outbound,
+        'Node B',
+      );
+
+      client.probeCompleter!.complete(
+        const SpeedTestState(
+          id: '1',
+          server: SpeedTestServer(
+            sponsor: 'Example',
+            city: 'Tokyo',
+            host: 'speed.example',
+          ),
+          outbound: SpeedTestOutbound(chains: ['Group', 'Node A']),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widget<SpeedTestConnectionCard>(
+              find.byType(SpeedTestConnectionCard),
+            )
+            .outbound,
+        'Node A',
+      );
+
+      await tester.tap(find.text('Start Test'));
+      await tester.pump();
+      client.run!.complete(
+        const SpeedTestState(
+          id: '2',
+          phase: SpeedTestPhase.done,
+          download: 120,
+          upload: 60,
+          latency: 30,
+          jitter: 5,
+          downloadLatency: 40,
+          uploadLatency: 50,
+          rpm: 900,
+          bytes: 1000000,
+          outbound: SpeedTestOutbound(chains: ['Group', 'Node B']),
+          server: SpeedTestServer(sponsor: 'Example', city: 'Tokyo'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widget<SpeedTestConnectionCard>(
+              find.byType(SpeedTestConnectionCard),
+            )
+            .outbound,
+        'Node B',
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('speed-test-outbound-picker')),
+      );
+      await tester.pumpAndSettle();
+      final nodeBRow = find.ancestor(
+        of: find.text('Node B').last,
+        matching: find.byType(app_ui.DecorationListItem),
+      );
+      expect(tester.widget<app_ui.DecorationListItem>(nodeBRow).isSelected, isTrue);
+      expect(
+        find.descendant(
+          of: nodeBRow,
+          matching: find.byType(app_ui.SelectionCheck),
+        ),
+        findsOneWidget,
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
     },
   );
 }

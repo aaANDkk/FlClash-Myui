@@ -516,5 +516,20 @@ void main() {
     test('default is disconnected', () {
       expect(container.read(coreStatusProvider), CoreStatus.disconnected);
     });
+
+    test('why the core stopped is kept until it starts again', () {
+      container.read(coreStopReasonProvider.notifier).value = 'pipe reset';
+      expect(container.read(coreStopReasonProvider), 'pipe reset');
+
+      container.read(coreStatusProvider.notifier).value = CoreStatus.connecting;
+
+      expect(container.read(coreStopReasonProvider), isNull);
+    });
+
+    test('a core that reports nothing supports everything', () {
+      final capabilities = container.read(coreCapabilitiesStateProvider);
+
+      expect(capabilities.restricted, isFalse);
+    });
   });
 }

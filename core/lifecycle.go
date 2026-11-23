@@ -32,6 +32,7 @@ func handleInit(params *InitParams) error {
 	constant.SetHomeDir(params.HomeDir)
 	initOwnership(params.HomeDir)
 	initTrafficStats(params.HomeDir)
+	ipCache.init(params.HomeDir)
 	clearSpilledResponses()
 	isInit.Store(true)
 	return nil
@@ -43,6 +44,7 @@ func handleInitialized() bool {
 
 func setRunning(running bool) {
 	isRunning.Store(running)
+	trafficStats.setRunning(running)
 }
 
 func handleStartListener() {
@@ -58,12 +60,13 @@ func handleStartListener() {
 
 func handleStopListener() {
 	_ = handleCancelSpeedTest(SpeedTestCancelParams{})
-	flushTrafficStats()
 	configMu.Lock()
 	defer configMu.Unlock()
 	setRunning(false)
+	flushTrafficStats()
 	listener.StopListener()
 	resolver.ResetConnection()
+	bumpRouteEpoch()
 }
 
 func updateListeners(cfg *config.Config) {
@@ -95,10 +98,10 @@ func updateListeners(cfg *config.Config) {
 func handleShutdown() {
 	handleStopLog()
 	stopRouteWatch()
-	flushTrafficStats()
 
 	configMu.Lock()
 	setRunning(false)
+	flushTrafficStats()
 	listener.StopListener()
 	updater.StopGeoUpdater()
 	executor.Shutdown()

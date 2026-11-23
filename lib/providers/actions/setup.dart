@@ -1,6 +1,31 @@
 part of '../action.dart';
 
-enum _SetupTaskResult { completed, handoffToCoreRestart, failed }
+enum _SetupTaskResult { completed, handoffToCoreRestart, failed, superseded }
+
+class _PendingSetupSlot {
+  _PendingSetupSlot({
+    required this.force,
+    required this.silence,
+    Future<void> Function()? preloadInvoke,
+  }) : preloadInvokes = [if (preloadInvoke != null) preloadInvoke];
+
+  bool force;
+  bool silence;
+  final List<Future<void> Function()> preloadInvokes;
+  final completer = Completer<_SetupTaskResult>();
+
+  void merge({
+    required bool force,
+    required bool silence,
+    Future<void> Function()? preloadInvoke,
+  }) {
+    this.force |= force;
+    this.silence &= silence;
+    if (preloadInvoke != null) {
+      preloadInvokes.add(preloadInvoke);
+    }
+  }
+}
 
 typedef _SetupInputs = (
   SetupState,
@@ -20,14 +45,11 @@ class _RunRequest {
   final bool running;
   final bool initialize;
 
-  /// Adopts a run the Android service has, config and groups alike.
-  final bool resume;
   final DateTime? previousStartTime;
 
   const _RunRequest({
     required this.running,
     required this.initialize,
-    required this.resume,
     required this.previousStartTime,
   });
 }
@@ -37,24 +59,61 @@ class SetupAction extends _$SetupAction {
   CoreController get _core => ref.read(coreHandlerProvider);
 
   Timer? _runtimeTimer;
-  final _setupScheduler = SerialTaskScheduler();
+  var _setupRunning = false;
+  _PendingSetupSlot? _pendingSetup;
+  var _switchToken = 0;
+  var _switchDebouncePending = false;
   final _listenerScheduler = SerialTaskScheduler();
   _RunRequest? _latestRunRequest;
   DateTime? _startTime;
+  var _resumeOnRestart = false;
+  ({String digest, Set<String> names})? _outboundNames;
   _SetupInputs? _appliedInputs;
   var _lastPushDuration = Duration.zero;
   var _pendingForceApply = false;
 
-  bool get _isRunning => _startTime != null && _startTime!.isBeforeNow;
-
   @override
   void build() {
-    ref.onDispose(_stopRuntimeTicker);
+    ref.onDispose(() {
+      _stopRuntimeTicker();
+      debouncer.cancel(FunctionTag.switchProfile);
+      _switchDebouncePending = false;
+    });
     ref.listen(appVisibleProvider, (_, _) => _syncRuntimeTicker());
     ref.listen(
       appSettingProvider.select((state) => state.showTrayTitle),
       (_, _) => _syncRuntimeTicker(),
     );
+  }
+
+  /// Short debounce that coalesces rapid profile taps before pushing to Core,
+  /// flushed immediately when navigating away or starting the VPN.
+  @protected
+  Duration get switchProfileDebounceDuration =>
+      const Duration(milliseconds: 250);
+
+  void switchProfileDebounce() {
+    if (!ref.read(initProvider)) return;
+    _switchToken++;
+    _switchDebouncePending = true;
+    debouncer.cancel(FunctionTag.applyProfile);
+    _pendingForceApply = false;
+    ref.read(proxiesActionProvider.notifier).cancelDelayTests();
+    debouncer.call(
+      FunctionTag.switchProfile,
+      () {
+        _switchDebouncePending = false;
+        unawaited(fullSetup());
+      },
+      duration: switchProfileDebounceDuration,
+    );
+  }
+
+  /// Immediately runs a pending profile switch when the user navigates away
+  /// from the profiles page (e.g. straight into Proxies) or starts the VPN.
+  void flushPendingProfileSwitch() {
+    if (!_switchDebouncePending) return;
+    debouncer.flush(FunctionTag.switchProfile);
   }
 
   bool get _isTrafficShown =>
@@ -73,6 +132,8 @@ class SetupAction extends _$SetupAction {
       _setupParams.copyWith(selectedMap: const {});
 
   Future<bool> fullSetup() async {
+    _switchDebouncePending = false;
+    debouncer.cancel(FunctionTag.switchProfile);
     if (!ref.read(initProvider)) return true;
     ref.read(proxiesActionProvider.notifier).cancelDelayTests();
     ref.read(delayDataSourceProvider.notifier).value = {};
@@ -141,22 +202,65 @@ class SetupAction extends _$SetupAction {
   }
 
   @protected
-  Future<DateTime?> serviceStartTime() async => service?.getRunTime();
+  Future<AndroidServiceRun?> adoptRunningService() async =>
+      service?.adoptRunningService();
 
   Future<void> initStatus() async {
     if (!globalState.needInitStatus) {
       return;
     }
-    _startTime = await serviceStartTime();
-    if (_isRunning) {
-      globalState.lastConfigMd5 = await preferences.getAppliedConfigMd5();
-      globalState.lastConfigCounts = await preferences.getAppliedConfigCounts();
-      await _run(true, initialize: true, resume: true);
+    final request = _latestRunRequest;
+    final run = await adoptRunningService();
+    if (!globalState.needInitStatus || !_isCurrent(request)) {
+      return;
+    }
+    if (run != null) {
+      globalState.needInitStatus = false;
+      _resumeOnRestart = false;
+      _startTime = run.startedAt;
+      ref.read(runningVpnOptionsProvider.notifier).value = run.options;
+      _setLocalRunning(true);
+      final saved = await globalState.safeRun(
+        () => (
+          preferences.getAppliedConfigMd5(),
+          preferences.getAppliedConfigCounts(),
+        ).wait,
+      );
+      if (saved != null && _isCurrent(request) && _startTime == run.startedAt) {
+        final (md5, counts) = saved;
+        globalState.lastConfigMd5 = md5;
+        globalState.lastConfigCounts = counts;
+      }
     } else if (ref.read(appSettingProvider).autoRun) {
       await setRunning(true, initialize: true);
     } else {
       await globalState.safeRun(() => applyProfile(force: true));
     }
+  }
+
+  bool get wantsRunning => ref.read(isStartProvider) || _resumeOnRestart;
+
+  /// The lost session gets no stop; work begun for the old run stops counting.
+  void onCoreLost() {
+    if (_startTime == null) {
+      return;
+    }
+    _resumeOnRestart = true;
+    _latestRunRequest = null;
+    _setLocalRunning(false);
+    ref.read(runningVpnOptionsProvider.notifier).value = null;
+  }
+
+  void resumeOnRestart() {
+    _resumeOnRestart = true;
+  }
+
+  void applyAndroidServiceStopped() {
+    _latestRunRequest = null;
+    _resumeOnRestart = false;
+    _setLocalRunning(false);
+    ref.read(runningVpnOptionsProvider.notifier).value = null;
+    _clearDisplayedTraffic();
   }
 
   Future<bool> setRunning(bool running, {bool initialize = false}) {
@@ -166,18 +270,14 @@ class SetupAction extends _$SetupAction {
     return _run(running, initialize: running && initialize);
   }
 
-  Future<bool> _run(
-    bool running, {
-    required bool initialize,
-    bool resume = false,
-  }) {
+  Future<bool> _run(bool running, {required bool initialize}) {
     final request = _RunRequest(
       running: running,
       initialize: initialize,
-      resume: resume,
       previousStartTime: _startTime,
     );
     _latestRunRequest = request;
+    _resumeOnRestart = false;
     _setLocalRunning(running);
     if (request.initialize) {
       globalState.needInitStatus = false;
@@ -190,11 +290,16 @@ class SetupAction extends _$SetupAction {
       var applied = false;
       try {
         applied = await applyProfile(
-          force: !request.resume,
+          force: true,
           preloadInvoke: () => _startCoreRunning(request),
         );
-      } catch (_) {
-        applied = false;
+      } catch (error) {
+        if (_isCurrent(request)) {
+          dialogs.showBanner(
+            userFacingErrorMessage(error, currentAppLocalizations),
+            level: BannerLevel.error,
+          );
+        }
       }
       if (!applied && _isCurrent(request)) {
         await globalState.safeRun(() => setRunning(false));
@@ -202,6 +307,7 @@ class SetupAction extends _$SetupAction {
       return applied;
     }
 
+    flushPendingProfileSwitch();
     try {
       await _startCoreRunning(request);
     } catch (_) {
@@ -209,7 +315,11 @@ class SetupAction extends _$SetupAction {
       rethrow;
     }
     final applied = await inputsApplied();
-    if (_isCurrent(request) && !applied) {
+    if (_isCurrent(request) &&
+        !applied &&
+        !_setupRunning &&
+        _pendingSetup == null &&
+        !_switchDebouncePending) {
       applyProfileDebounce(force: true, silence: true);
     }
     return true;
@@ -240,13 +350,17 @@ class SetupAction extends _$SetupAction {
       return true;
     }
     resetCoreTraffic();
-    ref.read(trafficsProvider.notifier).clear();
-    ref.read(totalTrafficProvider.notifier).value = const Traffic();
+    _clearDisplayedTraffic();
     // A silent Core is gone or hung; running again would proxy traffic to it.
     if (unanswered case (final error, final stackTrace)) {
       Error.throwWithStackTrace(error, stackTrace);
     }
     return true;
+  }
+
+  void _clearDisplayedTraffic() {
+    ref.read(trafficsProvider.notifier).clear();
+    ref.read(totalTrafficProvider.notifier).value = const Traffic();
   }
 
   Future<void> _setCoreRunning(_RunRequest request) {
@@ -261,18 +375,21 @@ class SetupAction extends _$SetupAction {
   }
 
   Future<void> _setListening(bool running) async {
+    final request = _latestRunRequest;
     final vpnOptions = await ref.read(vpnOptionsProvider.future);
     try {
       await setCoreRunning(running);
     } catch (error) {
-      if (_isUnanswered(error)) {
+      if (_isCurrent(request) && _isUnanswered(error)) {
         ref.read(runningVpnOptionsProvider.notifier).value = null;
       }
       rethrow;
     }
-    ref.read(runningVpnOptionsProvider.notifier).value = running
-        ? vpnOptions
-        : null;
+    if (_isCurrent(request)) {
+      ref.read(runningVpnOptionsProvider.notifier).value = running
+          ? vpnOptions
+          : null;
+    }
   }
 
   bool _isUnanswered(Object error) =>
@@ -313,7 +430,8 @@ class SetupAction extends _$SetupAction {
     _setLocalRunning(!request.running);
   }
 
-  bool _isCurrent(_RunRequest request) => identical(_latestRunRequest, request);
+  bool _isCurrent(_RunRequest? request) =>
+      identical(_latestRunRequest, request);
 
   Future<void> updateConfigDebounce() async {
     debouncer.call(FunctionTag.updateConfig, updateConfig);
@@ -398,9 +516,7 @@ class SetupAction extends _$SetupAction {
 
   void applyIfGlobalRulesUsed() {
     final profile = ref.read(currentProfileProvider);
-    if (profile == null ||
-        profile.type == ProfileType.custom ||
-        profile.extendType != ExtendType.standard) {
+    if (profile == null || profile.type == ProfileType.custom) {
       return;
     }
     applyProfileDebounce(silence: true);
@@ -437,6 +553,11 @@ class SetupAction extends _$SetupAction {
     bool force = false,
     Future<void> Function()? preloadInvoke,
   }) async {
+    if (_switchDebouncePending) {
+      _switchDebouncePending = false;
+      debouncer.cancel(FunctionTag.switchProfile);
+      force = true;
+    }
     final result = await _runSetup(
       force: force,
       silence: silence,
@@ -445,28 +566,147 @@ class SetupAction extends _$SetupAction {
     return result != _SetupTaskResult.failed;
   }
 
+  Future<_SetupTaskResult> _runSingleSetupConfig({
+    required bool force,
+    required bool silence,
+    required List<Future<void> Function()> preloadInvokes,
+  }) {
+    final Future<void> Function()? combinedPreload = preloadInvokes.isEmpty
+        ? null
+        : () async {
+            for (final invoke in preloadInvokes) {
+              await invoke();
+            }
+          };
+    return _setupConfig(
+      force: force,
+      silence: silence,
+      preloadInvoke: combinedPreload,
+      onUpdated: () async {
+        await ref.read(proxiesActionProvider.notifier).updateGroups();
+        await ref.read(providersProvider.notifier).syncProviders();
+      },
+    );
+  }
+
   Future<_SetupTaskResult> _runSetup({
     bool silence = false,
     bool force = false,
     Future<void> Function()? preloadInvoke,
   }) async {
-    final result = await _setupScheduler.run(() {
-      return _setupConfig(
+    if (_setupRunning) {
+      final slot = _pendingSetup;
+      if (slot != null) {
+        slot.merge(
+          force: force,
+          silence: silence,
+          preloadInvoke: preloadInvoke,
+        );
+        return slot.completer.future;
+      }
+      final nextSlot = _PendingSetupSlot(
         force: force,
         silence: silence,
         preloadInvoke: preloadInvoke,
-        onUpdated: () async {
-          await ref.read(proxiesActionProvider.notifier).updateGroups();
-          await ref.read(providersProvider.notifier).syncProviders();
-        },
       );
-    });
-    if (result != _SetupTaskResult.handoffToCoreRestart) {
-      return result;
+      _pendingSetup = nextSlot;
+      return nextSlot.completer.future;
     }
-    // Release the current serial task before restartCore reapplies the profile.
-    final restarted = await _restartCoreAfterAuthorization();
-    return restarted ? _SetupTaskResult.completed : _SetupTaskResult.failed;
+
+    // Absorb any deferred slot held back while a switch burst was active.
+    final deferred = _pendingSetup;
+    _pendingSetup = null;
+    if (deferred != null) {
+      force |= deferred.force;
+      silence &= deferred.silence;
+    }
+    final preloadInvokes = <Future<void> Function()>[
+      ...?deferred?.preloadInvokes,
+      if (preloadInvoke != null) preloadInvoke,
+    ];
+
+    _setupRunning = true;
+    final _SetupTaskResult result;
+    try {
+      result = await _runSingleSetupConfig(
+        force: force,
+        silence: silence,
+        preloadInvokes: preloadInvokes,
+      );
+    } catch (error, stackTrace) {
+      _releaseOrDrainSetup();
+      if (deferred != null && !deferred.completer.isCompleted) {
+        deferred.completer.completeError(error, stackTrace);
+      }
+      rethrow;
+    }
+    _releaseOrDrainSetup();
+
+    final _SetupTaskResult finalResult;
+    if (result == _SetupTaskResult.handoffToCoreRestart) {
+      try {
+        // Active slot is already released so restartCore can reapply cleanly.
+        final restarted = await _restartCoreAfterAuthorization();
+        finalResult = restarted
+            ? _SetupTaskResult.completed
+            : _SetupTaskResult.failed;
+      } catch (error, stackTrace) {
+        if (deferred != null && !deferred.completer.isCompleted) {
+          deferred.completer.completeError(error, stackTrace);
+        }
+        rethrow;
+      }
+    } else {
+      finalResult = result;
+    }
+    if (deferred != null && !deferred.completer.isCompleted) {
+      deferred.completer.complete(finalResult);
+    }
+    return finalResult;
+  }
+
+  void _releaseOrDrainSetup() {
+    if (_switchDebouncePending) {
+      // Hold back any queued pass while the user is still tapping through
+      // profiles; the debounce fire/flush will absorb it for the final choice.
+      _setupRunning = false;
+      return;
+    }
+    final next = _pendingSetup;
+    if (next == null) {
+      _setupRunning = false;
+      return;
+    }
+    _pendingSetup = null;
+    unawaited(_runPendingSlot(next));
+  }
+
+  Future<void> _runPendingSlot(_PendingSetupSlot slot) async {
+    final _SetupTaskResult result;
+    try {
+      result = await _runSingleSetupConfig(
+        force: slot.force,
+        silence: slot.silence,
+        preloadInvokes: slot.preloadInvokes,
+      );
+    } catch (error, stackTrace) {
+      _releaseOrDrainSetup();
+      slot.completer.completeError(error, stackTrace);
+      return;
+    }
+    _releaseOrDrainSetup();
+    if (result == _SetupTaskResult.handoffToCoreRestart) {
+      try {
+        final restarted = await _restartCoreAfterAuthorization();
+        slot.completer.complete(
+          restarted ? _SetupTaskResult.completed : _SetupTaskResult.failed,
+        );
+      } catch (error, stackTrace) {
+        slot.completer.completeError(error, stackTrace);
+      }
+      return;
+    }
+    slot.completer.complete(result);
   }
 
   Future<bool> _restartCoreAfterAuthorization() async {
@@ -486,7 +726,21 @@ class SetupAction extends _$SetupAction {
   }) async {
     final profileId = setupState.profileId;
     if (profileId == null) {
-      return (yaml: '', md5: '', counts: configCountsOf(const {}), base: null);
+      final yaml = await encodeYamlTask(
+        inboundConfigOf(
+          patchConfig,
+          authentication: ref
+              .read(networkSettingProvider)
+              .authentication
+              .credentials,
+        ),
+      );
+      return (
+        yaml: yaml,
+        md5: yaml.toMd5(),
+        counts: configCountsOf(const {}),
+        base: null,
+      );
     }
     final defaultUA = globalState.packageInfo.ua;
     final networkSetting = ref.read(
@@ -500,10 +754,7 @@ class SetupAction extends _$SetupAction {
     );
     final appendSystemDns = networkSetting.appendSystemDns;
     final isCustom = setupState.profileType == ProfileType.custom;
-    final scriptContent =
-        !isCustom && setupState.extendType == ExtendType.script
-        ? await setupState.script?.content
-        : null;
+    final scriptContent = isCustom ? null : await setupState.script?.content;
     final hasScript = scriptContent?.isNotEmpty == true;
     final profileBase = !isCustom && !hasScript
         ? await _core.getProfileBase(profileId)
@@ -523,6 +774,9 @@ class SetupAction extends _$SetupAction {
       rawConfig = await handleEvaluate(scriptContent!, rawConfig);
     }
     final directory = await appPath.profilesPath;
+    final hasCustomExit =
+        setupState.addedRules.any((rule) => rule.customExit) ||
+        setupState.mitmModules.isNotEmpty;
     final injected = await _resolveInjectedProviders(
       setupState,
       proxyGroups: proxyGroups,
@@ -540,15 +794,20 @@ class SetupAction extends _$SetupAction {
         realPatchConfig: patchConfig,
         overrides: setupState.overrides,
         bypassPrivateRoute: networkSetting.bypassPrivateRoute,
-        keepEmptyDnsOverrides: setupState.profileType != ProfileType.custom,
         appendSystemDns: appendSystemDns,
+        // sing-tun points the system resolver at the TUN by default with
+        // auto-route everywhere but macOS, where native does it through a
+        // dynamic store entry that configd drops when the Core exits.
+        defaultTunDnsMode: system.isMacOS ? 'native' : null,
         addedRules: setupState.addedRules,
         defaultUA: defaultUA,
         authentication: networkSetting.authentication.credentials,
-        matchTarget:
-            profileBase == null ||
-                setupState.matchTarget?.trim().isNotEmpty == true
-            ? setupState.matchTarget
+        exitTargets: setupState.exitTargets,
+        outboundNames: profileBase != null && hasCustomExit
+            ? await _outboundNamesOf(profileId, profileBase.base.digest)
+            : null,
+        defaultExitTarget: profileBase == null
+            ? null
             : lastMatchTarget(profileBase.base.matchRules),
         safeMode: ref.read(safeModeProvider),
         mitmModules: setupState.mitmModules,
@@ -568,6 +827,17 @@ class SetupAction extends _$SetupAction {
       ),
       base: SetupBase(path: path, overlay: res.yaml),
     );
+  }
+
+  Future<Set<String>> _outboundNamesOf(int profileId, String digest) async {
+    final cached = _outboundNames;
+    if (cached != null && cached.digest == digest) {
+      return cached.names;
+    }
+    final outbounds = await _core.getProfileOutbounds(profileId);
+    final names = outboundNamesOf(outbounds);
+    _outboundNames = (digest: digest, names: names);
+    return names;
   }
 
   /// Only what the custom profile actually references is injected, so an
@@ -718,13 +988,36 @@ class SetupAction extends _$SetupAction {
     return fallback;
   }
 
+  bool _isSuperseded(int runToken, int? targetProfileId) {
+    if (_switchToken != runToken) {
+      return true;
+    }
+    if (targetProfileId != null &&
+        ref.read(currentProfileIdProvider) != targetProfileId) {
+      return true;
+    }
+    return false;
+  }
+
   Future<_SetupTaskResult> _setupConfig({
     bool force = false,
     bool silence = false,
     Future<void> Function()? preloadInvoke,
     FutureOr Function()? onUpdated,
   }) async {
-    var profile = ref.read(currentProfileProvider) ?? recoverMissingProfile();
+    var profile = ref.read(currentProfileProvider);
+    if (profile == null) {
+      profile = recoverMissingProfile();
+      if (profile != null) {
+        _switchDebouncePending = false;
+        debouncer.cancel(FunctionTag.switchProfile);
+      }
+    }
+    final targetProfileId = profile?.id;
+    final runToken = _switchToken;
+    bool isSuperseded() =>
+        preloadInvoke == null && _isSuperseded(runToken, targetProfileId);
+
     // A refresh failure is surfaced by safeRun; setup keeps the old profile.
     final nextProfile = await globalState.safeRun(
       () => profile?.checkAndUpdateAndCopy(
@@ -734,6 +1027,9 @@ class SetupAction extends _$SetupAction {
     if (nextProfile != null) {
       profile = nextProfile;
       ref.read(profilesProvider.notifier).put(nextProfile);
+    }
+    if (isSuperseded()) {
+      return _SetupTaskResult.superseded;
     }
     commonPrint.log('setup ===> ${profile?.realLabel}');
     final patchConfig = ref.read(patchClashConfigProvider);
@@ -750,6 +1046,9 @@ class SetupAction extends _$SetupAction {
       setupState = state;
       return getProfile(setupState: state, patchConfig: realPatchConfig);
     }, title: 'build profile');
+    if (isSuperseded()) {
+      return _SetupTaskResult.superseded;
+    }
     final profileFailed = realProfile == null;
     final setupParams = _setupParams.copyWith(base: realProfile?.base);
     final inputs = switch (setupState) {
@@ -812,7 +1111,9 @@ class SetupAction extends _$SetupAction {
               rethrow;
             }
             globalState.lastConfigCounts = configCountsOf(const {});
-            unawaited(preferences.saveAppliedConfigCounts(globalState.lastConfigCounts));
+            unawaited(
+              preferences.saveAppliedConfigCounts(globalState.lastConfigCounts),
+            );
             await globalState.safeRun(() => onUpdated?.call());
             throw MessageException(error.message);
           }
@@ -826,12 +1127,16 @@ class SetupAction extends _$SetupAction {
         globalState.lastConfigMd5 = yamlMd5;
         globalState.lastConfigCounts =
             realProfile?.counts ?? configCountsOf(const {});
-        unawaited(preferences.saveAppliedConfigCounts(globalState.lastConfigCounts));
+        unawaited(
+          preferences.saveAppliedConfigCounts(globalState.lastConfigCounts),
+        );
         _appliedInputs = inputs;
         if (system.isAndroid) {
           await preferences.saveAppliedConfigMd5(yamlMd5);
         }
-        await onUpdated?.call();
+        if (!isSuperseded()) {
+          await onUpdated?.call();
+        }
       },
       silence: true,
       tag: !silence ? LoadingTag.proxies : null,
