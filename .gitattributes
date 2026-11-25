@@ -1,2 +1,5 @@
 # freezed emits lines of trailing spaces, and generated code is never edited by hand.
 lib/**/generated/** -whitespace
+assets/data/*.dat binary
+assets/data/*.metadb binary
+assets/data/*.mmdb binary
