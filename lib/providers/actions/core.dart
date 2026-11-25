@@ -17,6 +17,7 @@ class CoreAction extends _$CoreAction {
     if (!isInit) {
       await _core.init(version);
     } else {
+      if (system.isAndroid) await CoreController.initGeo();
       await ref.read(proxiesActionProvider.notifier).updateGroups();
       await ref.read(providersProvider.notifier).syncProviders();
     }

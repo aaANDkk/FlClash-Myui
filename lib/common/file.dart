@@ -42,11 +42,17 @@ extension FileExt on File {
   }
 
   /// Writes to one file must not overlap: they share the temporary sibling.
-  Future<void> writeAsStringAtomically(String content) async {
+  Future<void> writeAsStringAtomically(String content) =>
+      _writeAtomically((temp) => temp.writeAsString(content, flush: true));
+
+  Future<void> writeAsBytesAtomically(List<int> content) =>
+      _writeAtomically((temp) => temp.writeAsBytes(content, flush: true));
+
+  Future<void> _writeAtomically(Future<File> Function(File) write) async {
     final temp = File('$path.$pid.tmp');
     try {
       await temp.parent.create(recursive: true);
-      await temp.writeAsString(content, flush: true);
+      await write(temp);
       await temp._renameRetryingWhileHeldOpen(path);
     } catch (_) {
       await temp.delete().then((_) {}, onError: (_) {});
