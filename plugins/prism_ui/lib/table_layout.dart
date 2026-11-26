@@ -115,6 +115,18 @@ class TableCells extends StatelessWidget {
   final double inset;
   final List<Widget> cells;
 
+  Widget _cell(TableColumn column, Widget cell) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: inset),
+      child: Align(
+        alignment: column.end
+            ? AlignmentDirectional.centerEnd
+            : AlignmentDirectional.centerStart,
+        child: cell,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -122,17 +134,11 @@ class TableCells extends StatelessWidget {
       child: Row(
         children: [
           for (final (index, cell) in cells.indexed)
+            // Sized whole, a cell keeps a change of its content from the row.
             SizedBox(
               width: widths[index],
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: inset),
-                child: Align(
-                  alignment: columns[index].end
-                      ? AlignmentDirectional.centerEnd
-                      : AlignmentDirectional.centerStart,
-                  child: cell,
-                ),
-              ),
+              height: height,
+              child: _cell(columns[index], cell),
             ),
         ],
       ),

@@ -1,4 +1,5 @@
-import 'package:fl_clash/common/common.dart';
+import 'dart:async';
+
 import 'package:fl_clash/core/controller.dart';
 import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/enum/enum.dart';
@@ -15,6 +16,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:prism_ui/prism_list.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../helpers/route_cover.dart';
 import '../../helpers/test_app.dart';
 import '../../helpers/test_profiles.dart';
 import '../../helpers/host_scaffold.dart';
@@ -60,7 +62,7 @@ void main() {
     globalState.container = container;
     container.listen(appSettingProvider, (_, _) {});
     final requests = container.read(requestsProvider.notifier);
-    requests.value = FixedList<TrackerInfo>(500);
+    requests.value = ConnectionLog(500);
     requests.addRequest(_request('gamma.test', 10));
     requests.addRequest(_request('alpha.test', 30));
     requests.addRequest(_request('beta.test', 20));
@@ -114,29 +116,36 @@ void main() {
     await teardown(tester);
   });
 
-  testWidgets('a column dragged wider in the card keeps its width', (
-    tester,
-  ) async {
-    await pumpRequestsTable(tester);
+  Finder ruleHead() => find.descendant(
+    of: find.byType(ConnectionsTableCard),
+    matching: find.text('Rule'),
+  );
 
-    final ruleHead = find.descendant(
-      of: find.byType(ConnectionsTableCard),
-      matching: find.text('Rule'),
-    );
-    final rule = tester.getTopLeft(ruleHead).dx;
-    final handles = find.byWidgetPredicate(
-      (widget) =>
-          widget is MouseRegion &&
-          widget.cursor == SystemMouseCursors.resizeColumn,
-    );
+  Finder resizeHandle() => find
+      .byWidgetPredicate(
+        (widget) =>
+            widget is MouseRegion &&
+            widget.cursor == SystemMouseCursors.resizeColumn,
+      )
+      .at(2);
+
+  Future<void> widenTarget(WidgetTester tester) async {
     await tester.drag(
-      handles.at(2),
+      resizeHandle(),
       const Offset(60, 0),
       kind: PointerDeviceKind.mouse,
     );
     await tester.pump();
+  }
 
-    expect(tester.getTopLeft(ruleHead).dx, greaterThan(rule + 30));
+  testWidgets('a column dragged wider in the card keeps its width', (
+    tester,
+  ) async {
+    await pumpRequestsTable(tester);
+    final rule = tester.getTopLeft(ruleHead()).dx;
+    await widenTarget(tester);
+
+    expect(tester.getTopLeft(ruleHead()).dx, greaterThan(rule + 30));
     expect(
       container
           .read(appSettingProvider)
@@ -147,10 +156,49 @@ void main() {
     await teardown(tester);
   });
 
+  testWidgets('a double click on a column edge sets the card\'s columns back', (
+    tester,
+  ) async {
+    await pumpRequestsTable(tester);
+    final rule = tester.getTopLeft(ruleHead()).dx;
+    await widenTarget(tester);
+    expect(tester.getTopLeft(ruleHead()).dx, greaterThan(rule + 30));
+
+    await tester.tap(resizeHandle(), kind: PointerDeviceKind.mouse);
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(resizeHandle(), kind: PointerDeviceKind.mouse);
+    await tester.pump(kDoubleTapTimeout);
+
+    expect(tester.getTopLeft(ruleHead()).dx, rule);
+    expect(
+      container.read(appSettingProvider).tableColumnWidths,
+      isNot(contains('dashboard.requests')),
+    );
+
+    await teardown(tester);
+  });
+
+  testWidgets('the card table opens with the widths saved for it', (
+    tester,
+  ) async {
+    await pumpRequestsTable(tester);
+    final rule = tester.getTopLeft(ruleHead()).dx;
+    await widenTarget(tester);
+    final widened = tester.getTopLeft(ruleHead()).dx;
+    await teardown(tester);
+
+    await pumpRequestsTable(tester);
+
+    expect(widened, greaterThan(rule + 30));
+    expect(tester.getTopLeft(ruleHead()).dx, widened);
+
+    await teardown(tester);
+  });
+
   testWidgets('the table keeps the newest rows, sorts every connection and '
       'counts them all', (tester) async {
     final core = _MockCore();
-    whenConnections<({List<TrackerInfo> next, int tcp})>(
+    whenConnections<List<TrackerInfo>>(
       core,
       () async => [
         for (var index = 0; index < 150; index++)
@@ -211,5 +259,66 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(seconds: 2));
+  });
+
+  testWidgets('a list read before the log was started over stays out of '
+      'the new one', (tester) async {
+    final core = _MockCore();
+    final answer = Completer<List<TrackerInfo>>();
+    whenConnections<List<TrackerInfo>>(core, () => answer.future);
+    final connections = ProviderContainer(
+      overrides: [
+        profilesProvider.overrideWith(TestProfiles.new),
+        coreHandlerProvider.overrideWithValue(CoreController.scoped(core)),
+        coreStatusProvider.overrideWithBuild((_, _) => CoreStatus.connected),
+      ],
+    );
+    addTearDown(connections.dispose);
+    globalState.container = connections;
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: connections,
+        child: const TestApp(
+          child: HostScaffold(
+            body: SizedBox(
+              width: 960,
+              height: 600,
+              child: DashboardDensityScope(
+                density: DashboardDensity.standard,
+                scale: 1,
+                child: ConnectionsTableCard(),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    verify(() => core.getConnectionsWith<List<TrackerInfo>>(any())).called(1);
+
+    connections.read(requestsProvider.notifier).value = ConnectionLog(500);
+    answer.complete([_connection(0, network: 'tcp')]);
+    await tester.pump();
+
+    expect(connections.read(requestsProvider).length, 0);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 2));
+  });
+
+  testWidgets('a page pushed over the table and popped rebuilds none of it', (
+    tester,
+  ) async {
+    await pumpRequestsTable(tester);
+
+    expect(
+      await rebuildsWhileCovered<ConnectionsTableCard>(
+        tester,
+        find.byType(ConnectionsTableCard),
+      ),
+      0,
+    );
+
+    await teardown(tester);
   });
 }

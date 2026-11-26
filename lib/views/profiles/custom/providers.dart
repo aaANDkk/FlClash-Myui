@@ -42,7 +42,7 @@ class CustomProvidersView extends ConsumerWidget {
           illustration: NullStatusIllustration.proxies,
         ),
         child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(
+          padding: context.listInsets.page().copyWith(
             top: context.sectionsTopPadding,
             bottom: 16 + context.bottomInset,
           ),
@@ -130,7 +130,13 @@ class _ProxyProviderItem extends ConsumerWidget {
     final lastUpdateDate = profile?.lastUpdateDate;
     return DecorationListItem(
       invalid: invalid,
-      contentPadding: const EdgeInsets.only(left: 16, right: 8),
+      contentPadding: EdgeInsetsDirectional.only(
+        start: context.listInsets.leading,
+        end: invalid
+            ? context.listInsets.trailing -
+                  MinIconButtonTheme.edgeInsetOf(context)
+            : context.listInsets.trailing,
+      ),
       onPressed: invalid ? null : () => _handleEdit(context, ref),
       title: TooltipText(
         text: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -204,7 +210,13 @@ class _RuleProviderItemState extends State<_RuleProviderItem> {
         final lastModified = snapshot.data;
         return DecorationListItem(
           invalid: widget.invalid,
-          contentPadding: const EdgeInsets.only(left: 16, right: 8),
+          contentPadding: EdgeInsetsDirectional.only(
+            start: context.listInsets.leading,
+            end: widget.invalid
+                ? context.listInsets.trailing -
+                      MinIconButtonTheme.edgeInsetOf(context)
+                : context.listInsets.leading,
+          ),
           title: TooltipText(
             text: Text(
               widget.name,
@@ -582,15 +594,15 @@ class _ProxyProviderOptionsViewState
       body: CustomScrollView(
         slivers: [
           SliverPadding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-            ).copyWith(top: context.sectionsTopPadding),
+            padding: context.listInsets.page().copyWith(
+              top: context.sectionsTopPadding,
+            ),
             sliver: const ProxyProviderFiltersSliver(),
           ),
           SliverPadding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-            ).copyWith(bottom: 20 + context.bottomInset),
+            padding: context.listInsets.page().copyWith(
+              bottom: 20 + context.bottomInset,
+            ),
             sliver: SliverList.list(
               children: [
                 generateAnimatedSection(

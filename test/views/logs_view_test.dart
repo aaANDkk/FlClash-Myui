@@ -12,6 +12,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../helpers/route_cover.dart';
 import '../helpers/scrollbar.dart';
 import '../helpers/test_app.dart';
 import '../helpers/host_scaffold.dart';
@@ -79,9 +80,7 @@ void main() {
     expect(seedLogs().map((log) => log.dateTime), contains(label.data));
 
     final scrollableRect = tester.getRect(find.byType(Scrollable).first);
-    // The list runs under the bar, so the scrollbar track starts at the
-    // bar's foot. The minimum thumb length is 48, so at the newest end the
-    // thumb center rests 24 dp below the track's top edge.
+    // A 48 dp minimum thumb at the newest end centers 24 below the bar's foot.
     final trackTop = tester.getRect(find.byType(AppBar)).bottom;
     expect(tester.getCenter(find.byKey(hintKey)).dy, closeTo(trackTop + 24, 6));
 
@@ -151,6 +150,81 @@ void main() {
     final body = tester.getRect(find.byType(SelectableText));
     expect(header.top - item.top, 10);
     expect(item.bottom - body.bottom, 12);
+  });
+
+  testWidgets('the logs and their filters stand at the list margin', (
+    tester,
+  ) async {
+    await pumpLogsView(tester, viewSize: const Size(1400, 1000));
+    await tester.tap(find.text(LogLevel.info.name).first);
+    await tester.pumpAndSettle();
+
+    final margin = tester.element(find.byType(LogsView)).listInsets.margin;
+    expect(margin, isNot(16));
+    final view = tester.getRect(find.byType(LogsView));
+    final card = tester.getRect(
+      find
+          .descendant(
+            of: find.byType(RecordListItem).first,
+            matching: find.byType(PressSurface),
+          )
+          .first,
+    );
+    expect(card.left - view.left, margin);
+    expect(view.right - card.right, margin);
+    expect(tester.getRect(find.byType(Chip).first).left - view.left, margin);
+  });
+
+  for (final (name, size) in [
+    ('a phone', const Size(390, 844)),
+    ('a wide window', const Size(1400, 1000)),
+  ]) {
+    testWidgets('$name filters from a button grouped with search', (
+      tester,
+    ) async {
+      await pumpLogsView(tester, size: size, viewSize: size);
+
+      expect(
+        find.ancestor(
+          of: find.byTooltip('Filter'),
+          matching: find.byType(TonalButtonGroup),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byType(Chip), findsNothing);
+
+      await tester.tap(find.byTooltip('More'));
+      await tester.pumpAndSettle();
+      expect(find.text('Export logs'), findsOneWidget);
+      expect(find.text('Filter'), findsNothing);
+      await tester.tapAt(Offset.zero);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Filter'));
+      await tester.pumpAndSettle();
+      expect(find.text('Filter'), findsOneWidget);
+      expect(find.text('Log level'), findsNothing);
+      await tester.tap(find.text(LogLevel.info.name).last);
+      await tester.pumpAndSettle();
+      await tester.tapAt(Offset.zero);
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(Chip, LogLevel.info.name), findsOneWidget);
+    });
+  }
+
+  testWidgets('the menu sets the Core log level', (tester) async {
+    await pumpLogsView(tester);
+
+    await tester.tap(find.byTooltip('More'));
+    await tester.pumpAndSettle();
+    expect(find.text(LogLevel.error.name), findsOneWidget);
+    await tester.tap(find.text('Log level'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(LogLevel.debug.name).last);
+    await tester.pumpAndSettle();
+
+    expect(container.read(patchClashConfigProvider).logLevel, LogLevel.debug);
   });
 
   testWidgets('tapping the level reports it for filtering', (tester) async {
@@ -304,5 +378,16 @@ void main() {
     debugOnRebuildDirtyWidget = null;
 
     expect(built, 1);
+  });
+
+  testWidgets('a page pushed over the logs and popped rebuilds none of them', (
+    tester,
+  ) async {
+    await pumpLogsView(tester);
+
+    expect(
+      await rebuildsWhileCovered<LogsView>(tester, find.byType(LogsView)),
+      0,
+    );
   });
 }

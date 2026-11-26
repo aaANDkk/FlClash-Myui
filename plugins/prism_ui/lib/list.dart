@@ -11,11 +11,11 @@ import 'package:prism_ui/prism_list.dart';
 import 'package:prism_ui/focus.dart';
 import 'package:prism_ui/inherited.dart';
 import 'package:prism_ui/item_position.dart';
+import 'package:prism_ui/list_text.dart';
 import 'package:prism_ui/measure.dart';
 import 'package:prism_ui/metrics.dart';
 import 'package:prism_ui/models.dart';
 import 'package:prism_ui/shape.dart';
-import 'package:prism_ui/typography.dart';
 
 import 'button.dart';
 import 'card.dart';
@@ -27,10 +27,9 @@ import 'sortable.dart';
 part 'list_row_separator.dart';
 part 'list_selected.dart';
 
-/// A section's title, as tall as its action buttons with or without them.
+/// A section's title, which grows to fit its action buttons.
 class ListHeader extends StatelessWidget {
   static const _actionSize = TonalButtonSize.section;
-  static const _actionsGap = 6.0;
 
   final String title;
 
@@ -40,6 +39,10 @@ class ListHeader extends StatelessWidget {
   final Widget? trailing;
   final EdgeInsets? padding;
 
+  /// Drops the gap above, for a list's first section where what holds the
+  /// list already spaces it from what sits over it.
+  final bool atTop;
+
   const ListHeader({
     super.key,
     required this.title,
@@ -47,6 +50,7 @@ class ListHeader extends StatelessWidget {
     this.padding,
     this.actions = const [],
     this.trailing,
+    this.atTop = false,
   });
 
   Widget _buildActions() {
@@ -77,30 +81,34 @@ class ListHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final padding = this.padding ?? listHeaderPaddingOf(context);
-    final lineHeight = MeasureScope.of(
-      context,
-    ).textHeight(AppTextStyle.headline);
+    final header = ListTextScope.of(context).header;
+    final lineHeight = MeasureScope.of(context).textHeight(header);
     final caption = this.caption;
-    final overhang = caption == null
+    final hasActions = actions.isNotEmpty || trailing != null;
+    final overhang = caption == null && hasActions
         ? (_actionSize.button - lineHeight) / 2
         : 0.0;
     final titleText = Text(
       title,
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
-      style: AppTextStyle.headline
-          .of(context)
+      style: header
+          .of(context, emphasized: true)
           .copyWith(color: context.colorScheme.onSurfaceVariant),
     );
     return Padding(
       padding: EdgeInsets.fromLTRB(
         padding.left,
-        math.max(0, padding.top - overhang),
+        atTop ? 0 : math.max(0, padding.top - overhang),
         padding.right,
-        math.max(_actionsGap, padding.bottom - overhang),
+        hasActions
+            ? math.max(listHeaderGap, padding.bottom - overhang)
+            : padding.bottom,
       ),
       child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: _actionSize.button),
+        constraints: BoxConstraints(
+          minHeight: hasActions ? _actionSize.button : 0,
+        ),
         child: Row(
           spacing: 12,
           children: [
@@ -125,19 +133,101 @@ class ListHeader extends StatelessWidget {
   }
 }
 
+/// A section's footnote. Its last line hangs into the gap above the next
+/// section, which iOS 27 closes up after a footer: a header's line then starts
+/// 16.33 dp under the footer's, where it starts [listSectionGap] under a card.
+/// A [last] footer ends its list, so it has no gap below to hang into.
 class ListFooter extends StatelessWidget {
-  final String text;
+  static const _top = 6.5;
+  static const _nextHeaderGap = 16.33;
 
-  const ListFooter({super.key, required this.text});
+  final String text;
+  final bool last;
+
+  const ListFooter({super.key, required this.text, this.last = false});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      alignment: Alignment.centerLeft,
-      padding:
-          const EdgeInsets.only(left: 16, right: 16, top: 8) * 1.mAp(context),
-      child: Text(text, style: context.listCaptionStyle),
+    final leading = context.listInsets.leading;
+    final scale = 1.mAp(context);
+    return _HangingBottom(
+      hang: last ? 0 : (listSectionGap - _nextHeaderGap) * scale,
+      child: Container(
+        alignment: AlignmentDirectional.centerStart,
+        padding:
+            EdgeInsetsDirectional.fromSTEB(leading, _top, leading, 0) * scale,
+        child: Text(text, style: context.listCaptionStyle),
+      ),
     );
+  }
+}
+
+class _HangingBottom extends SingleChildRenderObjectWidget {
+  final double hang;
+
+  const _HangingBottom({required this.hang, required super.child});
+
+  @override
+  _RenderHangingBottom createRenderObject(BuildContext context) =>
+      _RenderHangingBottom(hang);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderHangingBottom renderObject,
+  ) {
+    renderObject.hang = hang;
+  }
+}
+
+class _RenderHangingBottom extends RenderProxyBox {
+  _RenderHangingBottom(this._hang);
+
+  double _hang;
+
+  set hang(double value) {
+    if (_hang == value) {
+      return;
+    }
+    _hang = value;
+    markNeedsLayout();
+  }
+
+  double _shorten(double height) => math.max(0, height - _hang);
+
+  @override
+  double computeMinIntrinsicHeight(double width) =>
+      _shorten(super.computeMinIntrinsicHeight(width));
+
+  @override
+  double computeMaxIntrinsicHeight(double width) =>
+      _shorten(super.computeMaxIntrinsicHeight(width));
+
+  @override
+  Size computeDryLayout(covariant BoxConstraints constraints) {
+    final size = child!.getDryLayout(constraints.loosen());
+    return constraints.constrain(Size(size.width, _shorten(size.height)));
+  }
+
+  @override
+  void performLayout() {
+    final child = this.child!
+      ..layout(constraints.loosen(), parentUsesSize: true);
+    size = constraints.constrain(
+      Size(child.size.width, _shorten(child.size.height)),
+    );
+  }
+
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    if (!(Offset.zero & child!.size).contains(position)) {
+      return false;
+    }
+    if (hitTestChildren(result, position: position)) {
+      result.add(BoxHitTestEntry(this, position));
+      return true;
+    }
+    return false;
   }
 }
 
@@ -170,15 +260,19 @@ Widget generateSection({
   required Iterable<Widget> items,
   List<IconButtonData> actions = const [],
   String? footer,
+  bool atTop = false,
+  bool last = false,
 }) {
   return Column(
     children: [
       if (items.isNotEmpty)
-        title != null
-            ? ListHeader(title: title, actions: actions)
-            : const ListSectionGap(),
+        if (title != null)
+          ListHeader(title: title, actions: actions, atTop: atTop)
+        else if (!atTop)
+          const ListSectionGap(),
       generateGroup(items),
-      if (items.isNotEmpty && footer != null) ListFooter(text: footer),
+      if (items.isNotEmpty && footer != null)
+        ListFooter(text: footer, last: last),
     ],
   );
 }
@@ -190,25 +284,33 @@ Widget generateSliverSection<T>({
   required Widget Function(T item) itemBuilder,
   List<IconButtonData> actions = const [],
   String? footer,
+  bool atTop = false,
+  bool last = false,
+  bool addAutomaticKeepAlives = true,
 }) {
   if (items.isEmpty) {
     return const SliverToBoxAdapter();
   }
   return SliverMainAxisGroup(
     slivers: [
-      SliverToBoxAdapter(
-        child: title != null
-            ? ListHeader(title: title, actions: actions)
-            : const ListSectionGap(),
-      ),
+      if (title != null)
+        SliverToBoxAdapter(
+          child: ListHeader(title: title, actions: actions, atTop: atTop),
+        )
+      else if (!atTop)
+        const SliverToBoxAdapter(child: ListSectionGap()),
       SliverPrismList(
         itemCount: items.length,
+        addAutomaticKeepAlives: addAutomaticKeepAlives,
         itemBuilder: (_, index) => ItemPositionProvider(
           position: ItemPosition.get(index, items.length),
           child: itemBuilder(items[index]),
         ),
       ),
-      if (footer != null) SliverToBoxAdapter(child: ListFooter(text: footer)),
+      if (footer != null)
+        SliverToBoxAdapter(
+          child: ListFooter(text: footer, last: last),
+        ),
     ],
   );
 }

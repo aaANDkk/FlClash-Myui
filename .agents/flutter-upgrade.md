@@ -13,6 +13,28 @@ Hotfix releases (3.50.x) carry only cherry-picks listed in the SDK's `CHANGELOG.
 The SDK checkout carries the engine sources under `engine/src/flutter`, so an entry below that names an engine file can
 be checked against the new SDK with a plain `diff` of that file between the two checkouts.
 
+## Impeller disabled on Intel macOS release builds
+
+- **Bug:** two failures on Intel (x86_64) Macs under Impeller. On 3.47,
+  [flutter/flutter#191538](https://github.com/flutter/flutter/issues/191538): the whole window flickered while
+  scrolling or animating, and text could render garbled; the fix is in 3.50. On 3.50.0, #3063: on an iMac 13,2
+  (GeForce GTX 675MX, macOS 12.5 installed through OpenCore Legacy Patcher) the app never shows its window. The main
+  thread waits inside the engine under the first `order` of `MainFlutterWindow` (`viewWillAppear`) while Metal's
+  compiler service builds Impeller's shaders and never answers; no Core starts and no crash report is written.
+  `FLTEnableImpeller` set to false in the bundle's `Info.plist` brings it up. Apple Silicon is not affected.
+- **Workaround:** the release job for `macos-15-intel` (`arch: amd64`) runs
+  `plutil -replace FLTEnableImpeller -bool NO macos/Runner/Info.plist` before `tool/package.dart`, so only the Intel
+  DMG renders with Skia. The checked-in `Info.plist` does not set the key, so local builds and the arm64 DMG keep
+  Impeller. The macOS embedder reads the key at launch in `FlutterDartProject.mm` (`enableImpeller`), release builds
+  included.
+- **Side effect:** Skia on Intel renders blur, shadows and text slightly differently, and Liquid Glass frosts from its
+  capture without refraction; judge Intel-only visual reports against Skia, not Impeller.
+- **Remove when:** an Intel DMG built without the step passes both checks on real hardware. It reaches its window on a
+  Mac whose GPU supports only the first macOS Metal family, such as a Kepler-era NVIDIA card on an OCLP-patched system.
+  Scrolling the proxies and dashboard pages does not flicker on an Intel Mac with its integrated GPU driving the
+  built-in display; an external display can switch to the discrete GPU and hide the flicker. Flutter no longer tests on
+  Intel Macs from 3.50, so nothing upstream guards against either.
+
 ## Wrong-size back buffer on macOS
 
 - **Bug:** [flutter/flutter#185394](https://github.com/flutter/flutter/issues/185394). `removeSurfaceForSize:` in
@@ -22,7 +44,7 @@ be checked against the new SDK with a plain `diff` of that file between the two 
   disagrees with its descriptor, the render target drops it, and `Canvas::SetupRenderPass` dereferences a null
   texture on the raster thread. Debug builds log `The texture and its descriptor disagree about its size` and
   `Store action needs resolve but no valid resolve texture specified` first; release builds just crash.
-- **Fix upstream:** [flutter/flutter#192522](https://github.com/flutter/flutter/pull/192522), still open; 3.50.0
+- **Fix upstream:** [flutter/flutter#192522](https://github.com/flutter/flutter/pull/192522), still open; 3.50.1
   ships the same `FlutterSurfaceManager.mm` as 3.47.9, whose `removeSurfaceForSize:` compares only the first cached
   surface's size.
 - **Workaround:** `plugins/rust_api/rust/src/window/macos/back_buffer.rs`, installed from the window module's
@@ -45,7 +67,7 @@ be checked against the new SDK with a plain `diff` of that file between the two 
   `HandleTopLevelWindowProc`, so the view shows and hides with its window. The Flutter runner template has no such
   call, so keep it when regenerating the runner.
 - **Remove when:** the engine hides the view together with its top-level window; `windows_lifecycle_manager.cc` is
-  unchanged from 3.47.9 to 3.50.0. Check with the proxy running and
+  unchanged from 3.47.9 to 3.50.1. Check with the proxy running and
   the window focused: hiding it to the tray and minimizing it must each log `AppLifecycleState.hidden`.
 
 ## macOS activation resumes a hidden window
@@ -59,7 +81,7 @@ be checked against the new SDK with a plain `diff` of that file between the two 
   (`applicationActivityChanged:` in `plugins/rust_api/rust/src/window/macos/mod.rs`). A window brought back without another activation change
   would then wait on an occlusion notification macOS does not always post, keeping its last frame, so `show` and a
   deminiaturize hand the state back (`became_visible`).
-- **Remove when:** the engine ignores status item windows on activation; 3.50.0's `handleWillBecomeActive` still
+- **Remove when:** the engine ignores status item windows on activation; 3.50.1's `handleWillBecomeActive` still
   resumes for any visible window. Check without the workaround: minimize the
   window, switch to another app, then Cmd-Tab back without restoring it; the log must stay at
   `AppLifecycleState.hidden`.
@@ -74,7 +96,7 @@ be checked against the new SDK with a plain `diff` of that file between the two 
   follows the engine's `inactive`; the compositor focuses the window when it restores it, which the engine reports as
   `resumed`. A minimize the compositor starts itself (Super+H, the dock) is not covered.
 - **Remove when:** the Linux engine reports minimized windows on Wayland, which needs GTK 4 or xdg-shell's
-  `suspended` state; 3.50.0's `fl_window_state_monitor.cc` still reads only `GDK_WINDOW_STATE_ICONIFIED`. Check in a GNOME Wayland session without the workaround: minimizing from the caption button
+  `suspended` state; 3.50.1's `fl_window_state_monitor.cc` still reads only `GDK_WINDOW_STATE_ICONIFIED`. Check in a GNOME Wayland session without the workaround: minimizing from the caption button
   must log `AppLifecycleState.hidden`.
 
 ## Linux window black after it is shown again on Wayland
@@ -108,18 +130,6 @@ be checked against the new SDK with a plain `diff` of that file between the two 
 A workaround here is gone from the tree, removed by the maintainer's decision before its removal check had run, so a
 report that matches its symptom points back at it. Drop an entry once the check passes or a stable release has shipped
 without such a report.
-
-### Impeller on Intel macOS
-
-- **Bug:** [flutter/flutter#191538](https://github.com/flutter/flutter/issues/191538). On 3.47, Intel (x86_64) Macs
-  flickered across the whole window while scrolling or animating under Impeller, and text could render garbled.
-- **Removed:** on moving to 3.50.0, because the upstream fix is in 3.50: it landed on `main` before 2026-08-25 and the
-  reporter verified it on `3.48.0-1.0.pre-404`. The Intel hardware check was not run, and Flutter no longer tests on
-  Intel Macs from 3.50, so nothing upstream guards against a regression.
-- **If it returns:** in the release job for `macos-15-intel` (`arch: amd64`), run
-  `plutil -replace FLTEnableImpeller -bool NO macos/Runner/Info.plist` before `tool/package.dart`, so only the Intel DMG
-  falls back to Skia. The check: scroll the proxies and dashboard pages on an Intel Mac with its integrated GPU driving
-  the built-in display; an external display can switch to the discrete GPU and hide the flicker.
 
 ### Impeller on Windows
 

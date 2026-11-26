@@ -423,6 +423,62 @@ void main() {
     expect(find.byGlyph(Glyphs.check), findsOneWidget);
   });
 
+  testWidgets(
+    'an item sets its detail after its label in the secondary color',
+    (tester) async {
+      for (final maxVisibleItems in [null, 7]) {
+        final open = await pumpMenu(tester, [
+          PopupMenuItem(
+            label: 'Active',
+            detail: '1,284',
+            checked: true,
+            onPressed: () {},
+          ),
+          PopupMenuItem(
+            label: 'Failed',
+            detail: '4',
+            checked: false,
+            onPressed: () {},
+          ),
+        ], maxVisibleItems: maxVisibleItems);
+        open();
+        await tester.pumpAndSettle();
+
+        final label = tester.getRect(find.text('Active'));
+        final detail = tester.getRect(find.text('1,284'));
+        expect(detail.left, moreOrLessEquals(label.right + 8));
+        expect(detail.center.dy, moreOrLessEquals(label.center.dy));
+        expect(
+          tester.getRect(find.byGlyph(Glyphs.check)).left,
+          greaterThanOrEqualTo(detail.right + 8),
+        );
+        final colorScheme = Theme.of(
+          tester.element(find.text('Active')),
+        ).colorScheme;
+        final style = tester
+            .widget<RichText>(
+              find
+                  .descendant(
+                    of: find.text('1,284'),
+                    matching: find.byType(RichText),
+                  )
+                  .first,
+            )
+            .text
+            .style;
+        expect(style?.color, colorScheme.onSurfaceVariant);
+        expect(
+          style?.fontFeatures,
+          contains(const FontFeature.tabularFigures()),
+        );
+        expect(tester.takeException(), isNull);
+
+        await tester.tapAt(const Offset(4, 4));
+        await tester.pumpAndSettle();
+      }
+    },
+  );
+
   testWidgets('an item that keeps the menu open toggles its check in place', (
     tester,
   ) async {

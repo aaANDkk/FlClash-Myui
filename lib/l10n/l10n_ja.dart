@@ -189,6 +189,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get autoCheckUpdate => '更新の自動チェック';
 
   @override
+  String get updateChannel => 'アップデートチャンネル';
+
+  @override
+  String get updateChannelStable => '安定版';
+
+  @override
+  String get updateChannelPre => 'プレリリース版';
+
+  @override
   String get checkCertificate => 'TLS証明書を検証';
 
   @override
@@ -488,7 +497,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get externalController => '外部コントローラー';
 
   @override
-  String get externalControllerDesc => '外部コントローラーを有効にすると、ポート 9090 でコアを制御できます。';
+  String get externalControllerDesc => '外部コントローラーはポート 9090 で待ち受けます。';
 
   @override
   String get externalControllerSecret => '外部コントローラーのシークレット';
@@ -504,9 +513,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get startupAndBackground => '起動とバックグラウンド';
-
-  @override
-  String get requestsAndUpdates => 'リクエストと更新';
 
   @override
   String get logsAndDiagnostics => 'ログと診断';
@@ -543,6 +549,236 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get liveConnections => 'リアルタイム接続';
+
+  @override
+  String get speed => '速度';
+
+  @override
+  String get closeActiveConnections => 'アクティブな接続をすべて閉じる';
+
+  @override
+  String closeActiveConnectionsTip(int count) {
+    return 'アクティブな接続 $count 件をすべて閉じますか？使用中のアプリは自動で再接続しますが、進行中のダウンロードや通話は途切れることがあります。';
+  }
+
+  @override
+  String get connectionsAll => 'すべて';
+
+  @override
+  String get connectionsActive => 'アクティブ';
+
+  @override
+  String get connectionsFailed => '失敗';
+
+  @override
+  String get connectionsDecrypted => '復号済み';
+
+  @override
+  String get connectionRuleGlobal => 'グローバルモード';
+
+  @override
+  String get connectionRuleNone => 'ルールなし';
+
+  @override
+  String get failureRefused => '拒否されました';
+
+  @override
+  String get failureUnreachable => '到達不能';
+
+  @override
+  String get failureDns => 'DNS 解決に失敗';
+
+  @override
+  String get dnsNoSuchDomain => 'ドメインが存在しません';
+
+  @override
+  String get dnsServerFailure => 'アップストリームのエラー';
+
+  @override
+  String get dnsRefused => 'アップストリームが拒否しました';
+
+  @override
+  String get dnsTimedOut => 'クエリがタイムアウトしました';
+
+  @override
+  String get dnsBlockedByRule => 'ルールでブロックされました';
+
+  @override
+  String get failureHandshake => 'ハンドシェイクに失敗';
+
+  @override
+  String get failureOther => 'その他のエラー';
+
+  @override
+  String get connectionClosed => '終了済み';
+
+  @override
+  String get timeline => 'タイムライン';
+
+  @override
+  String get connectionInfo => '情報';
+
+  @override
+  String get decryption => '復号';
+
+  @override
+  String connectionRuleIndex(Object number) {
+    return '$number 番目';
+  }
+
+  @override
+  String get handshake => 'ハンドシェイク';
+
+  @override
+  String get now => '現在';
+
+  @override
+  String get mitmCertificateRefused => 'クライアントが証明書を拒否';
+
+  @override
+  String get connectionEndLocal => 'ローカル側で終了';
+
+  @override
+  String get connectionEndRemote => '相手側で終了';
+
+  @override
+  String get connectionEndFinished => '完了';
+
+  @override
+  String get connectionEndReset => 'リセット';
+
+  @override
+  String get connectionEndCore => 'コアが終了';
+
+  @override
+  String get fakeIpMapping => 'fake-ip マッピング';
+
+  @override
+  String get dnsFromHosts => 'hosts から';
+
+  @override
+  String get condition => '条件';
+
+  @override
+  String get addCondition => '条件を追加';
+
+  @override
+  String get conditionField => 'フィールド';
+
+  @override
+  String get conditionContains => '含む';
+
+  @override
+  String get conditionEquals => '等しい';
+
+  @override
+  String get conditionTip =>
+      '同じフィールドの条件はいずれか一つ、異なるフィールドの条件はすべてに一致します。検索欄でも同じ書き方が使えます（例：host:github.com -app:chrome）。';
+
+  @override
+  String get conditionNotContains => '含まない';
+
+  @override
+  String get conditionNotEquals => '等しくない';
+
+  @override
+  String get editCondition => '条件を編集';
+
+  @override
+  String conditionValuesIn(String field) {
+    return '現在の接続の$field';
+  }
+
+  @override
+  String conditionShows(String count) {
+    return '$count 件の接続に絞り込みます';
+  }
+
+  @override
+  String get conditionRows => '同じ行はいずれか、各行はすべて一致';
+
+  @override
+  String get clearAll => 'すべてクリア';
+
+  @override
+  String get conditionOr => 'または';
+
+  @override
+  String get selectConnection => '接続を選択';
+
+  @override
+  String get selectConnectionHint => 'タイムライン、HTTP リクエスト、接続情報がここに表示されます';
+
+  @override
+  String get selectDnsQuery => 'クエリを選択';
+
+  @override
+  String get selectDnsQueryHint => '応答、アップストリーム、関連する接続がここに表示されます';
+
+  @override
+  String get relatedConnections => '関連する接続';
+
+  @override
+  String get upstream => 'アップストリーム';
+
+  @override
+  String get dnsQueryFields => 'クエリ';
+
+  @override
+  String dnsQueryAskedBy(String initiator) {
+    return '$initiatorから問い合わせ';
+  }
+
+  @override
+  String get dnsConditionTip => '同じフィールドの条件はいずれか一つ、異なるフィールドの条件はすべてに一致します。';
+
+  @override
+  String dnsConditionValuesIn(String field) {
+    return '現在のクエリの$field';
+  }
+
+  @override
+  String dnsConditionShows(String count) {
+    return '$count 件のクエリに絞り込みます';
+  }
+
+  @override
+  String get connectionPath => '経路';
+
+  @override
+  String get processPath => 'プロセスのパス';
+
+  @override
+  String get proxyNode => 'プロキシノード';
+
+  @override
+  String get closingTime => '終了時刻';
+
+  @override
+  String processUid(int uid) {
+    return 'UID $uid';
+  }
+
+  @override
+  String get onlyThisApp => 'このアプリのみ表示';
+
+  @override
+  String get onlyThisDomain => 'このドメインのみ表示';
+
+  @override
+  String get hideThisHost => 'このホストを非表示';
+
+  @override
+  String get copySummary => '概要をコピー';
+
+  @override
+  String get copyDomain => 'ドメインをコピー';
+
+  @override
+  String get copyAnswers => '応答をコピー';
+
+  @override
+  String get viewHttp => 'HTTP を表示';
 
   @override
   String get inbound => 'インバウンド';
@@ -755,8 +991,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get writeToSystem => 'システムに書き込む';
 
   @override
-  String get writeToSystemDesc =>
-      'システムに書き込むを有効にするとシステムクロックも設定します。Android では無視されます。';
+  String get writeToSystemDesc => 'システムに書き込むは Android では無効です。';
 
   @override
   String get sniffer => 'スニッファー';
@@ -766,10 +1001,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get forceDnsMapping => 'DNSマッピングを強制';
-
-  @override
-  String get forceDnsMappingDesc =>
-      'DNS マッピングを強制すると、DNS マッピングでドメインを得た接続もスニッフィングします。';
 
   @override
   String get parsePureIp => '純粋なIPを解析';
@@ -802,8 +1033,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get addOverrideEntry => '上書き項目を追加';
 
   @override
-  String get dnsOverrideDesc =>
-      'ここで追加した項目は、すべての URL・ファイルプロファイルの DNS を上書きします。追加していない項目はプロファイル自身の設定のままです。カスタムプロファイルの DNS はその内容で設定します。';
+  String get dnsOverrideDesc => '追加した項目は URL・ファイルプロファイルの DNS を上書きします。';
 
   @override
   String get settingEntries => '設定項目';
@@ -833,8 +1063,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get respectRules => 'ルールに従う';
 
   @override
-  String get respectRulesDesc =>
-      'ルールに従うを有効にすると DNS 接続がルールに従います。Proxy Server Nameserver の設定が必要です。';
+  String get respectRulesDesc => 'ルールに従うには Proxy Server Nameserver の設定が必要です。';
 
   @override
   String get dnsMode => 'DNSモード';
@@ -1073,9 +1302,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get filter => 'フィルター';
-
-  @override
-  String get groupBy => '分類';
 
   @override
   String get hideTimeoutProxies => 'タイムアウトしたプロキシを隠す';
@@ -2263,9 +2489,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get pickFromAlbum => 'アルバムから選択';
 
   @override
-  String get closeConnections => '接続を閉じる';
-
-  @override
   String get scrollToSelected => '選択項目へスクロール';
 
   @override
@@ -2285,6 +2508,24 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get noSearchResults => '一致する結果はありません';
+
+  @override
+  String get noActiveConnections => 'アクティブな接続はありません';
+
+  @override
+  String get noFailedConnections => '失敗した接続はありません';
+
+  @override
+  String get noFailedDnsQueries => '失敗したDNSクエリはありません';
+
+  @override
+  String get noCachedDnsQueries => 'キャッシュから応答したDNSクエリはありません';
+
+  @override
+  String get noFailedHttpRequests => '失敗した HTTP リクエストはありません';
+
+  @override
+  String get noRewrittenHttpRequests => '書き換えられた HTTP リクエストはありません';
 
   @override
   String get showPassword => 'パスワードを表示';
@@ -2308,9 +2549,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get outboundIp => 'アウトバウンド IP';
-
-  @override
-  String get outboundIpAddress => 'アウトバウンド IP アドレス';
 
   @override
   String get ipAddress => 'IP アドレス';
@@ -2649,8 +2887,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get routingMark => 'ルーティングマーク';
 
   @override
-  String get strictRouteDesc =>
-      '厳格なルーティングは DNS などの通信が TUN を迂回するのを防ぎます。IPv6 がオフの場合、この端末の IPv6 通信は遮断されます。';
+  String get strictRouteDesc => 'IPv6 がオフの場合、厳格なルーティングはこの端末の IPv6 通信も遮断します。';
 
   @override
   String get initFailed => '起動に失敗しました';
@@ -2682,7 +2919,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get disableIcmpForwardingDesc =>
-      'ICMP 転送を無効にすると TUN が ping に直接応答するため、ping に実際の遅延が表示されなくなります。';
+      'ICMP 転送を無効にすると、ping に実際の遅延が表示されなくなります。';
 
   @override
   String get excludeInterface => '除外インターフェース';
@@ -2691,8 +2928,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get includeInterface => '対象インターフェース';
 
   @override
-  String get includeInterfaceDesc =>
-      '対象インターフェースから入る通信だけが TUN を通り、除外インターフェースは無効になります。';
+  String get includeInterfaceDesc => '設定すると、除外インターフェースは無効になります。';
 
   @override
   String get includeUid => '対象ユーザー ID';
@@ -2719,15 +2955,14 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get tunOverrideDesc =>
-      'ここで追加した項目は、すべてのプロファイルの TUN 設定を上書きします。追加していない項目はプロファイル自身の設定のままです。カスタムプロファイル自身が追加した項目が優先されます。';
+      '追加した項目はすべてのプロファイルを上書きします。カスタムプロファイル自身の項目が優先されます。';
 
   @override
-  String get generalOverrideDesc =>
-      'ここで追加した項目は、すべてのプロファイルの該当設定を上書きします。追加していない項目はプロファイル自身の設定のままで、プロファイルにない場合はコアの既定値を使います。';
+  String get generalOverrideDesc => '追加した項目はすべてのプロファイルの該当設定を上書きします。';
 
   @override
   String get profileTunSettingsDesc =>
-      'このプロファイルにのみ適用され、ネットワーク設定の TUN 上書き項目より優先されます。';
+      'このプロファイルのみに適用され、ネットワーク設定の TUN 上書きより優先されます。';
 
   @override
   String settingsCount(num count) {
@@ -3094,26 +3329,35 @@ class AppLocalizationsJa extends AppLocalizations {
   String get httpCapture => 'HTTP キャプチャ';
 
   @override
-  String get httpCaptureDesc =>
-      'ホスト名に記載したホストへのリクエストを記録し、接続の詳細で確認できます。記録はメモリ上にのみ保持されます。';
-
-  @override
-  String get httpCaptureNoHosts =>
-      'ホストが記載されていないため、何も記録されません。MITM ページの「ホスト名」または接続の詳細から追加してください。';
+  String get httpCaptureNoHosts => '「ホスト名」にホストを追加するまで何も記録されません。';
 
   @override
   String get httpCaptureLimit => '最大記録数';
 
   @override
-  String httpCaptureLimitDesc(Object memory, Object body) {
-    return 'この件数に達するか、メモリを $memory 使い切ると、古い記録から削除されます。本文は先頭の $body のみ保持されます。';
-  }
+  String get httpCaptureMemoryOnly => 'メモリにのみ保存';
 
   @override
   String get httpRequests => 'HTTP リクエスト';
 
   @override
+  String httpRequestCount(int count) {
+    return 'HTTP リクエスト $count 件';
+  }
+
+  @override
+  String latestHttpRequest(String request) {
+    return '直近 $request';
+  }
+
+  @override
   String get httpRequestsMissing => 'キャプチャをオンにする前のリクエストや、消去済みのリクエストは表示されません。';
+
+  @override
+  String get noHttpRequests => 'リクエストはまだありません';
+
+  @override
+  String get noHttpRequestsHint => 'この接続は復号済みです。その上の HTTP リクエストがここに表示されます';
 
   @override
   String get httpRequestCleared => 'このリクエストの記録は消去されました';
@@ -3131,7 +3375,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get originalUrl => '元の URL';
 
   @override
-  String get timeToFirstByte => '最初のバイトまでの時間';
+  String get httpTiming => '所要時間';
+
+  @override
+  String get httpWaiting => '応答待ち';
+
+  @override
+  String get httpReceiving => '受信';
 
   @override
   String get requestBody => 'リクエストボディ';
@@ -3264,8 +3514,7 @@ class AppLocalizationsJa extends AppLocalizations {
       '復号されるのはユーザー証明書を信頼するアプリ（主にブラウザ）だけです。';
 
   @override
-  String get mitmAndroidRootDesc =>
-      'root がない場合、復号できるのはユーザー証明書を信頼するアプリ（主にブラウザ）だけです。root があればすべてのアプリを復号できます。';
+  String get mitmAndroidRootDesc => 'root がない場合、復号されるのはユーザー証明書を信頼するアプリだけです。';
 
   @override
   String get mitmCertificateLinuxTip =>
@@ -3426,11 +3675,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mitmIgnoredLines => '無視された行';
 
   @override
-  String get mitmModuleRulesDesc => 'ルーティングルールはプロファイル自身のルールより前に入ります。';
+  String get mitmModuleRulesDesc => 'プロファイル自身のルールより先に照合されます。';
 
   @override
   String get mitmRequestRulesDesc =>
-      'このモジュールの URL-REGEX と USER-AGENT のルールは URL 書き換えに変換され、リクエストごとに判定されます。平文の HTTP はすべてのリクエスト、HTTPS は MITM ホスト名に含まれる接続だけが対象です。';
+      'URL-REGEX と USER-AGENT のルールは URL 書き換えとして動作し、HTTPS ではホスト名に含まれるホストだけが対象です。';
 
   @override
   String mitmModuleSystemTip(Object system) {
@@ -3451,8 +3700,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mitmModuleRiskTitle => 'このモジュールをオンにしますか？';
 
   @override
-  String get mitmNetworkRisk =>
-      '設定の生成時に以下のネットワーク設定を変更し、FlClash で同じ項目に設定した内容より優先されます。モジュールをオフにするか削除すると元に戻ります。';
+  String get mitmNetworkRisk => 'オンの間、以下のネットワーク設定を上書きします。';
 
   @override
   String mitmSkipVerifyRisk(Object hosts) {
@@ -3466,7 +3714,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get mitmClientSourceTunTip =>
-      'TUN がオンのとき、この端末のアプリの送信元は TUN のアドレスです。リストに含まれていない場合、その通信は復号されません。';
+      'TUN がオンのときは、この端末のアプリを復号するには TUN のアドレスを含めてください。';
 
   @override
   String get mitmNetworkChanges => 'ネットワーク設定';
@@ -3689,6 +3937,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get updateDownloadFailed => '更新をダウンロードできませんでした。';
 
   @override
+  String get updateFileMissing => 'リリースに更新ファイルがありません。リリースページから手動でダウンロードしてください。';
+
+  @override
   String get defaultNameserverDesc =>
       'ほかの DNS サーバーのドメイン名を解決します。IP アドレスのみ指定できます。';
 
@@ -3782,6 +4033,64 @@ class AppLocalizationsJa extends AppLocalizations {
   String get vpnServiceStartFailed => 'VPN サービスを起動できませんでした。';
 
   @override
+  String get requestPath => 'パス';
+
+  @override
+  String get statusCode => 'ステータスコード';
+
+  @override
+  String get contentKind => '種類';
+
+  @override
+  String get httpRewritten => '書き換え済み';
+
+  @override
+  String get httpAnswerReject => '拒否';
+
+  @override
+  String get httpAnswerRedirect => 'リダイレクト';
+
+  @override
+  String get httpAnswerScript => 'スクリプト応答';
+
+  @override
+  String get httpBodyText => 'テキスト';
+
+  @override
+  String get httpBodyImage => '画像';
+
+  @override
+  String get regexReplace => '正規表現で置換';
+
+  @override
+  String get owningConnection => '所属する接続';
+
+  @override
+  String get selectHttpRequest => 'リクエストを選択';
+
+  @override
+  String get selectHttpRequestHint => 'リクエスト、レスポンス、所要時間がここに表示されます';
+
+  @override
+  String httpConditionShows(String count) {
+    return '$count 件のリクエストに絞り込みます';
+  }
+
+  @override
+  String httpConditionValuesIn(String field) {
+    return '現在のリクエストの$field';
+  }
+
+  @override
+  String get httpConditionTip => '同じフィールドの条件はいずれか一つ、異なるフィールドの条件はすべてに一致します。';
+
+  @override
+  String get outboundIpAddress => 'アウトバウンド IP アドレス';
+
+  @override
+  String get config => '設定';
+
+  @override
   String get advanced => '詳細設定';
 
   @override
@@ -3803,7 +4112,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get addressHelp => 'WebDAVサーバーのアドレス';
 
   @override
-  String get authenticationDesc => '認証を有効にすると、ローカルプロキシポートの利用にユーザー名とパスワードが必要になります。';
+  String get authenticationDesc =>
+      '認証を有効にすると、ローカルプロキシポートの利用にユーザー名とパスワードが必要になります。';
 
   @override
   String get autoCloseConnectionsDesc => 'プロキシを切り替えると、既存の接続を自動的に閉じます。';
@@ -3821,7 +4131,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get dialerProxyDesc => 'ダイヤラープロキシは NTP サーバーへの接続に使用するアウトバウンドです。';
 
   @override
-  String get snifferStatusDesc => 'スニッファーは TLS・HTTP・QUIC の通信からドメインを読み取り、ルールで照合できるようにします。';
+  String get snifferStatusDesc =>
+      'スニッファーは TLS・HTTP・QUIC の通信からドメインを読み取り、ルールで照合できるようにします。';
 
   @override
   String get overrideDestinationDesc => '宛先を上書きすると、元のアドレスではなく検出したドメインに接続します。';
@@ -3833,7 +4144,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get skipDomainDesc => 'スキップするドメインにあるドメインを検出しても使用しません。';
 
   @override
-  String get fakeipFilterModeDesc => 'Fake-IP フィルターモードでは、blacklist は一致を除外、whitelist は一致のみ、rule はルールで判定します。';
+  String get fakeipFilterModeDesc =>
+      'Fake-IP フィルターモードでは、blacklist は一致を除外、whitelist は一致のみ、rule はルールで判定します。';
 
   @override
   String get ipv6InboundDesc => 'IPv6 を有効にすると、VPN で IPv6 インバウンドを許可します。';
@@ -3860,7 +4172,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get customProfileResources => 'カスタムプロファイルのリソース';
 
   @override
-  String get customProfileResourcesDesc => 'カスタムプロファイルのリソースは、自分で追加してカスタムプロファイルから使うプロキシ、ルールプロバイダー、フィルター、アイコンセットです。';
+  String get customProfileResourcesDesc =>
+      'カスタムプロファイルのリソースは、自分で追加してカスタムプロファイルから使うプロキシ、ルールプロバイダー、フィルター、アイコンセットです。';
 
   @override
   String get batteryOptimizationDesc => '電池の最適化を無視すると、アプリがバックグラウンドで動作し続けます。';
@@ -3872,10 +4185,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get blockConnection => '接続をブロック';
 
   @override
-  String get proxyNode => 'プロキシノード';
-
-  @override
-  String get bypassPrivateRouteDesc => 'プライベートアドレスをバイパスすると、LAN・ループバック・マルチキャストのアドレスは TUN を通りません。';
+  String get bypassPrivateRouteDesc =>
+      'プライベートアドレスをバイパスすると、LAN・ループバック・マルチキャストのアドレスは TUN を通りません。';
 
   @override
   String get excludeInterfaceDesc => 'docker0 などの除外インターフェースから入る通信は TUN を通りません。';
@@ -3932,13 +4243,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get editIconRule => '正規表現アイコンを編集';
 
   @override
-  String get iconRuleHelp => '1. 完全一致：例 ^YouTube\$ は YouTube という名前のグループにのみ一致します。\n2. キーワード一致：例 YouTube は名前に YouTube を含むすべてのグループに一致します。\n3. 複数一致：例 (YouTube|Netflix|Disney) は複数のストリーミンググループに同時に一致します。\n4. ワイルドカード：例 .* はすべてのグループに一致し、選択したアイコンを適用します。\n5. 前方・後方一致：例 ^PROXY は前方一致、 Auto\$ は後方一致；上から順に評価されます。';
+  String get iconRuleHelp =>
+      '1. 完全一致：例 ^YouTube\$ は YouTube という名前のグループにのみ一致します。\n2. キーワード一致：例 YouTube は名前に YouTube を含むすべてのグループに一致します。\n3. 複数一致：例 (YouTube|Netflix|Disney) は複数のストリーミンググループに同時に一致します。\n4. ワイルドカード：例 .* はすべてのグループに一致し、選択したアイコンを適用します。\n5. 前方・後方一致：例 ^PROXY は前方一致、 Auto\$ は後方一致；上から順に評価されます。';
 
   @override
   String get refreshGroupIcons => 'グループアイコンを更新';
 
   @override
-  String get refreshGroupIconsTip => 'キャッシュ済みのリモートアイコンとアイコンセット画像をすべて削除し、リモートアイコンセットを再同期して最新のアイコンを取得します。';
+  String get refreshGroupIconsTip =>
+      'キャッシュ済みのリモートアイコンとアイコンセット画像をすべて削除し、リモートアイコンセットを再同期して最新のアイコンを取得します。';
 
   @override
   String get groupIconsRefreshed => 'グループアイコンを更新しました';
@@ -4023,16 +4336,17 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String ipRiskNoteDirect(Object score) {
-    return 'Scamalytics はこの IP の Web トラフィックを直接観測しています。スコア ${score} は、そのうち不正が疑われるトラフィックの割合を示します。';
+    return 'Scamalytics はこの IP の Web トラフィックを直接観測しています。スコア $score は、そのうち不正が疑われるトラフィックの割合を示します。';
   }
 
   @override
   String ipRiskNoteIndirect(Object score, Object isp) {
-    return 'Scamalytics はこの IP の Web トラフィックを直接観測できません。スコア ${score} は ${isp} が運用する IP 全体のリスクから推定されています。';
+    return 'Scamalytics はこの IP の Web トラフィックを直接観測できません。スコア $score は $isp が運用する IP 全体のリスクから推定されています。';
   }
 
   @override
-  String get ipRiskNoteGeneric => '不正スコア（0〜100）は、この IP からの Web トラフィックのうち Scamalytics が不正を疑う割合を示します。';
+  String get ipRiskNoteGeneric =>
+      '不正スコア（0〜100）は、この IP からの Web トラフィックのうち Scamalytics が不正を疑う割合を示します。';
 
   @override
   String get ipRiskNoteAmount => '観測トラフィック';
@@ -4071,16 +4385,20 @@ class AppLocalizationsJa extends AppLocalizations {
   String get ipRiskCommercialServer => '商用サーバー';
 
   @override
-  String get ipRiskNoteProxying => '他地域のトラフィックを中継している可能性があり、実際の利用者はどこにいてもおかしくありません';
+  String get ipRiskNoteProxying =>
+      '他地域のトラフィックを中継している可能性があり、実際の利用者はどこにいてもおかしくありません';
 
   @override
-  String get ipRiskNoteWarningHigh => 'この IP からの Web トラフィックは、不正行為者によるものである可能性が高いです。';
+  String get ipRiskNoteWarningHigh =>
+      'この IP からの Web トラフィックは、不正行為者によるものである可能性が高いです。';
 
   @override
-  String get ipRiskNoteWarningVeryHigh => 'この IP からの Web トラフィックは、不正行為者によるものである可能性が非常に高いです。';
+  String get ipRiskNoteWarningVeryHigh =>
+      'この IP からの Web トラフィックは、不正行為者によるものである可能性が非常に高いです。';
 
   @override
-  String get ipRiskNoteFootnote => 'この評価は Web トラフィックのみを対象としており、その他のトラフィックのリスクは異なる場合があります。';
+  String get ipRiskNoteFootnote =>
+      'この評価は Web トラフィックのみを対象としており、その他のトラフィックのリスクは異なる場合があります。';
 
   @override
   String get ipRiskLocation => '国・地域';
@@ -4158,20 +4476,22 @@ class AppLocalizationsJa extends AppLocalizations {
   String get speedTestProtocol => 'プロトコル';
 
   @override
-  String get speedTestMobileDataTip => 'モバイルデータ通信中です。1 回の測定で数百 MB を消費する場合があります。続行しますか？';
+  String get speedTestMobileDataTip =>
+      'モバイルデータ通信中です。1 回の測定で数百 MB を消費する場合があります。続行しますか？';
 
   @override
   String get speedTestErrorRejected => 'ルールによりブロックされました';
 
   @override
-  String get speedTestErrorRejectedDesc => '現在のルールでは測定ドメインが REJECT に割り当てられています。別のアウトバウンドを選んで再試行してください。';
+  String get speedTestErrorRejectedDesc =>
+      '現在のルールでは測定ドメインが REJECT に割り当てられています。別のアウトバウンドを選んで再試行してください。';
 
   @override
   String get speedTestErrorBlocked => '速度テストを利用できません';
 
   @override
   String speedTestErrorBlockedDesc(Object provider) {
-    return 'アウトバウンドが ${provider} の速度テストをブロックしている可能性があります。測定元またはアウトバウンドを変更してください。';
+    return 'アウトバウンドが $provider の速度テストをブロックしている可能性があります。測定元またはアウトバウンドを変更してください。';
   }
 
   @override
@@ -4203,15 +4523,16 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String speedTestConnectionsDesc(Object count) {
-    return 'マルチは ${count} 本の並列接続で帯域を使い切ります';
+    return 'マルチは $count 本の並列接続で帯域を使い切ります';
   }
 
   @override
-  String get speedTestProtocolDesc => 'HTTP/3 は QUIC (UDP) を使用し、使えない場合は HTTP/2 に、HTTP/2 も使えない場合は HTTP/1.1 に切り替えます';
+  String get speedTestProtocolDesc =>
+      'HTTP/3 は QUIC (UDP) を使用し、使えない場合は HTTP/2 に、HTTP/2 も使えない場合は HTTP/1.1 に切り替えます';
 
   @override
   String speedTestProtocolFallback(Object protocol, Object fallback) {
-    return '${protocol} が利用できないため ${fallback} に切り替えました';
+    return '$protocol が利用できないため $fallback に切り替えました';
   }
 
   @override
@@ -4225,7 +4546,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String speedTestStreams(Object count) {
-    return '${count} 接続';
+    return '$count 接続';
   }
 
   @override
@@ -4281,7 +4602,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String trafficStatsHitCount(Object count) {
-    return '${count} 回';
+    return '$count 回';
   }
 
   @override
@@ -4294,7 +4615,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get trafficStatsDisabled => 'トラフィック統計が無効です';
 
   @override
-  String get trafficStatsDisabledDesc => '有効にすると、ドメイン・プロセス・ノード・ルール別の通信量をローカルに記録します。';
+  String get trafficStatsDisabledDesc =>
+      '有効にすると、ドメイン・プロセス・ノード・ルール別の通信量をローカルに記録します。';
 
   @override
   String get trafficStatsEnable => 'トラフィック統計を有効にする';
@@ -4318,8 +4640,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get trafficStatsRetention => 'データ保持期間';
 
   @override
-  String trafficStatsMonths(Object count) {
-    return '${count} か月';
+  String trafficStatsMonths(num count) {
+    return '$count か月';
   }
 
   @override
@@ -4330,7 +4652,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String trafficStatsSince(Object date) {
-    return '${date} 以降の統計';
+    return '$date 以降の統計';
   }
 
   @override

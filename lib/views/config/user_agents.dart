@@ -170,10 +170,12 @@ class _UserAgentsViewState extends ConsumerState<UserAgentsView> {
         ),
       ],
       body: PrismReorderableListView(
-        padding: const EdgeInsets.all(16).copyWith(
-          top: context.contentTopPadding,
-          bottom: 16 + context.bottomInset,
-        ),
+        padding: context.listInsets
+            .page(top: 16, bottom: 16)
+            .copyWith(
+              top: context.contentTopPadding,
+              bottom: 16 + context.bottomInset,
+            ),
         header: ItemPositionProvider(
           position: ItemPosition.get(0, entries.length + 1),
           child: _UserAgentItem(
@@ -218,10 +220,11 @@ class _UserAgentItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecorationListItem(
       isSelected: isSelected,
-      horizontalTitleGap: 8,
-      contentPadding: EdgeInsets.only(
-        left: 14,
-        right: SortableItem.maybeOf(context) == null ? 16 : 0,
+      contentPadding: EdgeInsetsDirectional.only(
+        start: context.listInsets.leading,
+        end: SortableItem.maybeOf(context) == null
+            ? context.listInsets.trailing
+            : 0,
       ),
       leading: SizedBox.square(
         dimension: 24,

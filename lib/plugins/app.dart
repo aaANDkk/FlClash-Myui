@@ -1,11 +1,14 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:dio/dio.dart' show CancelToken, ProgressCallback;
 import 'package:fl_clash/common/boot_record.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
+import 'package:fl_clash/plugins/app_icon.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:rust_api/rust_api.dart' show NetworkState;
@@ -22,7 +25,7 @@ const _downloadPollInterval = Duration(milliseconds: 500);
 bool packageInstallFailed(int status) =>
     status != _packageInstallSucceeded && status != _packageInstallAborted;
 
-class App {
+class App extends AppIconSource {
   static App? _instance;
   late MethodChannel methodChannel;
   Function()? onExit;
@@ -84,9 +87,10 @@ class App {
     final packagesString = await methodChannel.invokeMethod<String>(
       'getPackages',
     );
-    final List<dynamic> packagesRaw =
-        (await packagesString?.decodeJson<List<dynamic>>()) ?? [];
-    return packagesRaw.map((e) => Package.fromJson(e)).toSet().toList();
+    if (packagesString == null || packagesString.isEmpty) {
+      return const [];
+    }
+    return Isolate.run(() => _parsePackages(packagesString));
   }
 
   Future<bool> isInstalledAppsPermissionGranted() async {
@@ -116,94 +120,15 @@ class App {
     final packageNamesString = await methodChannel.invokeMethod<String>(
       'getChinaPackageNames',
     );
-    final List<dynamic> packageNamesRaw =
-        await packageNamesString?.decodeJson<List<dynamic>>() ?? [];
-    return packageNamesRaw.map((e) => e.toString()).toList();
-  }
-
-  final Map<String, ImageProvider?> _packageIcons = {};
-  final Map<String, Future<ImageProvider?>> _packageIconTasks = {};
-  final TaskPool _packageIconPool = TaskPool(maxConcurrentIconLoads);
-
-  ImageProvider? getCachedPackageIcon(String packageName) {
-    return _packageIcons[packageName];
-  }
-
-  Future<ImageProvider?> getPackageIcon(String packageName) {
-    if (_packageIcons.containsKey(packageName)) {
-      return Future.value(_packageIcons[packageName]);
+    if (packageNamesString == null || packageNamesString.isEmpty) {
+      return const [];
     }
-    return _packageIconTasks[packageName] ??= _loadPackageIcon(packageName);
+    return Isolate.run(() => _parsePackageNames(packageNamesString));
   }
 
-  final Map<String, ImageProvider?> _ownPackageIcons = {};
-  final Map<String, Future<ImageProvider?>> _ownPackageIconTasks = {};
-
-  ({ImageProvider? icon})? getCachedOwnPackageIcon(String packageName) {
-    if (!_ownPackageIcons.containsKey(packageName)) {
-      return null;
-    }
-    return (icon: _ownPackageIcons[packageName]);
-  }
-
-  Future<ImageProvider?> getOwnPackageIcon(String packageName) {
-    if (_ownPackageIcons.containsKey(packageName)) {
-      return Future.value(_ownPackageIcons[packageName]);
-    }
-    return _ownPackageIconTasks[packageName] ??= _loadOwnPackageIcon(
-      packageName,
-    );
-  }
-
-  // getPackageIconPath answers a package without an icon as it answers ''.
-  Future<ImageProvider?> _loadOwnPackageIcon(String packageName) async {
-    ImageProvider? own;
-    if (packageName.isNotEmpty) {
-      final (icon, fallback) = await (
-        getPackageIcon(packageName),
-        getPackageIcon(''),
-      ).wait;
-      own = icon == fallback ? null : icon;
-    }
-    _ownPackageIcons[packageName] = own;
-    unawaited(_ownPackageIconTasks.remove(packageName));
-    return own;
-  }
-
-  Future<ImageProvider?> _loadPackageIcon(String packageName) async {
-    var icon = await _requestPackageIcon(packageName);
-    if (icon == null && packageName.isNotEmpty) {
-      icon = await getPackageIcon('');
-    }
-    _packageIcons[packageName] = icon;
-    unawaited(_packageIconTasks.remove(packageName));
-    return icon;
-  }
-
-  Future<ImageProvider?> _requestPackageIcon(String packageName) async {
-    try {
-      final path = await _packageIconPool.run(
-        () => methodChannel.invokeMethod<String>('getPackageIcon', {
-          'packageName': packageName,
-        }),
-      );
-      if (path == null || path.isEmpty) {
-        return null;
-      }
-      return FileImage(File(path));
-    } catch (error) {
-      commonPrint.log('getPackageIcon error: $error');
-      return null;
-    }
-  }
-
-  @visibleForTesting
-  void clearPackageIconCache() {
-    _packageIcons.clear();
-    _packageIconTasks.clear();
-    _ownPackageIcons.clear();
-    _ownPackageIconTasks.clear();
-  }
+  @override
+  Future<String?> loadIconFile(String id) =>
+      methodChannel.invokeMethod<String>('getPackageIcon', {'packageName': id});
 
   Future<bool?> tip(String? message) async {
     return methodChannel.invokeMethod<bool>('tip', {'message': '$message'});
@@ -370,6 +295,16 @@ class App {
       return null;
     }
   }
+}
+
+List<Package> _parsePackages(String raw) {
+  final decoded = json.decode(raw) as List<dynamic>;
+  return {for (final item in decoded) Package.fromJson(item)}.toList();
+}
+
+List<String> _parsePackageNames(String raw) {
+  final decoded = json.decode(raw) as List<dynamic>;
+  return [for (final item in decoded) item.toString()];
 }
 
 final app = system.isAndroid ? App() : null;

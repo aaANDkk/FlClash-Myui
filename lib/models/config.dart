@@ -24,7 +24,16 @@ const defaultBypassDomain = [
   '172.17.*',
   '172.18.*',
   '172.19.*',
-  '172.2*',
+  '172.20.*',
+  '172.21.*',
+  '172.22.*',
+  '172.23.*',
+  '172.24.*',
+  '172.25.*',
+  '172.26.*',
+  '172.27.*',
+  '172.28.*',
+  '172.29.*',
   '172.30.*',
   '172.31.*',
   '192.168.*',
@@ -266,13 +275,13 @@ abstract class AppSettingProps with _$AppSettingProps {
     @Default(false) bool autoRun,
     @Default(false) bool openLogs,
     @Default(true) bool closeConnections,
-    @Default(RequestFeed.live) RequestFeed requestFeed,
     @Default(defaultDelayTestTimeout) int delayTestTimeout,
     @Default(TabAnimation.fade)
     @JsonKey(readValue: _readTabAnimation)
     TabAnimation tabAnimation,
     @Default(true) bool floatingNavigationBar,
     @Default(true) bool autoCheckUpdate,
+    @Default(UpdateChannel.stable) UpdateChannel updateChannel,
     @Default(true)
     @JsonKey(readValue: _readSidebarExpanded)
     bool sidebarExpanded,
@@ -294,7 +303,6 @@ abstract class AppSettingProps with _$AppSettingProps {
     @Default([]) List<String> serviceOrder,
     @Default([]) List<String> disabledServices,
     @Default({}) Map<String, Map<String, double>> tableColumnWidths,
-    @Default({}) Map<String, String> recordGroupings,
   }) = _AppSettingProps;
 
   factory AppSettingProps.fromJson(Map<String, Object?> json) =>

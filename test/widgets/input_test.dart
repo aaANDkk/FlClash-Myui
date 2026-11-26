@@ -91,6 +91,37 @@ void main() {
     expect(find.text('Page'), findsNothing);
   });
 
+  testWidgets('ListItem.open builds its page only once it opens', (
+    tester,
+  ) async {
+    var built = 0;
+    await tester.pumpWidget(
+      TestApp(
+        overrides: [_viewSizeOverride],
+        child: HostScaffold(
+          body: generateSection(
+            items: [
+              ListItem.open(
+                title: const Text('Lazy'),
+                builder: (_) {
+                  built++;
+                  return const Text('Page');
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(built, 0);
+
+    await tester.tap(find.text('Lazy'));
+    await tester.pumpAndSettle();
+    expect(find.text('Page'), findsOneWidget);
+    expect(built, greaterThan(0));
+  });
+
   testWidgets('ListItem takes the grouped card inside a V3 section', (
     tester,
   ) async {
@@ -611,6 +642,95 @@ void main() {
 
     expect(find.text('open'), findsOneWidget);
     expect(result(), isNull);
+  });
+
+  testWidgets('ListEditView saves unsaved items when told to on the way out', (
+    tester,
+  ) async {
+    final result = await openListEditView(tester);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'Confirm'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('open'), findsOneWidget);
+    expect(result(), ['a', 'b', 'c']);
+  });
+
+  testWidgets(
+    'ListEditView resets to the items it opened with once confirmed',
+    (tester) async {
+      await openListEditView(tester);
+
+      await tester.tap(find.byTooltip('Reset'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('This page has changes. Are you sure you want to reset?'),
+        findsOneWidget,
+      );
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      await tester.pumpAndSettle();
+      expect(find.text('c'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Reset'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Reset'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('c'), findsNothing);
+      expect(find.text('a'), findsOneWidget);
+      expect(find.byTooltip('Save'), findsNothing);
+      expect(find.byTooltip('Reset'), findsNothing);
+    },
+  );
+
+  testWidgets('ListEditView leaves selection on back rather than the page', (
+    tester,
+  ) async {
+    await openListEditView(tester);
+
+    await tester.tap(find.byType(Checkbox).first);
+    await tester.pump();
+    expect(find.byGlyph(AppGlyphs.delete), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.byGlyph(AppGlyphs.delete), findsNothing);
+    expect(find.text('Save the changes?'), findsNothing);
+    expect(find.text('c'), findsOneWidget);
+  });
+
+  testWidgets('ListEditView flags an item its validator rejects, in the list '
+      'and in the add dialog', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: TestApp(
+          overrides: [_viewSizeOverride],
+          child: ListEditView(
+            title: 'Items',
+            items: const ['a', '-b'],
+            titleBuilder: _textBuilder,
+            itemMaxLength: 4,
+            itemValidator: (item) =>
+                item.startsWith('-') ? 'No leading dash' : null,
+          ),
+        ),
+      ),
+    );
+    expect(find.text('No leading dash'), findsOneWidget);
+
+    await _openAddMenuItem(tester, 'Add');
+    await tester.tap(find.text('Confirm'));
+    await tester.pumpAndSettle();
+    expect(find.text('Value cannot be empty'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextFormField), '-c');
+    await tester.tap(find.text('Confirm'));
+    await tester.pumpAndSettle();
+    expect(find.text('No leading dash'), findsNWidgets(2));
+    expect(find.text('-c'), findsOneWidget);
   });
 
   testWidgets('MapEditView adds, reorders, selects, and deletes entries', (

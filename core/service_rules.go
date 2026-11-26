@@ -31,7 +31,7 @@ var (
 	discordCountryPattern  = regexp.MustCompile(`"country_code"\s*:\s*"([^"]+)"`)
 	geminiRegionMarker     = `,2,1,200,"`
 	claudeBlockedRegions   = []string{"AF", "BY", "CN", "CU", "HK", "IR", "KP", "MO", "RU", "SY"}
-	geminiBlockedRegions   = []string{"CHN", "RUS", "BLR", "CUB", "IRN", "PRK", "SYR", "HKG", "MAC"}
+	geminiBlockedRegions   = []string{"CHN", "RUS", "BLR", "CUB", "IRN", "PRK", "SYR"}
 
 	// A playable episode runs past the small body cap; only its leading code is read.
 	bilibiliCodePattern = regexp.MustCompile(`^\s*\{\s*"code"\s*:\s*(-?\d+)`)
@@ -46,11 +46,15 @@ func firstSubmatch(pattern *regexp.Regexp, body string) string {
 }
 
 func checkClaude(env serviceEnv) ServiceCheckItem {
-	result := env.get("https://claude.ai/cdn-cgi/trace", serviceSmallMaxBody)
+	return claudeItem(env.get("https://claude.ai/cdn-cgi/trace", serviceSmallMaxBody))
+}
+
+func claudeItem(result *ProbeResult) ServiceCheckItem {
 	item := itemFrom(result)
 	if !answered(item, result) {
 		return item
 	}
+	item.Ip = traceIp(result.Body)
 	region := normalizeRegion(traceValue(result.Body, "loc"))
 	if region == "" {
 		item.Status = serviceFailed
@@ -65,10 +69,13 @@ func checkClaude(env serviceEnv) ServiceCheckItem {
 }
 
 func checkGemini(env serviceEnv) ServiceCheckItem {
-	result := env.scan("https://gemini.google.com", func(tail string) bool {
+	return geminiItem(env.scan("https://gemini.google.com", func(tail string) bool {
 		index := strings.Index(tail, geminiRegionMarker)
 		return index >= 0 && index+len(geminiRegionMarker)+3 <= len(tail)
-	})
+	}))
+}
+
+func geminiItem(result *ProbeResult) ServiceCheckItem {
 	item := itemFrom(result)
 	if !answered(item, result) {
 		return item
@@ -102,10 +109,7 @@ func checkChatGpt(env serviceEnv) ServiceCheckItem {
 		item.Status = chatGptIosStatus(ios)
 	}
 
-	trace := env.get("https://chat.openai.com/cdn-cgi/trace", serviceSmallMaxBody)
-	if traceItem := itemFrom(trace); answered(traceItem, trace) {
-		item.Region = normalizeRegion(traceValue(trace.Body, "loc"))
-	}
+	readChatGptTrace(&item, env.get("https://chat.openai.com/cdn-cgi/trace", serviceSmallMaxBody))
 
 	web := env.get("https://api.openai.com/compliance/cookie_requirements", serviceSmallMaxBody)
 	if webItem := itemFrom(web); answered(webItem, web) &&
@@ -113,6 +117,13 @@ func checkChatGpt(env serviceEnv) ServiceCheckItem {
 		item.Status = serviceUnsupportedRegion
 	}
 	return item
+}
+
+func readChatGptTrace(item *ServiceCheckItem, trace *ProbeResult) {
+	if traceItem := itemFrom(trace); answered(traceItem, trace) {
+		item.Region = normalizeRegion(traceValue(trace.Body, "loc"))
+		item.Ip = traceIp(trace.Body)
+	}
 }
 
 func chatGptIosStatus(result *ProbeResult) string {

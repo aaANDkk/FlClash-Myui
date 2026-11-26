@@ -1,3 +1,4 @@
+import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/features/form/form.dart';
 import 'package:fl_clash/models/models.dart';
@@ -27,6 +28,7 @@ import 'package:fl_clash/views/proxies/list.dart';
 import 'package:fl_clash/views/proxies/tab.dart';
 import 'package:fl_clash/views/theme.dart';
 import 'package:fl_clash/views/views.dart';
+import 'package:fl_clash/views/navigation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -47,8 +49,8 @@ void main() {
     'dashboard': const DashboardView(),
     'proxies': const ProxiesView(),
     'profiles': const ProfilesView(),
-    'requests': const RequestsView(initialFeed: RequestFeed.recent),
-    'dns queries': const DnsQueriesView(),
+    'requests': const RequestsView(),
+    'dns queries': const RequestsView(segment: RequestsSegment.dns),
     'resources': const ResourcesView(),
     'logs': const LogsView(),
     'tools': const ToolsView(),
@@ -158,6 +160,58 @@ void main() {
       expect(tester.takeException(), null);
     });
   }
+
+  testWidgets('tools opens the logs without rebuilding for each log', (
+    tester,
+  ) async {
+    const window = Size(1400, 1000);
+    tester.view.physicalSize = window;
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final container = ProviderContainer(
+      overrides: [profilesProvider.overrideWith(TestProfiles.new)],
+    );
+    addTearDown(container.dispose);
+    globalState.container = container;
+    navigationPort = navigation;
+    addTearDown(() => navigationPort = null);
+    container.read(viewSizeProvider.notifier).update((_) => window);
+    container
+        .read(appSettingProvider.notifier)
+        .update((state) => state.copyWith(openLogs: true));
+    final logs = container.read(logsProvider.notifier);
+    for (var i = 0; i < 3; i++) {
+      logs.add(Log(payload: 'log $i', dateTime: '2024-01-01 12:00:0$i'));
+    }
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const TestApp(child: ToolsView()),
+      ),
+    );
+    await tester.pump();
+
+    var rebuilt = 0;
+    debugOnRebuildDirtyWidget = (element, _) {
+      if (element.findAncestorWidgetOfExactType<ToolsView>() != null) {
+        rebuilt++;
+      }
+    };
+    addTearDown(() => debugOnRebuildDirtyWidget = null);
+    logs.add(const Log(payload: 'log 3', dateTime: '2024-01-01 12:00:03'));
+    await tester.pump();
+    debugOnRebuildDirtyWidget = null;
+    expect(rebuilt, 0);
+
+    await tester.tap(find.text('Logs'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(LogsView), findsOneWidget);
+    expect(tester.takeException(), null);
+  });
 
   testWidgets('custom resources list directly in advanced config', (
     tester,

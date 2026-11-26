@@ -21,9 +21,18 @@ const _touchDevices = {
 /// otherwise leave covered.
 class ContextMenuRegion extends StatefulWidget {
   final List<PopupMenuItem>? menuItems;
+
+  /// Builds the items only as the menu opens, for a region rebuilt far more
+  /// often than its menu is asked for; no items, no menu.
+  final List<PopupMenuItem> Function(BuildContext context)? menuBuilder;
   final Widget child;
 
-  const ContextMenuRegion({super.key, this.menuItems, required this.child});
+  const ContextMenuRegion({
+    super.key,
+    this.menuItems,
+    this.menuBuilder,
+    required this.child,
+  }) : assert(menuItems == null || menuBuilder == null);
 
   @override
   State<ContextMenuRegion> createState() => _ContextMenuRegionState();
@@ -36,8 +45,8 @@ class _ContextMenuRegionState extends State<ContextMenuRegion> {
 
   bool get _enabled {
     final items = widget.menuItems;
-    return items != null &&
-        items.isNotEmpty &&
+    return (widget.menuBuilder != null ||
+            (items != null && items.isNotEmpty)) &&
         !SortableItem.isSorting(context);
   }
 
@@ -86,7 +95,7 @@ class _ContextMenuRegionState extends State<ContextMenuRegion> {
   }
 
   void _open(Offset globalPosition, {bool avoid = false}) {
-    final items = widget.menuItems;
+    final items = widget.menuItems ?? widget.menuBuilder?.call(context);
     final navigator = Navigator.maybeOf(context);
     final navigatorBox = navigator?.context.findRenderObject();
     final box = context.findRenderObject();

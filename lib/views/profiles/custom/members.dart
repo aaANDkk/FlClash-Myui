@@ -570,7 +570,9 @@ class _MemberRow extends ConsumerWidget {
     );
     return DecorationListItem(
       invalid: !isValid,
-      contentPadding: const EdgeInsets.only(left: 16),
+      contentPadding: EdgeInsetsDirectional.only(
+        start: context.listInsets.leading,
+      ),
       leading: EntryButton.remove(onPressed: onRemove),
       title: TooltipText(
         text: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -578,7 +580,10 @@ class _MemberRow extends ConsumerWidget {
       subtitle: subtitle == null
           ? null
           : Padding(
-              padding: const EdgeInsets.only(top: 4, bottom: 2),
+              padding: const EdgeInsets.only(
+                top: recordLabelLineGap,
+                bottom: 2,
+              ),
               child: Row(
                 children: [
                   Flexible(

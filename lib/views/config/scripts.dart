@@ -64,10 +64,12 @@ class _ScriptsViewState extends ConsumerState<ScriptsView> {
         label: appLocalizations.nullTip(appLocalizations.script),
       ),
       child: PrismReorderableListView(
-        padding: const EdgeInsets.all(16).copyWith(
-          top: context.contentTopPadding,
-          bottom: 16 + context.bottomInset,
-        ),
+        padding: context.listInsets
+            .page(top: 16, bottom: 16)
+            .copyWith(
+              top: context.contentTopPadding,
+              bottom: 16 + context.bottomInset,
+            ),
         itemCount: scripts.length,
         itemBuilder: (_, index) => _buildItem(scripts, index),
         proxyDecorator: (_, index, animation) {
@@ -134,7 +136,9 @@ class _ScriptsViewState extends ConsumerState<ScriptsView> {
         child: ItemPositionProvider(
           position: ItemPosition.get(index, scripts.length),
           child: DecorationListItem(
-            contentPadding: const EdgeInsets.only(left: 16),
+            contentPadding: EdgeInsetsDirectional.only(
+              start: context.listInsets.leading,
+            ),
             title: Text(
               script.label,
               maxLines: 1,
@@ -379,7 +383,7 @@ class _ScriptTrailing extends ConsumerWidget {
     final isUpdating = ref.watch(isUpdatingProvider(script.updatingKey));
     // Inset here, not in the row, so the sort handle that replaces it sits flush.
     return Padding(
-      padding: const EdgeInsetsDirectional.only(end: 16),
+      padding: EdgeInsetsDirectional.only(end: context.listInsets.trailing),
       child: AnimatedSwitcher(
         duration: context.motionDuration(commonDuration),
         layoutBuilder: (current, previous) => Stack(

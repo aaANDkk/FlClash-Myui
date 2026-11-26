@@ -189,6 +189,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get autoCheckUpdate => 'Auto check for updates';
 
   @override
+  String get updateChannel => 'Update channel';
+
+  @override
+  String get updateChannelStable => 'Stable';
+
+  @override
+  String get updateChannelPre => 'Prerelease';
+
+  @override
   String get checkCertificate => 'Verify TLS certificates';
 
   @override
@@ -505,7 +514,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get externalControllerDesc =>
-      'The external controller lets you control the core on port 9090.';
+      'The external controller listens on port 9090.';
 
   @override
   String get externalControllerSecret => 'External controller secret';
@@ -521,9 +530,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get startupAndBackground => 'Startup and background';
-
-  @override
-  String get requestsAndUpdates => 'Requests and updates';
 
   @override
   String get logsAndDiagnostics => 'Logs and diagnostics';
@@ -560,6 +566,245 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get liveConnections => 'Live connections';
+
+  @override
+  String get speed => 'Speed';
+
+  @override
+  String get closeActiveConnections => 'Close all active connections';
+
+  @override
+  String closeActiveConnectionsTip(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count active connections will close.',
+      one: '1 active connection will close.',
+    );
+    return '$_temp0 Apps using them reconnect on their own, though downloads and calls in progress may drop.';
+  }
+
+  @override
+  String get connectionsAll => 'All';
+
+  @override
+  String get connectionsActive => 'Active';
+
+  @override
+  String get connectionsFailed => 'Failed';
+
+  @override
+  String get connectionsDecrypted => 'Decrypted';
+
+  @override
+  String get connectionRuleGlobal => 'Global mode';
+
+  @override
+  String get connectionRuleNone => 'No rule';
+
+  @override
+  String get failureRefused => 'Refused';
+
+  @override
+  String get failureUnreachable => 'Unreachable';
+
+  @override
+  String get failureDns => 'DNS failed';
+
+  @override
+  String get dnsNoSuchDomain => 'No such domain';
+
+  @override
+  String get dnsServerFailure => 'The upstream failed';
+
+  @override
+  String get dnsRefused => 'Refused by the upstream';
+
+  @override
+  String get dnsTimedOut => 'Query timed out';
+
+  @override
+  String get dnsBlockedByRule => 'Blocked by a rule';
+
+  @override
+  String get failureHandshake => 'Handshake failed';
+
+  @override
+  String get failureOther => 'Other error';
+
+  @override
+  String get connectionClosed => 'Closed';
+
+  @override
+  String get timeline => 'Timeline';
+
+  @override
+  String get connectionInfo => 'Info';
+
+  @override
+  String get decryption => 'Decryption';
+
+  @override
+  String connectionRuleIndex(Object number) {
+    return '#$number';
+  }
+
+  @override
+  String get handshake => 'Handshake';
+
+  @override
+  String get now => 'Now';
+
+  @override
+  String get mitmCertificateRefused => 'Certificate refused';
+
+  @override
+  String get connectionEndLocal => 'Closed locally';
+
+  @override
+  String get connectionEndRemote => 'Closed by the remote';
+
+  @override
+  String get connectionEndFinished => 'Finished';
+
+  @override
+  String get connectionEndReset => 'Reset';
+
+  @override
+  String get connectionEndCore => 'Closed by the Core';
+
+  @override
+  String get fakeIpMapping => 'fake-ip mapping';
+
+  @override
+  String get dnsFromHosts => 'From hosts';
+
+  @override
+  String get condition => 'Condition';
+
+  @override
+  String get addCondition => 'Add condition';
+
+  @override
+  String get conditionField => 'Field';
+
+  @override
+  String get conditionContains => 'Contains';
+
+  @override
+  String get conditionEquals => 'Equals';
+
+  @override
+  String get conditionTip =>
+      'Conditions on one field match any of them, on different fields all. Search takes the same form, as in host:github.com -app:chrome.';
+
+  @override
+  String get conditionNotContains => 'Excludes';
+
+  @override
+  String get conditionNotEquals => 'Not equal';
+
+  @override
+  String get editCondition => 'Edit condition';
+
+  @override
+  String conditionValuesIn(String field) {
+    return '$field in the list';
+  }
+
+  @override
+  String conditionShows(String count) {
+    return 'Connections shown: $count';
+  }
+
+  @override
+  String get conditionRows => 'Any in a row, every row';
+
+  @override
+  String get clearAll => 'Clear all';
+
+  @override
+  String get conditionOr => 'or';
+
+  @override
+  String get selectConnection => 'Select a connection';
+
+  @override
+  String get selectConnectionHint =>
+      'Its timeline, HTTP requests and connection details appear here';
+
+  @override
+  String get selectDnsQuery => 'Select a query';
+
+  @override
+  String get selectDnsQueryHint =>
+      'Its answers, upstream and related connections appear here';
+
+  @override
+  String get relatedConnections => 'Related connections';
+
+  @override
+  String get upstream => 'Upstream';
+
+  @override
+  String get dnsQueryFields => 'Query';
+
+  @override
+  String dnsQueryAskedBy(String initiator) {
+    return 'Asked by $initiator';
+  }
+
+  @override
+  String get dnsConditionTip =>
+      'Conditions on one field match any of them, on different fields all.';
+
+  @override
+  String dnsConditionValuesIn(String field) {
+    return '$field in the list';
+  }
+
+  @override
+  String dnsConditionShows(String count) {
+    return 'Queries shown: $count';
+  }
+
+  @override
+  String get connectionPath => 'Path';
+
+  @override
+  String get processPath => 'Process path';
+
+  @override
+  String get proxyNode => 'Proxy Node';
+
+  @override
+  String get closingTime => 'Closed at';
+
+  @override
+  String processUid(int uid) {
+    return 'UID $uid';
+  }
+
+  @override
+  String get onlyThisApp => 'Only this app';
+
+  @override
+  String get onlyThisDomain => 'Only this domain';
+
+  @override
+  String get hideThisHost => 'Hide this host';
+
+  @override
+  String get copySummary => 'Copy summary';
+
+  @override
+  String get copyDomain => 'Copy domain';
+
+  @override
+  String get copyAnswers => 'Copy answers';
+
+  @override
+  String get viewHttp => 'View HTTP';
 
   @override
   String get inbound => 'Inbound';
@@ -775,8 +1020,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get writeToSystem => 'Write to system';
 
   @override
-  String get writeToSystemDesc =>
-      'Write to system also sets the system clock; Android ignores it.';
+  String get writeToSystemDesc => 'Write to system has no effect on Android.';
 
   @override
   String get sniffer => 'Sniffer';
@@ -786,10 +1030,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get forceDnsMapping => 'Force DNS mapping';
-
-  @override
-  String get forceDnsMappingDesc =>
-      'Force DNS mapping also sniffs connections whose domain came from a DNS mapping.';
 
   @override
   String get parsePureIp => 'Parse pure IP';
@@ -824,7 +1064,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dnsOverrideDesc =>
-      'Entries added here replace the DNS of every URL and file profile; anything not added keeps the profile\'s own setting. Custom profiles set their DNS in their content.';
+      'Added entries replace the DNS of URL and file profiles.';
 
   @override
   String get settingEntries => 'settings';
@@ -856,7 +1096,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get respectRulesDesc =>
-      'Respect rules routes DNS connections by the rules and needs a Proxy Server Nameserver.';
+      'Respect rules needs a Proxy Server Nameserver.';
 
   @override
   String get dnsMode => 'DNS mode';
@@ -1098,9 +1338,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get filter => 'Filter';
-
-  @override
-  String get groupBy => 'Group by';
 
   @override
   String get hideTimeoutProxies => 'Hide timed-out proxies';
@@ -2374,9 +2611,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pickFromAlbum => 'Choose from album';
 
   @override
-  String get closeConnections => 'Close connections';
-
-  @override
   String get scrollToSelected => 'Scroll to selected';
 
   @override
@@ -2396,6 +2630,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noSearchResults => 'No matching results';
+
+  @override
+  String get noActiveConnections => 'No active connections';
+
+  @override
+  String get noFailedConnections => 'No failed connections';
+
+  @override
+  String get noFailedDnsQueries => 'No failed DNS queries';
+
+  @override
+  String get noCachedDnsQueries => 'No DNS queries answered from cache';
+
+  @override
+  String get noFailedHttpRequests => 'No failed HTTP requests';
+
+  @override
+  String get noRewrittenHttpRequests => 'No rewritten HTTP requests';
 
   @override
   String get showPassword => 'Show password';
@@ -2419,9 +2671,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get outboundIp => 'Outbound IP';
-
-  @override
-  String get outboundIpAddress => 'Outbound IP address';
 
   @override
   String get ipAddress => 'IP address';
@@ -2764,7 +3013,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get strictRouteDesc =>
-      'Strict route keeps traffic such as DNS from bypassing TUN, and with IPv6 off it blocks this device\'s IPv6 connections.';
+      'With IPv6 off, strict route also blocks this device’s IPv6 connections.';
 
   @override
   String get initFailed => 'Startup failed';
@@ -2796,7 +3045,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get disableIcmpForwardingDesc =>
-      'With ICMP forwarding disabled, TUN answers ping itself, so ping no longer shows the real latency.';
+      'With ICMP forwarding disabled, ping no longer shows the real latency.';
 
   @override
   String get excludeInterface => 'Excluded interfaces';
@@ -2806,7 +3055,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get includeInterfaceDesc =>
-      'Only traffic arriving on included interfaces goes through TUN, and excluded interfaces no longer apply.';
+      'Once set, excluded interfaces no longer apply.';
 
   @override
   String get includeUid => 'Included user IDs';
@@ -2833,15 +3082,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tunOverrideDesc =>
-      'Entries added here replace the TUN settings of every profile; anything not added keeps the profile\'s own setting. Entries a custom profile adds itself take precedence.';
+      'Added entries override every profile; a custom profile’s own entries win.';
 
   @override
   String get generalOverrideDesc =>
-      'Entries added here replace the setting of every profile; anything not added keeps the profile\'s own setting, or the core default when the profile has none.';
+      'Added entries replace every profile’s own setting.';
 
   @override
   String get profileTunSettingsDesc =>
-      'Applies to this profile only and takes precedence over the TUN override entries in the network settings.';
+      'For this profile only; wins over the TUN overrides in network settings.';
 
   @override
   String settingsCount(num count) {
@@ -3251,27 +3500,44 @@ class AppLocalizationsEn extends AppLocalizations {
   String get httpCapture => 'HTTP capture';
 
   @override
-  String get httpCaptureDesc =>
-      'Records requests to the hosts listed under Hostname, to view in connection details. Records stay in memory only.';
-
-  @override
   String get httpCaptureNoHosts =>
-      'No host is listed, so nothing is recorded. Add hosts under Hostname on the MITM page, or from the details of a connection.';
+      'Nothing is recorded until hosts are added under Hostname.';
 
   @override
   String get httpCaptureLimit => 'Maximum records';
 
   @override
-  String httpCaptureLimitDesc(Object memory, Object body) {
-    return 'The oldest records go first once this many are kept or they fill $memory of memory. Each body keeps its first $body.';
-  }
+  String get httpCaptureMemoryOnly => 'Kept in memory only';
 
   @override
   String get httpRequests => 'HTTP requests';
 
   @override
+  String httpRequestCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count HTTP requests',
+      one: '1 HTTP request',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String latestHttpRequest(String request) {
+    return 'Latest $request';
+  }
+
+  @override
   String get httpRequestsMissing =>
       'Requests made before capture was on, or since cleared, are not listed.';
+
+  @override
+  String get noHttpRequests => 'No requests yet';
+
+  @override
+  String get noHttpRequestsHint =>
+      'This connection is decrypted, and the HTTP requests on it will appear here';
 
   @override
   String get httpRequestCleared => 'This request is no longer kept';
@@ -3289,7 +3555,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get originalUrl => 'Original URL';
 
   @override
-  String get timeToFirstByte => 'Time to first byte';
+  String get httpTiming => 'Timing';
+
+  @override
+  String get httpWaiting => 'Waiting';
+
+  @override
+  String get httpReceiving => 'Receiving';
 
   @override
   String get requestBody => 'Request body';
@@ -3424,7 +3696,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mitmAndroidRootDesc =>
-      'Without root, only apps that trust user certificates, mostly browsers, can be decrypted. With root, every app can.';
+      'Without root, only apps that trust user certificates are decrypted.';
 
   @override
   String get mitmCertificateLinuxTip =>
@@ -3588,12 +3860,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mitmIgnoredLines => 'Ignored lines';
 
   @override
-  String get mitmModuleRulesDesc =>
-      'Routing rules go in front of the profile’s own.';
+  String get mitmModuleRulesDesc => 'Matched before the profile’s rules.';
 
   @override
   String get mitmRequestRulesDesc =>
-      'The module’s URL-REGEX and USER-AGENT rules became URL rewrites, judged request by request: on every plain HTTP request, and on HTTPS only for hosts in the MITM hostname list.';
+      'URL-REGEX and USER-AGENT rules run as URL rewrites, on HTTPS only for listed hosts.';
 
   @override
   String mitmModuleSystemTip(Object system) {
@@ -3615,7 +3886,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mitmNetworkRisk =>
-      'When the config is generated, it changes the network settings below, ahead of what you set for the same ones in FlClash. Turning the module off or deleting it undoes this.';
+      'While on, it overrides these network settings.';
 
   @override
   String mitmSkipVerifyRisk(Object hosts) {
@@ -3629,7 +3900,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mitmClientSourceTunTip =>
-      'With TUN on, this device\'s apps come from the TUN\'s address; a list that leaves it out leaves their traffic undecrypted.';
+      'With TUN on, include its address to decrypt this device’s apps.';
 
   @override
   String get mitmNetworkChanges => 'Network settings';
@@ -3865,6 +4136,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get updateDownloadFailed => 'The update could not be downloaded.';
 
   @override
+  String get updateFileMissing =>
+      'The update file is not in the release. Download it from the release page.';
+
+  @override
   String get defaultNameserverDesc =>
       'Resolves the hostnames of the other DNS servers. Use IP addresses only.';
 
@@ -3961,16 +4236,78 @@ class AppLocalizationsEn extends AppLocalizations {
   String get vpnServiceStartFailed => 'The VPN service could not start.';
 
   @override
+  String get requestPath => 'Path';
+
+  @override
+  String get statusCode => 'Status code';
+
+  @override
+  String get contentKind => 'Type';
+
+  @override
+  String get httpRewritten => 'Rewritten';
+
+  @override
+  String get httpAnswerReject => 'Rejected';
+
+  @override
+  String get httpAnswerRedirect => 'Redirected';
+
+  @override
+  String get httpAnswerScript => 'Script response';
+
+  @override
+  String get httpBodyText => 'Text';
+
+  @override
+  String get httpBodyImage => 'Image';
+
+  @override
+  String get regexReplace => 'Regex replace';
+
+  @override
+  String get owningConnection => 'Connection';
+
+  @override
+  String get selectHttpRequest => 'Select a request';
+
+  @override
+  String get selectHttpRequestHint =>
+      'Its request, response and timing appear here';
+
+  @override
+  String httpConditionShows(String count) {
+    return 'Requests shown: $count';
+  }
+
+  @override
+  String httpConditionValuesIn(String field) {
+    return '$field in the list';
+  }
+
+  @override
+  String get httpConditionTip =>
+      'Conditions on one field match any of them, on different fields all.';
+
+  @override
+  String get outboundIpAddress => 'Outbound IP address';
+
+  @override
+  String get config => 'Configuration';
+
+  @override
   String get advanced => 'Advanced';
 
   @override
   String get ipDetails => 'IP Details';
 
   @override
-  String get silentLaunchDesc => 'Silent launch starts without showing the window.';
+  String get silentLaunchDesc =>
+      'Silent launch starts without showing the window.';
 
   @override
-  String get accessControlDesc => 'Access control picks which apps use the proxy.';
+  String get accessControlDesc =>
+      'Access control picks which apps use the proxy.';
 
   @override
   String get wakelock => 'Keep screen on';
@@ -3982,46 +4319,59 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addressHelp => 'WebDAV server address';
 
   @override
-  String get authenticationDesc => 'Authentication asks for a username and password on the local proxy port.';
+  String get authenticationDesc =>
+      'Authentication asks for a username and password on the local proxy port.';
 
   @override
-  String get autoCloseConnectionsDesc => 'Auto close connections drops open connections when you switch proxies.';
+  String get autoCloseConnectionsDesc =>
+      'Auto close connections drops open connections when you switch proxies.';
 
   @override
-  String get sidebarBlurDesc => 'Background blur lets the desktop behind the window show through the sidebar.';
+  String get sidebarBlurDesc =>
+      'Background blur lets the desktop behind the window show through the sidebar.';
 
   @override
-  String get vpnEnableDesc => 'VPN routes all system traffic through VpnService automatically.';
+  String get vpnEnableDesc =>
+      'VPN routes all system traffic through VpnService automatically.';
 
   @override
-  String get ntpStatusDesc => 'NTP takes the time from an NTP server instead of the system clock.';
+  String get ntpStatusDesc =>
+      'NTP takes the time from an NTP server instead of the system clock.';
 
   @override
-  String get dialerProxyDesc => 'Dialer proxy is the outbound used to reach the NTP server.';
+  String get dialerProxyDesc =>
+      'Dialer proxy is the outbound used to reach the NTP server.';
 
   @override
-  String get snifferStatusDesc => 'The sniffer reads the domain from TLS, HTTP and QUIC traffic so rules can match it.';
+  String get snifferStatusDesc =>
+      'The sniffer reads the domain from TLS, HTTP and QUIC traffic so rules can match it.';
 
   @override
-  String get overrideDestinationDesc => 'Override destination connects to the sniffed domain instead of the original address.';
+  String get overrideDestinationDesc =>
+      'Override destination connects to the sniffed domain instead of the original address.';
 
   @override
-  String get parsePureIpDesc => 'Parse pure IP sniffs connections that carry only an IP address.';
+  String get parsePureIpDesc =>
+      'Parse pure IP sniffs connections that carry only an IP address.';
 
   @override
-  String get skipDomainDesc => 'A sniffed domain on the Skip domains list is not used.';
+  String get skipDomainDesc =>
+      'A sniffed domain on the Skip domains list is not used.';
 
   @override
-  String get fakeipFilterModeDesc => 'In Fake-IP filter mode, blacklist excludes matches, whitelist fakes only matches, and rule matches as rules.';
+  String get fakeipFilterModeDesc =>
+      'In Fake-IP filter mode, blacklist excludes matches, whitelist fakes only matches, and rule matches as rules.';
 
   @override
   String get ipv6InboundDesc => 'With IPv6 on, the VPN allows IPv6 inbound.';
 
   @override
-  String get interfaceNameDesc => 'Interface name is the network interface outbound connections use.';
+  String get interfaceNameDesc =>
+      'Interface name is the network interface outbound connections use.';
 
   @override
-  String get advancedConfigDesc => 'Advanced configuration holds network, DNS, added rules, and scripts.';
+  String get advancedConfigDesc =>
+      'Advanced configuration holds network, DNS, added rules, and scripts.';
 
   @override
   String get singleAdd => 'Single add';
@@ -4039,10 +4389,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customProfileResources => 'Custom profile resources';
 
   @override
-  String get customProfileResourcesDesc => 'Custom profile resources are the proxies, rule providers, filters, and icon sets you add yourself for custom profiles to use.';
+  String get customProfileResourcesDesc =>
+      'Custom profile resources are the proxies, rule providers, filters, and icon sets you add yourself for custom profiles to use.';
 
   @override
-  String get batteryOptimizationDesc => 'Ignore battery optimization keeps the app running in the background.';
+  String get batteryOptimizationDesc =>
+      'Ignore battery optimization keeps the app running in the background.';
 
   @override
   String get onDemandDesc => 'On demand pauses the proxy on excluded Wi-Fi.';
@@ -4051,25 +4403,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get blockConnection => 'Block connection';
 
   @override
-  String get proxyNode => 'Proxy Node';
+  String get bypassPrivateRouteDesc =>
+      'With Bypass private addresses on, LAN, loopback and multicast addresses skip TUN.';
 
   @override
-  String get bypassPrivateRouteDesc => 'With Bypass private addresses on, LAN, loopback and multicast addresses skip TUN.';
+  String get excludeInterfaceDesc =>
+      'Traffic arriving on excluded interfaces, such as docker0, skips TUN.';
 
   @override
-  String get excludeInterfaceDesc => 'Traffic arriving on excluded interfaces, such as docker0, skips TUN.';
+  String get includeUidDesc =>
+      'Only traffic from processes of included user IDs goes through TUN.';
 
   @override
-  String get includeUidDesc => 'Only traffic from processes of included user IDs goes through TUN.';
+  String get excludeUidDesc =>
+      'Traffic from processes of excluded user IDs skips TUN.';
 
   @override
-  String get excludeUidDesc => 'Traffic from processes of excluded user IDs skips TUN.';
+  String get excludeSrcPortDesc =>
+      'Traffic from excluded source ports skips TUN.';
 
   @override
-  String get excludeSrcPortDesc => 'Traffic from excluded source ports skips TUN.';
-
-  @override
-  String get excludeDstPortDesc => 'Traffic to excluded destination ports skips TUN.';
+  String get excludeDstPortDesc =>
+      'Traffic to excluded destination ports skips TUN.';
 
   @override
   String get emojiStyle => 'Emoji font';
@@ -4093,7 +4448,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get iconRules => 'Regex icons';
 
   @override
-  String get iconRulesTip => 'A group whose name matches the regex takes its icon from the chosen icon set.';
+  String get iconRulesTip =>
+      'A group whose name matches the regex takes its icon from the chosen icon set.';
 
   @override
   String get invalidRegex => 'Invalid regular expression';
@@ -4111,13 +4467,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get editIconRule => 'Edit regex icon';
 
   @override
-  String get iconRuleHelp => '1. Exact match: e.g. ^YouTube\$ matches only the group named YouTube.\n2. Keyword match: e.g. YouTube matches any group whose name contains YouTube.\n3. Multiple match: e.g. (YouTube|Netflix|Disney) matches multiple media groups.\n4. Wildcard: e.g. .* matches all groups to use the selected icon.\n5. Prefix & suffix: e.g. ^PROXY matches prefix, Auto\$ matches suffix; evaluated from top to bottom.';
+  String get iconRuleHelp =>
+      '1. Exact match: e.g. ^YouTube\$ matches only the group named YouTube.\n2. Keyword match: e.g. YouTube matches any group whose name contains YouTube.\n3. Multiple match: e.g. (YouTube|Netflix|Disney) matches multiple media groups.\n4. Wildcard: e.g. .* matches all groups to use the selected icon.\n5. Prefix & suffix: e.g. ^PROXY matches prefix, Auto\$ matches suffix; evaluated from top to bottom.';
 
   @override
   String get refreshGroupIcons => 'Refresh group icons';
 
   @override
-  String get refreshGroupIconsTip => 'Clear all cached remote icons and icon-set images, update remote icon sets and fetch fresh icons.';
+  String get refreshGroupIconsTip =>
+      'Clear all cached remote icons and icon-set images, update remote icon sets and fetch fresh icons.';
 
   @override
   String get groupIconsRefreshed => 'Group icons refreshed';
@@ -4202,16 +4560,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String ipRiskNoteDirect(Object score) {
-    return 'Scamalytics can see web traffic from this IP directly. The score of ${score} reflects the share of that traffic suspected to be fraudulent.';
+    return 'Scamalytics can see web traffic from this IP directly. The score of $score reflects the share of that traffic suspected to be fraudulent.';
   }
 
   @override
   String ipRiskNoteIndirect(Object score, Object isp) {
-    return 'Scamalytics can\'t see web traffic from this IP directly. The score of ${score} is estimated from the overall risk of IPs operated by ${isp}.';
+    return 'Scamalytics can\'t see web traffic from this IP directly. The score of $score is estimated from the overall risk of IPs operated by $isp.';
   }
 
   @override
-  String get ipRiskNoteGeneric => 'The fraud score (0–100) reflects the share of web traffic from this IP that Scamalytics suspects to be fraudulent.';
+  String get ipRiskNoteGeneric =>
+      'The fraud score (0–100) reflects the share of web traffic from this IP that Scamalytics suspects to be fraudulent.';
 
   @override
   String get ipRiskNoteAmount => 'Observed traffic';
@@ -4250,16 +4609,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ipRiskCommercialServer => 'Commercial server';
 
   @override
-  String get ipRiskNoteProxying => 'May be relaying traffic from elsewhere; the actual user could be anywhere';
+  String get ipRiskNoteProxying =>
+      'May be relaying traffic from elsewhere; the actual user could be anywhere';
 
   @override
-  String get ipRiskNoteWarningHigh => 'Web traffic from this IP is likely to come from fraudsters.';
+  String get ipRiskNoteWarningHigh =>
+      'Web traffic from this IP is likely to come from fraudsters.';
 
   @override
-  String get ipRiskNoteWarningVeryHigh => 'Web traffic from this IP is very likely to come from fraudsters.';
+  String get ipRiskNoteWarningVeryHigh =>
+      'Web traffic from this IP is very likely to come from fraudsters.';
 
   @override
-  String get ipRiskNoteFootnote => 'This assessment covers web traffic only; other traffic may carry a different risk.';
+  String get ipRiskNoteFootnote =>
+      'This assessment covers web traffic only; other traffic may carry a different risk.';
 
   @override
   String get ipRiskLocation => 'Country / region';
@@ -4337,20 +4700,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get speedTestProtocol => 'Protocol';
 
   @override
-  String get speedTestMobileDataTip => 'You are on mobile data. One test may use hundreds of MB. Continue?';
+  String get speedTestMobileDataTip =>
+      'You are on mobile data. One test may use hundreds of MB. Continue?';
 
   @override
   String get speedTestErrorRejected => 'Blocked by rules';
 
   @override
-  String get speedTestErrorRejectedDesc => 'The current rules route the test domain to REJECT. Choose another outbound and retry.';
+  String get speedTestErrorRejectedDesc =>
+      'The current rules route the test domain to REJECT. Choose another outbound and retry.';
 
   @override
   String get speedTestErrorBlocked => 'Speed test unavailable';
 
   @override
   String speedTestErrorBlockedDesc(Object provider) {
-    return 'The outbound may be blocking ${provider} speed tests. Switch the test source or the outbound.';
+    return 'The outbound may be blocking $provider speed tests. Switch the test source or the outbound.';
   }
 
   @override
@@ -4360,7 +4725,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get speedTestErrorTimeout => 'Speed test timed out';
 
   @override
-  String get speedTestErrorNetworkDesc => 'Check whether the outbound is available, then retry.';
+  String get speedTestErrorNetworkDesc =>
+      'Check whether the outbound is available, then retry.';
 
   @override
   String get speedTestChangeOutbound => 'Change Outbound';
@@ -4382,15 +4748,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String speedTestConnectionsDesc(Object count) {
-    return 'Multi uses ${count} parallel connections to saturate bandwidth';
+    return 'Multi uses $count parallel connections to saturate bandwidth';
   }
 
   @override
-  String get speedTestProtocolDesc => 'HTTP/3 runs over QUIC (UDP); if unavailable it falls back to HTTP/2, and to HTTP/1.1 if HTTP/2 is unavailable too';
+  String get speedTestProtocolDesc =>
+      'HTTP/3 runs over QUIC (UDP); if unavailable it falls back to HTTP/2, and to HTTP/1.1 if HTTP/2 is unavailable too';
 
   @override
   String speedTestProtocolFallback(Object protocol, Object fallback) {
-    return '${protocol} unavailable, fell back to ${fallback}';
+    return '$protocol unavailable, fell back to $fallback';
   }
 
   @override
@@ -4404,7 +4771,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String speedTestStreams(Object count) {
-    return '${count} connections';
+    return '$count connections';
   }
 
   @override
@@ -4417,7 +4784,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get speedTestRoute => 'Route Rule';
 
   @override
-  String get speedTestCredit => 'Test servers are provided by Speedtest by Ookla.';
+  String get speedTestCredit =>
+      'Test servers are provided by Speedtest by Ookla.';
 
   @override
   String get speedTestStop => 'Stop Test';
@@ -4426,7 +4794,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trafficStats => 'Traffic Statistics';
 
   @override
-  String get trafficStatsDesc => 'View detailed breakdown of traffic by day, week, or month';
+  String get trafficStatsDesc =>
+      'View detailed breakdown of traffic by day, week, or month';
 
   @override
   String get trafficStatsDay => 'Day';
@@ -4460,7 +4829,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String trafficStatsHitCount(Object count) {
-    return '${count} hits';
+    return '$count hits';
   }
 
   @override
@@ -4473,7 +4842,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trafficStatsDisabled => 'Traffic statistics not enabled';
 
   @override
-  String get trafficStatsDisabledDesc => 'Turn on traffic statistics to record daily usage by domain, process, node, and rule locally.';
+  String get trafficStatsDisabledDesc =>
+      'Turn on traffic statistics to record daily usage by domain, process, node, and rule locally.';
 
   @override
   String get trafficStatsEnable => 'Enable Traffic Statistics';
@@ -4485,35 +4855,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trafficStatsDetail => 'Detailed Breakdown';
 
   @override
-  String get trafficStatsDetailDesc => 'Record per-domain, process, node, profile, and rule traffic';
+  String get trafficStatsDetailDesc =>
+      'Record per-domain, process, node, profile, and rule traffic';
 
   @override
   String get trafficStatsSiteIcon => 'Website Icons';
 
   @override
-  String get trafficStatsSiteIconDesc => 'Fetch website favicons for domain rankings locally';
+  String get trafficStatsSiteIconDesc =>
+      'Fetch website favicons for domain rankings locally';
 
   @override
   String get trafficStatsRetention => 'Data Retention';
 
   @override
-  String trafficStatsMonths(Object count) {
-    return '${count} months';
+  String trafficStatsMonths(num count) {
+    return '$count months';
   }
 
   @override
   String get trafficStatsSettings => 'Statistics Settings';
 
   @override
-  String get trafficStatsClearTip => 'Are you sure you want to clear all saved traffic statistics data?';
+  String get trafficStatsClearTip =>
+      'Are you sure you want to clear all saved traffic statistics data?';
 
   @override
   String trafficStatsSince(Object date) {
-    return 'Since ${date}';
+    return 'Since $date';
   }
 
   @override
-  String get trafficStatsDetailOffTip => 'Detailed breakdown is turned off. Only total and hourly traffic are recorded.';
+  String get trafficStatsDetailOffTip =>
+      'Detailed breakdown is turned off. Only total and hourly traffic are recorded.';
 
   @override
   String get trafficStatsRefresh => 'Refresh';

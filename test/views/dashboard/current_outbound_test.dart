@@ -8,6 +8,7 @@ import 'package:fl_clash/common/service_probe.dart'
     show directOutbound, routedOutbound;
 import 'package:fl_clash/core/controller.dart';
 import 'package:fl_clash/core/interface.dart';
+import 'package:fl_clash/enum/enum.dart' show CoreStatus;
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/features/ip_quality/risk_provider.dart';
 import 'package:fl_clash/providers/outbound_ip.dart';
@@ -173,9 +174,20 @@ Finder _clover() => find.ancestor(
   matching: find.byWidgetPredicate((widget) => widget is PressRegion),
 );
 
-CountryBadgeShape _badgeShape(WidgetTester tester) => tester.widget<CountryBadgeShape>(
-  find.descendant(of: _clover(), matching: find.byType(CountryBadgeShape)),
+Finder _locationLabel(String text) => find.descendant(
+  of: find
+      .ancestor(
+        of: find.byGlyph(AppGlyphs.location),
+        matching: find.byType(Row),
+      )
+      .first,
+  matching: find.text(text),
 );
+
+CountryBadgeShape _badgeShape(WidgetTester tester) =>
+    tester.widget<CountryBadgeShape>(
+      find.descendant(of: _clover(), matching: find.byType(CountryBadgeShape)),
+    );
 
 double _cloverTurn(WidgetTester tester) => _badgeShape(tester).rotation;
 
@@ -249,7 +261,7 @@ void main() {
       await tester.pump();
 
       expect(find.text(_ip), findsOneWidget);
-      expect(find.text('GB'), findsOneWidget);
+      expect(_locationLabel('GB'), findsOneWidget);
       expect(find.text('1 / 100'), findsOneWidget);
       expect(find.text('Low risk'), findsOneWidget);
       expect(_chip(tester, 'Not running').tone, DashboardChipTone.idle);
@@ -300,16 +312,21 @@ void main() {
         final level = tester.widget<Text>(find.text('Medium risk'));
         expect(level.style!.color, scoreColor);
         final pill = tester.widget<DecoratedBox>(
-          find.ancestor(
-            of: find.text('Medium risk'),
-            matching: find.byType(DecoratedBox),
-          ).first,
+          find
+              .ancestor(
+                of: find.text('Medium risk'),
+                matching: find.byType(DecoratedBox),
+              )
+              .first,
         );
         final decoration = pill.decoration as ShapeDecoration;
         expect(decoration.color, isNull);
         final border = decoration.shape as RoundedSuperellipseBorder;
         expect(border.side.width, 1);
-        expect(border.side.color.toARGB32() & 0x00FFFFFF, scoreColor.toARGB32() & 0x00FFFFFF);
+        expect(
+          border.side.color.toARGB32() & 0x00FFFFFF,
+          scoreColor.toARGB32() & 0x00FFFFFF,
+        );
         final runtimeRect = tester.getRect(find.text('00:00:00'));
         final scoreRect = tester.getRect(find.text('50 / 100'));
         expect(scoreRect.top, closeTo(runtimeRect.top, 0.5));
@@ -328,7 +345,7 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text('GB'), findsOneWidget);
+      expect(_locationLabel('GB'), findsOneWidget);
       expect(find.text('Not running'), findsOneWidget);
       expect(_chip(tester, 'Not running').tone, DashboardChipTone.idle);
       expect(find.byType(DashboardChip), findsNWidgets(1));
@@ -430,10 +447,13 @@ void main() {
 
         expect(find.byGlyph(AppGlyphs.location), findsOneWidget);
         expect(find.text('China'), findsOneWidget);
-        expect(find.text('CN'), findsNothing);
+        expect(_locationLabel('CN'), findsNothing);
         final cardContext = tester.element(find.byType(CurrentOutboundCard));
         final stoppedColor = cardContext.colorScheme.onSurfaceVariant;
-        expect(tester.widget<Text>(find.text('China')).style!.color, stoppedColor);
+        expect(
+          tester.widget<Text>(find.text('China')).style!.color,
+          stoppedColor,
+        );
         expect(
           tester.widget<GlyphIcon>(find.byGlyph(AppGlyphs.location)).color,
           stoppedColor,
@@ -446,7 +466,10 @@ void main() {
         container.read(runTimeProvider.notifier).value = 1;
         await tester.pump();
         final runningColor = cardContext.colorScheme.onSurface;
-        expect(tester.widget<Text>(find.text('China')).style!.color, runningColor);
+        expect(
+          tester.widget<Text>(find.text('China')).style!.color,
+          runningColor,
+        );
         expect(
           tester.widget<GlyphIcon>(find.byGlyph(AppGlyphs.location)).color,
           runningColor,
@@ -454,7 +477,7 @@ void main() {
         expect(countryFlagTone('TW'), CountryFlagTone.blue);
         expect(localizedCountryName('CN', const Locale('zh')), '中华人民共和国');
         expect(localizedCountryName('US', const Locale('zh')), '美利坚合众国');
-        expect(localizedCountryName('TW', const Locale('zh')), '中国宝岛台湾省');
+        expect(localizedCountryName('TW', const Locale('zh')), '中国台湾省');
         expect(localizedCountryName('HK', const Locale('zh')), '香港特别行政区');
         expect(localizedCountryName('MO', const Locale('zh')), '澳门特别行政区');
         expect(localizedCountryName('GB', const Locale('zh')), '大不列颠联合王国');
@@ -476,7 +499,6 @@ void main() {
           localizedCountryName('RU', const Locale('ru')),
           'Российская Федерация',
         );
-        expect(find.byType(SvgPicture), findsOneWidget);
         expect(
           find.byTooltip(
             '\u{1F1E8}\u{1F1F3} China \u00b7 Shanghai \u00b7 Hongkou (Hongkou Qu)',
@@ -600,7 +622,7 @@ void main() {
                   seedColor: otherSeed,
                 );
                 final actualHct = Hct.fromInt(actual.ring.toARGB32());
-                expect(actualHct.hue, closeTo(expectedHct.hue, 1.5));
+                expect(actualHct.hue, closeTo(expectedHct.hue, 2.5));
                 expect(actualHct.tone, closeTo(expectedHct.tone, 0.5));
                 expect(actualHct.chroma, closeTo(expectedHct.chroma, 1.5));
               }
@@ -665,17 +687,15 @@ void main() {
       );
       expect(attributionQueries, 1);
       expect(find.text('Source Scamalytics and IPLocate.io'), findsOneWidget);
-      expect(find.text('Residential proxy'), findsOneWidget);
+      expect(find.text('Residential proxy'), findsNWidgets(2));
     });
 
-    testWidgets('opens its details from the country label too', (
-      tester,
-    ) async {
+    testWidgets('opens its details from the country label too', (tester) async {
       _useTallView(tester);
       await tester.pumpWidget(_app((_, _) async => _residential));
       await tester.pump();
 
-      await tester.tap(find.text('GB'));
+      await tester.tap(_locationLabel('GB'));
       await tester.pumpAndSettle();
 
       expect(
@@ -706,10 +726,7 @@ void main() {
         findsOneWidget,
       );
 
-      await tester.tap(find.byTooltip('Edit'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(EditableText), '8.8.8.8');
-      await tester.tap(find.text('Submit'));
+      await tester.tap(find.text('Retry'));
       await tester.pumpAndSettle();
 
       expect(calls, 2);

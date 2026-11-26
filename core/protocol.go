@@ -47,6 +47,7 @@ const (
 	providerGetMethod      CoreMethod = "provider.get"
 	providerUpdateMethod   CoreMethod = "provider.update"
 	providerSideLoadMethod CoreMethod = "provider.sideLoad"
+	ruleListMethod         CoreMethod = "rule.list"
 	ruleSetDumpMethod      CoreMethod = "ruleSet.dump"
 	ruleSetCompileMethod   CoreMethod = "ruleSet.compile"
 	geoUpdateMethod        CoreMethod = "geo.update"
@@ -89,6 +90,7 @@ const (
 	mitmIssueCertificateMethod    CoreMethod = "mitm.issueCertificate"
 	mitmRunScriptMethod           CoreMethod = "mitm.runScript"
 	mitmExchangesMethod           CoreMethod = "mitm.exchanges"
+	mitmQueryMethod               CoreMethod = "mitm.query"
 	mitmExchangeMethod            CoreMethod = "mitm.exchange"
 	mitmBodyMethod                CoreMethod = "mitm.body"
 

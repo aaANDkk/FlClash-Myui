@@ -6,6 +6,7 @@ import 'package:fl_clash/features/ip_quality/ip_locate.dart';
 import 'package:fl_clash/features/ip_quality/ip_lookup_view.dart';
 import 'package:fl_clash/features/ip_quality/risk_model.dart';
 import 'package:fl_clash/features/ip_quality/risk_provider.dart';
+import 'package:fl_clash/features/ip_quality/risk_view.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/outbound_ip.dart';
 import 'package:fl_clash/providers/routed_probe.dart';
@@ -321,8 +322,10 @@ void main() {
         ),
         matching: find.byType(CustomPaint),
       );
-      final trackColor = DashboardColors.of(tester.element(scale)).tone2;
-      expect(scale, paints..rsuperellipse(color: trackColor));
+      final greyTrack = DashboardColors.of(tester.element(scale)).tone2;
+      expect(scale, paints..rsuperellipse());
+      expect(scale, isNot(paints..rsuperellipse(color: greyTrack)));
+      expect(find.byGlyph(AppGlyphs.flag), findsOneWidget);
       final perforation = find.byWidgetPredicate(
         (widget) =>
             widget is CustomPaint &&
@@ -591,6 +594,89 @@ void main() {
       customRisk.complete(_customRisk);
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets(
+    'IpLookupView shows unknown for unclassified type and proxy hit for VPN',
+    (tester) async {
+      const unknownIp = '8.8.4.4';
+      const unknownRisk = IpRisk(
+        ip: unknownIp,
+        score: 35,
+        level: IpRiskLevel.medium,
+        country: 'United States',
+        countryCode: 'US',
+        checks: [
+          IpRiskCheck(
+            group: IpRiskGroup.datacenter,
+            name: 'Datacenter',
+            hit: false,
+          ),
+          IpRiskCheck(group: IpRiskGroup.blacklist, name: 'Firehol', hit: true),
+        ],
+      );
+      const vpnIp = '9.9.9.9';
+      const vpnRisk = IpRisk(
+        ip: vpnIp,
+        score: 50,
+        level: IpRiskLevel.medium,
+        country: 'Switzerland',
+        countryCode: 'CH',
+        checks: [
+          IpRiskCheck(
+            group: IpRiskGroup.datacenter,
+            name: 'Datacenter',
+            hit: false,
+          ),
+          IpRiskCheck(
+            group: IpRiskGroup.proxy,
+            name: 'Anonymizing VPN',
+            hit: true,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        TestApp(
+          locale: const Locale('zh', 'CN'),
+          overrides: [
+            outboundIpProbeProvider.overrideWith(
+              () => _FakeOutboundProbe(
+                const RoutedProbeState({
+                  routedOutbound: ProbeEntry(
+                    phase: ProbePhase.fresh,
+                    value: IpInfo(ip: unknownIp, countryCode: 'US'),
+                  ),
+                }),
+              ),
+            ),
+            ipRiskProvider.overrideWith((_, ip) async {
+              return ip == vpnIp ? vpnRisk : unknownRisk;
+            }),
+            ipLocateProvider.overrideWith(
+              (_, ip) async => IpLocateInfo(ip: ip, company: 'Example'),
+            ),
+          ],
+          child: const IpLookupView(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l = tester.element(find.byType(IpLookupView)).appLocalizations;
+      expect(find.text(l.unknown), findsOneWidget);
+
+      await tester.enterText(find.byType(app_ui.SearchField), vpnIp);
+      await tester.tap(find.text(l.search));
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byType(RiskInlineMetrics),
+          matching: find.text(l.ipRiskAnonymousVpn),
+        ),
+        findsOneWidget,
+      );
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );

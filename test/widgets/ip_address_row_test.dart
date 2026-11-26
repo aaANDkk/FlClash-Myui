@@ -1,4 +1,4 @@
-import 'package:fl_clash/features/connection/tracker_info_item.dart';
+import 'package:fl_clash/features/connection/tracker_selection.dart';
 import 'package:fl_clash/features/ip_quality/ip_address_row.dart';
 import 'package:fl_clash/features/ip_quality/ip_quality_sheet.dart';
 import 'package:fl_clash/models/models.dart';
@@ -14,6 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/test_app.dart';
+import '../helpers/detail_tabs.dart';
 
 class _HiddenSettings extends AppSetting {
   @override
@@ -177,6 +178,7 @@ void main() {
         const Offset(0, -500),
       );
       await tester.pumpAndSettle();
+      await openDetailTab(tester, 'Info');
       expect(find.text('🇺🇸 *****'), findsOneWidget);
       expect(find.text('*****:38120'), findsNothing);
       expect(find.text('198.18.0.1:38120'), findsOneWidget);

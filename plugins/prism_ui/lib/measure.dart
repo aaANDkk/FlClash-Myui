@@ -1,6 +1,5 @@
-import 'dart:math';
-
 import 'package:flutter/widgets.dart';
+import 'package:prism_ui/list_text.dart';
 import 'package:prism_ui/metrics.dart';
 import 'package:prism_ui/typography.dart';
 
@@ -72,19 +71,29 @@ class Measure {
   double textHeight(AppTextStyle style) => _textHeights[style] ??=
       computeTextSize(Text('X', style: style.of(context))).height;
 
-  double get listTitleHeight => textHeight(AppTextStyle.body);
+  double listTitleHeight([ListTextScale scale = ListTextScale.regular]) =>
+      textHeight(scale.title);
 
-  double get listSubtitleHeight => textHeight(AppTextStyle.subheadline);
+  double listSubtitleHeight([ListTextScale scale = ListTextScale.regular]) =>
+      textHeight(scale.subtitle);
 
   double get cardHeaderHeight => textHeight(AppTextStyle.headline);
 
-  double get listRowHeight =>
-      max(listRowMinHeight, listTitleHeight + 2 * listRowVerticalPadding);
+  double listRowHeight([ListTextScale scale = ListTextScale.regular]) =>
+      listRowExtent(titleHeight: listTitleHeight(scale));
 
-  double get listTwoLineRowHeight => max(
-    listRowMinHeight,
-    listTitleHeight + listSubtitleHeight + 2 * listRowVerticalPadding,
-  );
+  double listTwoLineRowHeight([ListTextScale scale = ListTextScale.regular]) =>
+      listRowExtent(
+        titleHeight: listTitleHeight(scale),
+        subtitleHeight: listSubtitleHeight(scale),
+      );
+}
+
+extension ListRowHeightContext on BuildContext {
+  /// The least a row stands, so one that drops its padding still stands as
+  /// tall as a padded line of its title.
+  double get listRowHeight =>
+      MeasureScope.of(this).listRowHeight(ListTextScope.of(this));
 }
 
 class MeasureScope extends InheritedWidget {

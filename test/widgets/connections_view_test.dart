@@ -1,20 +1,18 @@
-import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/core/controller.dart';
 import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/features/features.dart';
 import 'package:fl_clash/models/models.dart';
+import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/providers/core.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/views/connection/requests.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../helpers/test_app.dart';
-import 'package:prism_ui/prism_ui.dart';
 import '../helpers/core_connections.dart';
 
 void main() {
@@ -65,10 +63,7 @@ void main() {
         child: _TestApp(
           child: PageActivityScope(
             isActive: isPageActive,
-            child: RequestsView(
-              initialFeed: RequestFeed.live,
-              connectionsReader: connectionsReader,
-            ),
+            child: RequestsView(connectionsReader: connectionsReader),
           ),
         ),
       ),
@@ -76,7 +71,9 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('the live feed lazily builds every connection', (tester) async {
+  testWidgets('the list lazily builds every connection, newest first', (
+    tester,
+  ) async {
     final connections = buildConnections(100);
 
     await pumpConnections(tester, connectionsReader: () async => connections);
@@ -85,27 +82,28 @@ void main() {
     final builtItems = find.byType(TrackerInfoItem).evaluate().length;
     expect(builtItems, greaterThan(0));
     expect(builtItems, lessThan(connections.length));
-    expect(find.textContaining('host-0.com'), findsOneWidget);
+    expect(find.textContaining('host-99.com'), findsOneWidget);
 
     await tester.scrollUntilVisible(
-      find.textContaining('host-99.com'),
-      800,
+      find.textContaining('host-0.com'),
+      -800,
       scrollable: find
           .descendant(
-            of: find.byType(TrackerInfoAnimatedList),
+            of: find.byType(RecordMinuteList<String>),
             matching: find.byType(Scrollable),
           )
           .first,
     );
 
-    expect(find.textContaining('host-99.com'), findsOneWidget);
+    expect(find.textContaining('host-0.com'), findsOneWidget);
     expect(tester.takeException(), null);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
   testWidgets(
-    'a row closes its own connection from its menu and refreshes the list',
+    'a row closes its own connection from its menu, and stays where it was, '
+    'closed',
     (tester) async {
       final core = _MockCoreHandlerInterface();
       when(() => core.closeConnection(any())).thenAnswer((_) async {});
@@ -138,7 +136,13 @@ void main() {
 
       verify(() => core.closeConnection('0')).called(1);
       expect(readCount, greaterThan(reads));
-      expect(find.textContaining('host-0.com'), findsNothing);
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.textContaining('host-0.com'), findsOneWidget);
+      expect(container.read(requestsProvider)['0']!.isActive, isFalse);
+
+      await tester.longPress(find.textContaining('host-0.com'));
+      await tester.pumpAndSettle();
+      expect(find.text('Close connection'), findsNothing);
 
       await tester.pumpWidget(const SizedBox.shrink());
     },
@@ -182,36 +186,6 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('coming back to a feed whose first read fails shows no '
-      'connection from the last visit', (tester) async {
-    var fails = false;
-    await pumpConnections(
-      tester,
-      connectionsReader: () async {
-        if (fails) {
-          throw Exception('core gone');
-        }
-        return buildConnections(2);
-      },
-    );
-    await tester.pump(const Duration(seconds: 1));
-    expect(find.textContaining('host-0.com'), findsOneWidget);
-
-    fails = true;
-    await tester.tap(find.text('Running'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Recent requests'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Recent requests'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Running').last);
-    await tester.pumpAndSettle();
-
-    expect(find.textContaining('host-0.com'), findsNothing);
-
-    await tester.pumpWidget(const SizedBox.shrink());
-  });
-
   testWidgets('a Core that is not connected is not asked and lists nothing', (
     tester,
   ) async {
@@ -228,38 +202,20 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const _TestApp(
-          child: RequestsView(initialFeed: RequestFeed.live),
-        ),
+        child: const _TestApp(child: RequestsView()),
       ),
     );
     await tester.pump();
     await tester.pump();
 
-    registerConnectionsPresenter<RankedTrackerInfos>();
-    verifyNever(() => core.getConnectionsWith<RankedTrackerInfos>(any()));
+    registerConnectionsPresenter<ConnectionPoll>();
+    verifyNever(() => core.getConnectionsWith<ConnectionPoll>(any()));
     expect(find.byType(NullStatus), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('a wide table shows its whole protocol header', (tester) async {
-    await pumpConnections(
-      tester,
-      connectionsReader: () async => buildConnections(2),
-    );
-    tester.view.physicalSize = const Size(1600, 900);
-    await tester.pump(const Duration(seconds: 1));
-
-    final header = tester.renderObject<RenderParagraph>(find.text('Protocol'));
-    expect(header.didExceedMaxLines, isFalse);
-
-    await tester.pumpWidget(const SizedBox.shrink());
-  });
-
-  testWidgets('the live feed polls only while the page is active', (
-    tester,
-  ) async {
+  testWidgets('the list polls only while the page is active', (tester) async {
     var readCount = 0;
 
     Future<List<TrackerInfo>> readConnections() async {
@@ -282,10 +238,7 @@ void main() {
         child: _TestApp(
           child: PageActivityScope(
             isActive: true,
-            child: RequestsView(
-              initialFeed: RequestFeed.live,
-              connectionsReader: readConnections,
-            ),
+            child: RequestsView(connectionsReader: readConnections),
           ),
         ),
       ),
@@ -305,10 +258,7 @@ void main() {
         child: _TestApp(
           child: PageActivityScope(
             isActive: false,
-            child: RequestsView(
-              initialFeed: RequestFeed.live,
-              connectionsReader: readConnections,
-            ),
+            child: RequestsView(connectionsReader: readConnections),
           ),
         ),
       ),
@@ -321,9 +271,7 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('the live feed stops polling while the app is paused', (
-    tester,
-  ) async {
+  testWidgets('the list stops polling while the app is paused', (tester) async {
     var readCount = 0;
 
     Future<List<TrackerInfo>> readConnections() async {

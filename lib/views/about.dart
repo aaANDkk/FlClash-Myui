@@ -8,7 +8,7 @@ import 'package:fl_clash/features/about/miuix_frosted_card.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
-import 'package:fl_clash/ui/ui.dart';
+import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -159,8 +159,9 @@ class _AboutViewState extends ConsumerState<AboutView>
   Future<void> _checkUpdate(BuildContext context) async {
     if (ref.read(loadingProvider(LoadingTag.checkUpdate))) return;
     final commonAction = ref.read(commonActionProvider.notifier);
+    final channel = ref.read(appSettingProvider).updateChannel;
     final result = await globalState.loadingRun(
-      () async => (release: await request.checkForUpdate()),
+      () async => (release: await request.checkForUpdate(channel)),
       title: context.appLocalizations.checkUpdate,
       tag: LoadingTag.checkUpdate,
     );
@@ -280,6 +281,47 @@ class _AboutViewState extends ConsumerState<AboutView>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        MiuixFrostedSection(
+                          title: appLocalizations.update,
+                          blurEnabled: blurEnabled,
+                          items: [
+                            ConfigToggleItem(
+                              leading: _LinkBadge(
+                                glyph: AppGlyphs.autoCheckUpdate,
+                                color: colorScheme.primary,
+                              ),
+                              title: (l) => l.autoCheckUpdate,
+                              selector: appSettingProvider.select(
+                                (state) => state.autoCheckUpdate,
+                              ),
+                              onChanged: (ref, value) => ref
+                                  .read(appSettingProvider.notifier)
+                                  .update(
+                                    (state) =>
+                                        state.copyWith(autoCheckUpdate: value),
+                                  ),
+                            ),
+                            ConfigOptionsItem<UpdateChannel>(
+                              leading: _LinkBadge(
+                                glyph: AppGlyphs.updateChannel,
+                                color: colorScheme.primary,
+                              ),
+                              title: (l) => l.updateChannel,
+                              options: UpdateChannel.values,
+                              textBuilder: (channel) => channel.label,
+                              selector: appSettingProvider.select(
+                                (state) => state.updateChannel,
+                              ),
+                              onChanged: (ref, value) => ref
+                                  .read(appSettingProvider.notifier)
+                                  .update(
+                                    (state) =>
+                                        state.copyWith(updateChannel: value),
+                                  ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
                         MiuixFrostedSection(
                           title: appLocalizations.more,
                           blurEnabled: blurEnabled,

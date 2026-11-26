@@ -5,34 +5,25 @@ class _KeywordStrip extends StatelessWidget {
 
   final List<ScaffoldKeyword> keywords;
 
-  static const _inset = 16.0;
-  static const _sectionGap = 20.0;
-
   @override
   Widget build(BuildContext context) {
+    final inset = context.listInsets.margin;
     return SizedBox(
       height: TonalButtonSize.section.button,
       child: WidthBuilder(
         builder: (_, width) => ListView.separated(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: _inset),
+          padding: EdgeInsets.symmetric(horizontal: inset),
           itemCount: keywords.length,
-          separatorBuilder: (_, index) => SizedBox(
-            width: keywords[index + 1].startsSection ? _sectionGap : 8,
-          ),
+          separatorBuilder: (_, _) => const SizedBox(width: 8),
           itemBuilder: (_, index) {
             final keyword = keywords[index];
             return ConstrainedBox(
               key: ValueKey(keyword.key),
               constraints: BoxConstraints(
-                maxWidth: math.max(0, width - 2 * _inset),
+                maxWidth: math.max(0, width - 2 * inset),
               ),
-              child: Chip(
-                label: keyword.label,
-                onDeleted: keyword.onDeleted,
-                onPressed: keyword.onPressed,
-                selected: keyword.selected,
-              ),
+              child: Chip(label: keyword.label, onDeleted: keyword.onDeleted),
             );
           },
         ),
@@ -48,7 +39,8 @@ Widget _presentAction(Widget action, {required bool gap}) =>
     gap ? action : BarItemPresence(child: action);
 
 Widget _barButton(IconButtonData data, {Widget? icon}) => ElasticPress(
-  enabled: !data.isLoading && data.onPressed != null,
+  enabled:
+      !data.isLoading && (data.onPressed != null || data.menuItems != null),
   child: AppBarActionButton(data: data, icon: icon),
 );
 
@@ -107,6 +99,9 @@ class _SelectionButtons {
             label: data.tooltip ?? '',
             checked: data.isSelected,
             onPressed: data.isLoading ? null : data.onPressed,
+            subItems: data.isLoading
+                ? const []
+                : data.menuItems?.call() ?? const [],
           ),
       ...menuItems,
     ],

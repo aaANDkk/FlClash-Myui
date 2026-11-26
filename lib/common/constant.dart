@@ -107,6 +107,9 @@ const maxConcurrentDelayTests = 32;
 const maxConcurrentImports = 4;
 const maxConcurrentIconLoads = 8;
 
+/// The largest well an app's icon fills: a desktop detail header's.
+const appIconExtent = 52.0;
+
 const renderThrottleDuration = Duration(milliseconds: 300);
 const defaultUpdateDuration = Duration(days: 1);
 const MMDB = 'GEOIP.metadb';
@@ -187,7 +190,6 @@ const maxLogsLength = 5000;
 const maxRequestsLength = 2000;
 const maxDnsQueriesLength = 3000;
 const pausedMaxLogsLength = maxLogsLength * 2;
-const pausedMaxRequestsLength = maxRequestsLength * 2;
 const pausedMaxDnsQueriesLength = maxDnsQueriesLength * 2;
 
 const trafficSampleLength = 60;

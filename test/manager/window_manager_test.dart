@@ -205,6 +205,19 @@ void main() {
     expect(signals.hasListener, isFalse);
   });
 
+  testWidgets('the screens going dark and lighting up are recorded', (
+    tester,
+  ) async {
+    await pumpWindowManager(tester);
+    expect(container.read(screensSeenProvider), isTrue);
+
+    fakeWindow.emit(WindowEvent.screensUnseen);
+    expect(container.read(screensSeenProvider), isFalse);
+
+    fakeWindow.emit(WindowEvent.screensSeen);
+    expect(container.read(screensSeenProvider), isTrue);
+  });
+
   testWidgets('moving the window records its new position', (tester) async {
     final listener = await pumpWindowManager(tester);
     window.bounds = const Rect.fromLTWH(120, 64, 1000, 800);
@@ -411,6 +424,92 @@ void main() {
       container.read(windowSettingProvider),
       const WindowProps(width: 1200, height: 900, left: 80, top: 64),
     );
+  });
+
+  group('HiddenWindowFocusGuard', () {
+    late ValueNotifier<bool> shown;
+    late FocusNode node;
+
+    setUp(() {
+      shown = ValueNotifier(false);
+      node = FocusNode();
+    });
+
+    tearDown(() {
+      node.dispose();
+      shown.dispose();
+    });
+
+    Future<void> pumpGuard(WidgetTester tester) {
+      return tester.pumpWidget(
+        HiddenWindowFocusGuard(
+          shown: shown,
+          child: Focus(focusNode: node, child: const SizedBox()),
+        ),
+      );
+    }
+
+    testWidgets('a hidden window takes no focus', (tester) async {
+      await pumpGuard(tester);
+
+      node.requestFocus();
+      await tester.pump();
+
+      expect(node.hasFocus, isFalse);
+    });
+
+    testWidgets('hiding the window gives up the focus it held', (tester) async {
+      shown.value = true;
+      await pumpGuard(tester);
+      node.requestFocus();
+      await tester.pump();
+      expect(node.hasFocus, isTrue);
+
+      shown.value = false;
+      await tester.pump();
+
+      expect(node.hasFocus, isFalse);
+    });
+
+    testWidgets('showing the window again gives back the focus it held', (
+      tester,
+    ) async {
+      final other = FocusNode();
+      addTearDown(other.dispose);
+      shown.value = true;
+      await tester.pumpWidget(
+        HiddenWindowFocusGuard(
+          shown: shown,
+          child: Column(
+            children: [
+              Focus(focusNode: other, child: const SizedBox()),
+              Focus(focusNode: node, child: const SizedBox()),
+            ],
+          ),
+        ),
+      );
+      node.requestFocus();
+      await tester.pump();
+
+      shown.value = false;
+      await tester.pump();
+      expect(node.hasFocus, isFalse);
+      shown.value = true;
+      await tester.pump();
+
+      expect(node.hasFocus, isTrue);
+    });
+
+    testWidgets('a shown window takes focus again', (tester) async {
+      await pumpGuard(tester);
+      shown.value = true;
+      await tester.pump();
+
+      node.requestFocus();
+      await tester.pump();
+
+      expect(node.hasFocus, isTrue);
+    });
   });
 
   group('WindowHeaderContainer', () {

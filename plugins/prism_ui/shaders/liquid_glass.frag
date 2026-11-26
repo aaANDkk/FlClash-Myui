@@ -81,6 +81,10 @@ uniform vec4 uGoo[2];
 // octant: n, J and the arc's radius, then the arcs' centers two to a vector.
 uniform vec4 uPillCurves[6];
 uniform vec4 uPillCenters[3];
+// The part of the pane, in glass coordinates, that nothing at its rim reaches
+// but for the width of a pixel: no bevel, highlight, line or parted color.
+// Empty where the rim is to be worked out throughout.
+uniform vec4 uInner;
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -422,64 +426,71 @@ void main() {
   vec2 halfSize = uShape.xy * 0.5;
   float halfMinor = min(halfSize.x, halfSize.y);
   vec2 centered = point - halfSize;
-  float inset;
-  vec2 normal;
+  // A pixel here takes only what the whole pane does, by the same sums.
+  bool inner = all(greaterThan(point, uInner.xy + uTexels.x))
+      && all(lessThan(point, uInner.zw - uTexels.x));
+  float inset = 0.0;
+  vec2 normal = vec2(0.0, -1.0);
   // The inset of the line and the highlight. A pane is clipped to the engine's
   // superellipse, up to half a dp inside its circular corners where a long side
   // runs into them, and they keep to it; the optics read deeper than its inset
   // holds true, so they keep the circles. Only the band the line and the
   // highlight can reach works it out.
-  float edge;
-  bool lit = uEdge.x > 0.0 || uRim.w > 0.0 || uLight.x > 0.0;
-  float traced = max(
-    lit ? kLine + uLight.y : 0.0,
-    uShineLit[0].x > 0.0 ? uShineEnds[2].w : 0.0
-  );
-  if (uOutlined > 1.5) {
-    gooGeometry(point, traced, inset, normal, edge);
-  } else if (uOutlined > 0.5) {
-    outlineGeometry(centered, inset, normal);
-    edge = inset;
-  } else {
-    vec2 side = step(0.0, centered);
-    float radius = min(
-      mix(
-        mix(uCorners.x, uCorners.y, side.x),
-        mix(uCorners.w, uCorners.z, side.x),
-        side.y
-      ),
-      halfMinor
-    );
-    inset = max(-roundedBoxDistance(centered, halfSize, radius), 0.0);
-    normal = roundedBoxNormal(centered, halfSize, radius);
-    edge = inset;
-    if (traced > 0.0 && inset < traced + uTexels.x + kCornerGap * radius) {
-      edge = max(cornerInset(centered, halfSize), 0.0);
-    }
-  }
-
+  float edge = 0.0;
   bool lens = uOptics.x < 0.0;
-  float bevel = max(min(uShape.z, halfMinor * 0.5), 1e-3);
-  float rise = 1.0 - clamp(inset / bevel, 0.0, 1.0);
-  vec2 shift;
-  if (lens) {
-    // As measured on iOS 27, the raised lens reads outward along its normal
-    // all around, by nothing at the rim and its full depth a bevel in, so its
-    // outer band draws out what lies right under the rim; the depth then eases
-    // off toward the middle.
-    shift = normal * -uOptics.x * smoothstep(0.0, bevel, inset)
-        * (1.0 - smoothstep(bevel, halfMinor, inset));
-  } else {
-    // A bevel of circular profile, fitted to small panes: flat where it meets
-    // the face and steepening toward the rim, which reads from so far inside
-    // that its outermost band shows the content squeezed and mirrored.
-    float depth = min(uOptics.x, halfMinor) * (1.0 - sqrt(1.0 - rise * rise));
-    shift = -normal * depth;
+  vec2 shift = vec2(0.0);
+  float frost = uShape.w;
+  if (!inner) {
+    bool lit = uEdge.x > 0.0 || uRim.w > 0.0 || uLight.x > 0.0;
+    float traced = max(
+      lit ? kLine + uLight.y : 0.0,
+      uShineLit[0].x > 0.0 ? uShineEnds[2].w : 0.0
+    );
+    if (uOutlined > 1.5) {
+      gooGeometry(point, traced, inset, normal, edge);
+    } else if (uOutlined > 0.5) {
+      outlineGeometry(centered, inset, normal);
+      edge = inset;
+    } else {
+      vec2 side = step(0.0, centered);
+      float radius = min(
+        mix(
+          mix(uCorners.x, uCorners.y, side.x),
+          mix(uCorners.w, uCorners.z, side.x),
+          side.y
+        ),
+        halfMinor
+      );
+      inset = max(-roundedBoxDistance(centered, halfSize, radius), 0.0);
+      normal = roundedBoxNormal(centered, halfSize, radius);
+      edge = inset;
+      if (traced > 0.0 && inset < traced + uTexels.x + kCornerGap * radius) {
+        edge = max(cornerInset(centered, halfSize), 0.0);
+      }
+    }
+
+    float bevel = max(min(uShape.z, halfMinor * 0.5), 1e-3);
+    float rise = 1.0 - clamp(inset / bevel, 0.0, 1.0);
+    if (lens) {
+      // As measured on iOS 27, the raised lens reads outward along its normal
+      // all around, by nothing at the rim and its full depth a bevel in, so
+      // its outer band draws out what lies right under the rim; the depth then
+      // eases off toward the middle.
+      shift = normal * -uOptics.x * smoothstep(0.0, bevel, inset)
+          * (1.0 - smoothstep(bevel, halfMinor, inset));
+    } else {
+      // A bevel of circular profile, fitted to small panes: flat where it
+      // meets the face and steepening toward the rim, which reads from so far
+      // inside that its outermost band shows the content squeezed and
+      // mirrored.
+      float depth = min(uOptics.x, halfMinor) * (1.0 - sqrt(1.0 - rise * rise));
+      shift = -normal * depth;
+    }
+    frost = uShape.w + uEdge.z * rise * rise;
   }
 
-  float frost = uShape.w + uEdge.z * rise * rise;
   vec4 base = sampleFrosted(point + shift, frost);
-  if (uEdge.y > 0.0 && inset < kPartReach) {
+  if (!inner && uEdge.y > 0.0 && inset < kPartReach) {
     // iOS 27 parts red from blue along the normal's mirror image, across it
     // at the sides and along it at the corners. Along the top and bottom the
     // parting narrows from the rim to what it holds around the ends. Over
@@ -499,7 +510,9 @@ void main() {
   float alpha = base.a;
   vec3 color = base.rgb / max(alpha, 1e-4);
   color = mix(vec3(dot(color, kLuma)), color, uOptics.y) * uOptics.z;
-  color *= 1.0 - uLight.z * abs(normal.x) * exp(-inset / kEndShade);
+  if (!inner) {
+    color *= 1.0 - uLight.z * abs(normal.x) * exp(-inset / kEndShade);
+  }
 
   float clash = 0.0;
   if (uGlow.w != 0.0) {
@@ -520,40 +533,43 @@ void main() {
   float coverage = alpha * (1.0 - cover) + cover;
   vec3 glass = color * alpha * (1.0 - cover) + uTint.rgb * cover;
 
-  // iOS lights the top and bottom of its glass, just inside the line, and on
-  // its tab bar fades that around the rounded ends with the normal's upward
-  // part squared, out only at their tips; its controls dim far faster. All
-  // screened toward white, a pale tint would clip into a flat white ring.
-  // The tail reads the circular inset, as it reaches past where the edge's is
-  // worked out, and moves too slowly for the difference to show.
-  float within = max(edge - kLine, 0.0);
-  float facing;
-  if (lens) {
-    facing = smoothstep(0.65, 0.95, abs(normal.y));
-  } else {
-    float rise2 = normal.y * normal.y;
-    float rise4 = rise2 * rise2;
-    float rise16 = rise4 * rise4 * rise4 * rise4;
-    facing = mix(rise2, 0.5 * rise2 * abs(normal.y) * (1.0 + rise16), uRim.y);
-  }
-  float band = clamp(1.0 - within / max(uLight.y, 1e-3), 0.0, 1.0);
-  float tail = clamp(1.0 - max(inset - kLine, 0.0) / kRimTail, 0.0, 1.0);
-  float shine = min(uLight.x * facing * mix(band, tail, uRim.x), 1.0);
-  glass += (vec3(coverage) - (1.0 - uRim.z) * glass) * shine;
+  if (!inner) {
+    // iOS lights the top and bottom of its glass, just inside the line, and
+    // on its tab bar fades that around the rounded ends with the normal's
+    // upward part squared, out only at their tips; its controls dim far
+    // faster. All screened toward white, a pale tint would clip into a flat
+    // white ring. The tail reads the circular inset, as it reaches past where
+    // the edge's is worked out, and moves too slowly for the difference to
+    // show.
+    float within = max(edge - kLine, 0.0);
+    float facing;
+    if (lens) {
+      facing = smoothstep(0.65, 0.95, abs(normal.y));
+    } else {
+      float rise2 = normal.y * normal.y;
+      float rise4 = rise2 * rise2;
+      float rise16 = rise4 * rise4 * rise4 * rise4;
+      facing = mix(rise2, 0.5 * rise2 * abs(normal.y) * (1.0 + rise16), uRim.y);
+    }
+    float band = clamp(1.0 - within / max(uLight.y, 1e-3), 0.0, 1.0);
+    float tail = clamp(1.0 - max(inset - kLine, 0.0) / kRimTail, 0.0, 1.0);
+    float shine = min(uLight.x * facing * mix(band, tail, uRim.x), 1.0);
+    glass += (vec3(coverage) - (1.0 - uRim.z) * glass) * shine;
 
-  // iOS 27 outlines its glass with a dark line, which UIKit draws just outside
-  // the bounds, over the backdrop, where the pane cannot draw, so it takes the
-  // outermost pixels here. iOS draws it darkest at the sides; the dock keeps
-  // it as faint all around as along the top, as its darker sides read as
-  // brackets.
-  float line = clamp((kLine - edge) / uTexels.x + 0.5, 0.0, 1.0);
-  float across = abs(normal.x);
-  float darken = mix(uEdge.x, uRim.w, across * across * across);
-  if ((uEdge.x > 0.0 || uRim.w > 0.0) && line > 0.0) {
-    vec4 under = veiled(sampleGlass(point));
-    vec3 dark = max(under.rgb - kLineCap * under.a, 0.22 * under.rgb);
-    glass = mix(glass, mix(under.rgb, dark, darken), line);
-    coverage = mix(coverage, under.a, line);
+    // iOS 27 outlines its glass with a dark line, which UIKit draws just
+    // outside the bounds, over the backdrop, where the pane cannot draw, so it
+    // takes the outermost pixels here. iOS draws it darkest at the sides; the
+    // dock keeps it as faint all around as along the top, as its darker sides
+    // read as brackets.
+    float line = clamp((kLine - edge) / uTexels.x + 0.5, 0.0, 1.0);
+    float across = abs(normal.x);
+    float darken = mix(uEdge.x, uRim.w, across * across * across);
+    if ((uEdge.x > 0.0 || uRim.w > 0.0) && line > 0.0) {
+      vec4 under = veiled(sampleGlass(point));
+      vec3 dark = max(under.rgb - kLineCap * under.a, 0.22 * under.rgb);
+      glass = mix(glass, mix(under.rgb, dark, darken), line);
+      coverage = mix(coverage, under.a, line);
+    }
   }
 
   vec2 toGlow = point - uGlow.xy;
@@ -563,7 +579,8 @@ void main() {
 
   // A pixel the rim crosses takes the bands it covers, as the rasterizer
   // weighs the rest by its coverage.
-  if (uShineLit[0].x > 0.0 && edge < uShineEnds[2].w + uTexels.x) {
+  if (!inner && uShineLit[0].x > 0.0
+      && edge < uShineEnds[2].w + uTexels.x) {
     float turn = atan(abs(centered.x), abs(centered.y));
     float pixel = 0.5 * uTexels.x;
     glass += coverage * shineAround(turn)

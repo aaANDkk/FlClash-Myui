@@ -19,6 +19,9 @@ const double _glowSpread = 3;
 const _profileTurns = 64;
 // kLine in shaders/liquid_glass.frag.
 const double _hairlineWidth = 0.67;
+// kPartReach, past kLine + kRimTail, and kCornerGap in liquid_glass.frag.
+const double _rimReach = 10;
+const double _cornerGap = 0.03;
 // In corner radii from the corner of the bounds.
 const _shineAround = [
   (along: 1.53, down: 0.0, lit: 0.68),
@@ -52,6 +55,7 @@ const _gooPills = 6;
 final _noGoo = List<double>.unmodifiable(
   List<double>.filled(10 * _gooPills + 8, 0),
 );
+const _noInner = [0.0, 0.0, 0.0, 0.0];
 
 /// How much of iOS's glass the panes draw (.agents/architecture.md).
 enum LiquidGlassQuality { standard, ultra }
@@ -1130,6 +1134,17 @@ final class LiquidGlassGoo extends LiquidGlassShape {
   final List<double> blends;
   final double? firstRadius;
 
+  /// The others only add to the first pill, which so lies as deep in the goo.
+  (Rect, double)? get _inscribed {
+    if (pills.isEmpty) {
+      return null;
+    }
+    final first = pills.first;
+    final round = first.shortestSide / 2;
+    final radius = firstRadius ?? 0.0;
+    return (first, radius > 0 ? math.min(radius, round) : round);
+  }
+
   List<double> get _uniforms {
     final octants = [
       for (var index = 0; index < _gooPills; index++)
@@ -1210,7 +1225,16 @@ class LiquidGlassPane {
           ..corners = corners
           ..outline = null
           ..profile = _flatProfile
-          ..goo = _noGoo;
+          ..goo = _noGoo
+          ..inscribed = (
+            Offset.zero & rect.size,
+            [
+              corners.topLeft.x,
+              corners.topRight.x,
+              corners.bottomRight.x,
+              corners.bottomLeft.x,
+            ].reduce(math.max),
+          );
       case LiquidGlassOutline(:final path):
         assert(shadows.isEmpty, 'An outlined pane casts none');
         if (!identical(path, _profiled)) {
@@ -1221,7 +1245,8 @@ class LiquidGlassPane {
           ..corners = BorderRadius.zero
           ..outline = path.shift(rect.topLeft)
           ..profile = _profile
-          ..goo = _noGoo;
+          ..goo = _noGoo
+          ..inscribed = null;
       case final LiquidGlassGoo goo:
         assert(shadows.isEmpty, 'A pane of goo casts none');
         _profiled = null;
@@ -1229,7 +1254,8 @@ class LiquidGlassPane {
           ..corners = BorderRadius.zero
           ..outline = goo.path.shift(rect.topLeft)
           ..profile = _flatProfile
-          ..goo = goo._uniforms;
+          ..goo = goo._uniforms
+          ..inscribed = goo._inscribed;
     }
     pane
       ..program = _GlassProgram.request(onReady)
@@ -1344,6 +1370,7 @@ class _LiquidGlassLayer extends Layer {
   Path? outline;
   List<double> profile = _flatProfile;
   List<double> goo = _noGoo;
+  (Rect, double)? inscribed;
   LiquidGlassStyle style = const LiquidGlassStyle(tint: Colors.transparent);
   LiquidGlassGlow glow = LiquidGlassGlow.none;
   Rect? hold;
@@ -1430,7 +1457,24 @@ class _LiquidGlassLayer extends Layer {
     ...profile,
     ...rim?._uniforms(rect.size, corners.topLeft.x) ?? _noShine,
     ...goo,
+    ..._inner(style),
   ];
+
+  List<double> _inner(LiquidGlassStyle style) {
+    final inscribed = this.inscribed;
+    if (inscribed == null || LiquidGlassHost.debugSkipRimOverride == false) {
+      return _noInner;
+    }
+    final (bounds, radius) = inscribed;
+    final inner = liquidGlassInner(
+      bounds,
+      radius,
+      rect.size,
+      style,
+      shine: rim != null,
+    );
+    return [inner.left, inner.top, inner.right, inner.bottom];
+  }
 
   void _addFrost(ui.SceneBuilder builder) {
     final key = (rect, corners, outline, style, rim);
@@ -1665,6 +1709,31 @@ List<double> liquidGlassProfile(Path outline, Offset center) {
     }
   }
   return profile;
+}
+
+/// Where the shader skips the rim of a pane; nowhere in a lens or a shaded end.
+@visibleForTesting
+Rect liquidGlassInner(
+  Rect inscribed,
+  double radius,
+  Size size,
+  LiquidGlassStyle style, {
+  required bool shine,
+}) {
+  if (style.refraction < 0 || style.endShade != 0) {
+    return Rect.zero;
+  }
+  final halfMinor = size.shortestSide / 2;
+  final rimReach = [
+    _rimReach,
+    _hairlineWidth + style.rimWidth,
+    if (shine) _shineBands.last.depth + _shineBands.last.width,
+  ].reduce(math.max);
+  final shaderBevel = math.min(style.bevel, halfMinor / 2);
+  final depth = math.max(shaderBevel, rimReach + _cornerGap * halfMinor) + 0.01;
+  final withinCornerArc = math.max(radius - depth, 0) * (1 - math.sqrt1_2);
+  final inner = inscribed.deflate(depth + withinCornerArc);
+  return inner.isEmpty ? Rect.zero : inner;
 }
 
 @visibleForTesting

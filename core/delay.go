@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"slices"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -23,7 +24,30 @@ var (
 
 	testURL                 atomic.Pointer[string]
 	missingDelayTestProxyAt atomic.Int64
+
+	delayTestsMu     sync.Mutex
+	delayTestsCtx    context.Context
+	delayTestsCancel context.CancelFunc
 )
+
+func currentDelayTestContext() context.Context {
+	delayTestsMu.Lock()
+	defer delayTestsMu.Unlock()
+	if delayTestsCtx == nil {
+		delayTestsCtx, delayTestsCancel = context.WithCancel(context.Background())
+	}
+	return delayTestsCtx
+}
+
+func cancelAllDelayTests() {
+	delayTestsMu.Lock()
+	cancel := delayTestsCancel
+	delayTestsCtx, delayTestsCancel = context.WithCancel(context.Background())
+	delayTestsMu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+}
 
 func setTestURL(url string) {
 	if url == "" {
@@ -71,8 +95,10 @@ func reportMissingDelayTestProxy(name string) {
 	logError("delay test: %q is not part of the applied config", name)
 }
 
-// A nil answer means the test never got a slot, which says nothing about the proxy.
+// A nil answer means the test never got a slot or was cancelled by a config
+// switch, which says nothing about the proxy.
 func handleTestDelay(params *TestDelayParams) *Delay {
+	sweepCtx := currentDelayTestContext()
 	url := params.TestUrl
 	if url == "" {
 		url = currentTestURL()
@@ -89,14 +115,17 @@ func handleTestDelay(params *TestDelayParams) *Delay {
 	if !configured {
 		timeout = timeoutFromMillis(params.Timeout, defaultDelayTestTimeout)
 	}
-	if !delayTestSlots.acquireWithin(context.Background(), timeout) {
+	if !delayTestSlots.acquireWithin(sweepCtx, timeout) {
 		return nil
 	}
 	defer delayTestSlots.release()
 
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(sweepCtx, timeout)
 	defer cancel()
 	delay, err := proxy.URLTest(ctx, url, anyDelayTestStatus)
+	if sweepCtx.Err() != nil {
+		return nil
+	}
 	if err != nil {
 		delay = 0
 	}

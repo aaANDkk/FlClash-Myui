@@ -464,6 +464,24 @@ abstract class AppLocalizations {
   /// **'Auto check for updates'**
   String get autoCheckUpdate;
 
+  /// No description provided for @updateChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Update channel'**
+  String get updateChannel;
+
+  /// No description provided for @updateChannelStable.
+  ///
+  /// In en, this message translates to:
+  /// **'Stable'**
+  String get updateChannelStable;
+
+  /// No description provided for @updateChannelPre.
+  ///
+  /// In en, this message translates to:
+  /// **'Prerelease'**
+  String get updateChannelPre;
+
   /// No description provided for @checkCertificate.
   ///
   /// In en, this message translates to:
@@ -1043,7 +1061,7 @@ abstract class AppLocalizations {
   /// No description provided for @externalControllerDesc.
   ///
   /// In en, this message translates to:
-  /// **'The external controller lets you control the core on port 9090.'**
+  /// **'The external controller listens on port 9090.'**
   String get externalControllerDesc;
 
   /// No description provided for @externalControllerSecret.
@@ -1075,12 +1093,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Startup and background'**
   String get startupAndBackground;
-
-  /// No description provided for @requestsAndUpdates.
-  ///
-  /// In en, this message translates to:
-  /// **'Requests and updates'**
-  String get requestsAndUpdates;
 
   /// No description provided for @logsAndDiagnostics.
   ///
@@ -1153,6 +1165,432 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Live connections'**
   String get liveConnections;
+
+  /// No description provided for @speed.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed'**
+  String get speed;
+
+  /// No description provided for @closeActiveConnections.
+  ///
+  /// In en, this message translates to:
+  /// **'Close all active connections'**
+  String get closeActiveConnections;
+
+  /// No description provided for @closeActiveConnectionsTip.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 active connection will close.} other{{count} active connections will close.}} Apps using them reconnect on their own, though downloads and calls in progress may drop.'**
+  String closeActiveConnectionsTip(int count);
+
+  /// No description provided for @connectionsAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get connectionsAll;
+
+  /// No description provided for @connectionsActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get connectionsActive;
+
+  /// No description provided for @connectionsFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get connectionsFailed;
+
+  /// No description provided for @connectionsDecrypted.
+  ///
+  /// In en, this message translates to:
+  /// **'Decrypted'**
+  String get connectionsDecrypted;
+
+  /// No description provided for @connectionRuleGlobal.
+  ///
+  /// In en, this message translates to:
+  /// **'Global mode'**
+  String get connectionRuleGlobal;
+
+  /// No description provided for @connectionRuleNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No rule'**
+  String get connectionRuleNone;
+
+  /// No description provided for @failureRefused.
+  ///
+  /// In en, this message translates to:
+  /// **'Refused'**
+  String get failureRefused;
+
+  /// No description provided for @failureUnreachable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unreachable'**
+  String get failureUnreachable;
+
+  /// No description provided for @failureDns.
+  ///
+  /// In en, this message translates to:
+  /// **'DNS failed'**
+  String get failureDns;
+
+  /// No description provided for @dnsNoSuchDomain.
+  ///
+  /// In en, this message translates to:
+  /// **'No such domain'**
+  String get dnsNoSuchDomain;
+
+  /// No description provided for @dnsServerFailure.
+  ///
+  /// In en, this message translates to:
+  /// **'The upstream failed'**
+  String get dnsServerFailure;
+
+  /// No description provided for @dnsRefused.
+  ///
+  /// In en, this message translates to:
+  /// **'Refused by the upstream'**
+  String get dnsRefused;
+
+  /// No description provided for @dnsTimedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Query timed out'**
+  String get dnsTimedOut;
+
+  /// No description provided for @dnsBlockedByRule.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked by a rule'**
+  String get dnsBlockedByRule;
+
+  /// No description provided for @failureHandshake.
+  ///
+  /// In en, this message translates to:
+  /// **'Handshake failed'**
+  String get failureHandshake;
+
+  /// No description provided for @failureOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other error'**
+  String get failureOther;
+
+  /// No description provided for @connectionClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get connectionClosed;
+
+  /// No description provided for @timeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Timeline'**
+  String get timeline;
+
+  /// No description provided for @connectionInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Info'**
+  String get connectionInfo;
+
+  /// No description provided for @decryption.
+  ///
+  /// In en, this message translates to:
+  /// **'Decryption'**
+  String get decryption;
+
+  /// No description provided for @connectionRuleIndex.
+  ///
+  /// In en, this message translates to:
+  /// **'#{number}'**
+  String connectionRuleIndex(Object number);
+
+  /// No description provided for @handshake.
+  ///
+  /// In en, this message translates to:
+  /// **'Handshake'**
+  String get handshake;
+
+  /// No description provided for @now.
+  ///
+  /// In en, this message translates to:
+  /// **'Now'**
+  String get now;
+
+  /// No description provided for @mitmCertificateRefused.
+  ///
+  /// In en, this message translates to:
+  /// **'Certificate refused'**
+  String get mitmCertificateRefused;
+
+  /// No description provided for @connectionEndLocal.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed locally'**
+  String get connectionEndLocal;
+
+  /// No description provided for @connectionEndRemote.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed by the remote'**
+  String get connectionEndRemote;
+
+  /// No description provided for @connectionEndFinished.
+  ///
+  /// In en, this message translates to:
+  /// **'Finished'**
+  String get connectionEndFinished;
+
+  /// No description provided for @connectionEndReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get connectionEndReset;
+
+  /// No description provided for @connectionEndCore.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed by the Core'**
+  String get connectionEndCore;
+
+  /// No description provided for @fakeIpMapping.
+  ///
+  /// In en, this message translates to:
+  /// **'fake-ip mapping'**
+  String get fakeIpMapping;
+
+  /// No description provided for @dnsFromHosts.
+  ///
+  /// In en, this message translates to:
+  /// **'From hosts'**
+  String get dnsFromHosts;
+
+  /// No description provided for @condition.
+  ///
+  /// In en, this message translates to:
+  /// **'Condition'**
+  String get condition;
+
+  /// No description provided for @addCondition.
+  ///
+  /// In en, this message translates to:
+  /// **'Add condition'**
+  String get addCondition;
+
+  /// No description provided for @conditionField.
+  ///
+  /// In en, this message translates to:
+  /// **'Field'**
+  String get conditionField;
+
+  /// No description provided for @conditionContains.
+  ///
+  /// In en, this message translates to:
+  /// **'Contains'**
+  String get conditionContains;
+
+  /// No description provided for @conditionEquals.
+  ///
+  /// In en, this message translates to:
+  /// **'Equals'**
+  String get conditionEquals;
+
+  /// No description provided for @conditionTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Conditions on one field match any of them, on different fields all. Search takes the same form, as in host:github.com -app:chrome.'**
+  String get conditionTip;
+
+  /// No description provided for @conditionNotContains.
+  ///
+  /// In en, this message translates to:
+  /// **'Excludes'**
+  String get conditionNotContains;
+
+  /// No description provided for @conditionNotEquals.
+  ///
+  /// In en, this message translates to:
+  /// **'Not equal'**
+  String get conditionNotEquals;
+
+  /// No description provided for @editCondition.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit condition'**
+  String get editCondition;
+
+  /// No description provided for @conditionValuesIn.
+  ///
+  /// In en, this message translates to:
+  /// **'{field} in the list'**
+  String conditionValuesIn(String field);
+
+  /// No description provided for @conditionShows.
+  ///
+  /// In en, this message translates to:
+  /// **'Connections shown: {count}'**
+  String conditionShows(String count);
+
+  /// No description provided for @conditionRows.
+  ///
+  /// In en, this message translates to:
+  /// **'Any in a row, every row'**
+  String get conditionRows;
+
+  /// No description provided for @clearAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all'**
+  String get clearAll;
+
+  /// No description provided for @conditionOr.
+  ///
+  /// In en, this message translates to:
+  /// **'or'**
+  String get conditionOr;
+
+  /// No description provided for @selectConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a connection'**
+  String get selectConnection;
+
+  /// No description provided for @selectConnectionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Its timeline, HTTP requests and connection details appear here'**
+  String get selectConnectionHint;
+
+  /// No description provided for @selectDnsQuery.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a query'**
+  String get selectDnsQuery;
+
+  /// No description provided for @selectDnsQueryHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Its answers, upstream and related connections appear here'**
+  String get selectDnsQueryHint;
+
+  /// No description provided for @relatedConnections.
+  ///
+  /// In en, this message translates to:
+  /// **'Related connections'**
+  String get relatedConnections;
+
+  /// No description provided for @upstream.
+  ///
+  /// In en, this message translates to:
+  /// **'Upstream'**
+  String get upstream;
+
+  /// No description provided for @dnsQueryFields.
+  ///
+  /// In en, this message translates to:
+  /// **'Query'**
+  String get dnsQueryFields;
+
+  /// No description provided for @dnsQueryAskedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Asked by {initiator}'**
+  String dnsQueryAskedBy(String initiator);
+
+  /// No description provided for @dnsConditionTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Conditions on one field match any of them, on different fields all.'**
+  String get dnsConditionTip;
+
+  /// No description provided for @dnsConditionValuesIn.
+  ///
+  /// In en, this message translates to:
+  /// **'{field} in the list'**
+  String dnsConditionValuesIn(String field);
+
+  /// No description provided for @dnsConditionShows.
+  ///
+  /// In en, this message translates to:
+  /// **'Queries shown: {count}'**
+  String dnsConditionShows(String count);
+
+  /// No description provided for @connectionPath.
+  ///
+  /// In en, this message translates to:
+  /// **'Path'**
+  String get connectionPath;
+
+  /// No description provided for @processPath.
+  ///
+  /// In en, this message translates to:
+  /// **'Process path'**
+  String get processPath;
+
+  /// No description provided for @proxyNode.
+  ///
+  /// In en, this message translates to:
+  /// **'Proxy Node'**
+  String get proxyNode;
+
+  /// No description provided for @closingTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed at'**
+  String get closingTime;
+
+  /// No description provided for @processUid.
+  ///
+  /// In en, this message translates to:
+  /// **'UID {uid}'**
+  String processUid(int uid);
+
+  /// No description provided for @onlyThisApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Only this app'**
+  String get onlyThisApp;
+
+  /// No description provided for @onlyThisDomain.
+  ///
+  /// In en, this message translates to:
+  /// **'Only this domain'**
+  String get onlyThisDomain;
+
+  /// No description provided for @hideThisHost.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide this host'**
+  String get hideThisHost;
+
+  /// No description provided for @copySummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy summary'**
+  String get copySummary;
+
+  /// No description provided for @copyDomain.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy domain'**
+  String get copyDomain;
+
+  /// No description provided for @copyAnswers.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy answers'**
+  String get copyAnswers;
+
+  /// No description provided for @viewHttp.
+  ///
+  /// In en, this message translates to:
+  /// **'View HTTP'**
+  String get viewHttp;
 
   /// No description provided for @inbound.
   ///
@@ -1577,7 +2015,7 @@ abstract class AppLocalizations {
   /// No description provided for @writeToSystemDesc.
   ///
   /// In en, this message translates to:
-  /// **'Write to system also sets the system clock; Android ignores it.'**
+  /// **'Write to system has no effect on Android.'**
   String get writeToSystemDesc;
 
   /// No description provided for @sniffer.
@@ -1597,12 +2035,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Force DNS mapping'**
   String get forceDnsMapping;
-
-  /// No description provided for @forceDnsMappingDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Force DNS mapping also sniffs connections whose domain came from a DNS mapping.'**
-  String get forceDnsMappingDesc;
 
   /// No description provided for @parsePureIp.
   ///
@@ -1667,7 +2099,7 @@ abstract class AppLocalizations {
   /// No description provided for @dnsOverrideDesc.
   ///
   /// In en, this message translates to:
-  /// **'Entries added here replace the DNS of every URL and file profile; anything not added keeps the profile\'s own setting. Custom profiles set their DNS in their content.'**
+  /// **'Added entries replace the DNS of URL and file profiles.'**
   String get dnsOverrideDesc;
 
   /// No description provided for @settingEntries.
@@ -1727,7 +2159,7 @@ abstract class AppLocalizations {
   /// No description provided for @respectRulesDesc.
   ///
   /// In en, this message translates to:
-  /// **'Respect rules routes DNS connections by the rules and needs a Proxy Server Nameserver.'**
+  /// **'Respect rules needs a Proxy Server Nameserver.'**
   String get respectRulesDesc;
 
   /// No description provided for @dnsMode.
@@ -2167,12 +2599,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Filter'**
   String get filter;
-
-  /// No description provided for @groupBy.
-  ///
-  /// In en, this message translates to:
-  /// **'Group by'**
-  String get groupBy;
 
   /// No description provided for @hideTimeoutProxies.
   ///
@@ -4304,12 +4730,6 @@ abstract class AppLocalizations {
   /// **'Choose from album'**
   String get pickFromAlbum;
 
-  /// No description provided for @closeConnections.
-  ///
-  /// In en, this message translates to:
-  /// **'Close connections'**
-  String get closeConnections;
-
   /// No description provided for @scrollToSelected.
   ///
   /// In en, this message translates to:
@@ -4352,6 +4772,42 @@ abstract class AppLocalizations {
   /// **'No matching results'**
   String get noSearchResults;
 
+  /// No description provided for @noActiveConnections.
+  ///
+  /// In en, this message translates to:
+  /// **'No active connections'**
+  String get noActiveConnections;
+
+  /// No description provided for @noFailedConnections.
+  ///
+  /// In en, this message translates to:
+  /// **'No failed connections'**
+  String get noFailedConnections;
+
+  /// No description provided for @noFailedDnsQueries.
+  ///
+  /// In en, this message translates to:
+  /// **'No failed DNS queries'**
+  String get noFailedDnsQueries;
+
+  /// No description provided for @noCachedDnsQueries.
+  ///
+  /// In en, this message translates to:
+  /// **'No DNS queries answered from cache'**
+  String get noCachedDnsQueries;
+
+  /// No description provided for @noFailedHttpRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'No failed HTTP requests'**
+  String get noFailedHttpRequests;
+
+  /// No description provided for @noRewrittenHttpRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'No rewritten HTTP requests'**
+  String get noRewrittenHttpRequests;
+
   /// No description provided for @showPassword.
   ///
   /// In en, this message translates to:
@@ -4393,12 +4849,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Outbound IP'**
   String get outboundIp;
-
-  /// No description provided for @outboundIpAddress.
-  ///
-  /// In en, this message translates to:
-  /// **'Outbound IP address'**
-  String get outboundIpAddress;
 
   /// No description provided for @ipAddress.
   ///
@@ -4991,7 +5441,7 @@ abstract class AppLocalizations {
   /// No description provided for @strictRouteDesc.
   ///
   /// In en, this message translates to:
-  /// **'Strict route keeps traffic such as DNS from bypassing TUN, and with IPv6 off it blocks this device\'s IPv6 connections.'**
+  /// **'With IPv6 off, strict route also blocks this device’s IPv6 connections.'**
   String get strictRouteDesc;
 
   /// No description provided for @initFailed.
@@ -5045,7 +5495,7 @@ abstract class AppLocalizations {
   /// No description provided for @disableIcmpForwardingDesc.
   ///
   /// In en, this message translates to:
-  /// **'With ICMP forwarding disabled, TUN answers ping itself, so ping no longer shows the real latency.'**
+  /// **'With ICMP forwarding disabled, ping no longer shows the real latency.'**
   String get disableIcmpForwardingDesc;
 
   /// No description provided for @excludeInterface.
@@ -5063,7 +5513,7 @@ abstract class AppLocalizations {
   /// No description provided for @includeInterfaceDesc.
   ///
   /// In en, this message translates to:
-  /// **'Only traffic arriving on included interfaces goes through TUN, and excluded interfaces no longer apply.'**
+  /// **'Once set, excluded interfaces no longer apply.'**
   String get includeInterfaceDesc;
 
   /// No description provided for @includeUid.
@@ -5111,19 +5561,19 @@ abstract class AppLocalizations {
   /// No description provided for @tunOverrideDesc.
   ///
   /// In en, this message translates to:
-  /// **'Entries added here replace the TUN settings of every profile; anything not added keeps the profile\'s own setting. Entries a custom profile adds itself take precedence.'**
+  /// **'Added entries override every profile; a custom profile’s own entries win.'**
   String get tunOverrideDesc;
 
   /// No description provided for @generalOverrideDesc.
   ///
   /// In en, this message translates to:
-  /// **'Entries added here replace the setting of every profile; anything not added keeps the profile\'s own setting, or the core default when the profile has none.'**
+  /// **'Added entries replace every profile’s own setting.'**
   String get generalOverrideDesc;
 
   /// No description provided for @profileTunSettingsDesc.
   ///
   /// In en, this message translates to:
-  /// **'Applies to this profile only and takes precedence over the TUN override entries in the network settings.'**
+  /// **'For this profile only; wins over the TUN overrides in network settings.'**
   String get profileTunSettingsDesc;
 
   /// No description provided for @settingsCount.
@@ -5768,16 +6218,10 @@ abstract class AppLocalizations {
   /// **'HTTP capture'**
   String get httpCapture;
 
-  /// No description provided for @httpCaptureDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Records requests to the hosts listed under Hostname, to view in connection details. Records stay in memory only.'**
-  String get httpCaptureDesc;
-
   /// No description provided for @httpCaptureNoHosts.
   ///
   /// In en, this message translates to:
-  /// **'No host is listed, so nothing is recorded. Add hosts under Hostname on the MITM page, or from the details of a connection.'**
+  /// **'Nothing is recorded until hosts are added under Hostname.'**
   String get httpCaptureNoHosts;
 
   /// No description provided for @httpCaptureLimit.
@@ -5786,11 +6230,11 @@ abstract class AppLocalizations {
   /// **'Maximum records'**
   String get httpCaptureLimit;
 
-  /// No description provided for @httpCaptureLimitDesc.
+  /// No description provided for @httpCaptureMemoryOnly.
   ///
   /// In en, this message translates to:
-  /// **'The oldest records go first once this many are kept or they fill {memory} of memory. Each body keeps its first {body}.'**
-  String httpCaptureLimitDesc(Object memory, Object body);
+  /// **'Kept in memory only'**
+  String get httpCaptureMemoryOnly;
 
   /// No description provided for @httpRequests.
   ///
@@ -5798,11 +6242,35 @@ abstract class AppLocalizations {
   /// **'HTTP requests'**
   String get httpRequests;
 
+  /// No description provided for @httpRequestCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 HTTP request} other{{count} HTTP requests}}'**
+  String httpRequestCount(int count);
+
+  /// No description provided for @latestHttpRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest {request}'**
+  String latestHttpRequest(String request);
+
   /// No description provided for @httpRequestsMissing.
   ///
   /// In en, this message translates to:
   /// **'Requests made before capture was on, or since cleared, are not listed.'**
   String get httpRequestsMissing;
+
+  /// No description provided for @noHttpRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'No requests yet'**
+  String get noHttpRequests;
+
+  /// No description provided for @noHttpRequestsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'This connection is decrypted, and the HTTP requests on it will appear here'**
+  String get noHttpRequestsHint;
 
   /// No description provided for @httpRequestCleared.
   ///
@@ -5834,11 +6302,23 @@ abstract class AppLocalizations {
   /// **'Original URL'**
   String get originalUrl;
 
-  /// No description provided for @timeToFirstByte.
+  /// No description provided for @httpTiming.
   ///
   /// In en, this message translates to:
-  /// **'Time to first byte'**
-  String get timeToFirstByte;
+  /// **'Timing'**
+  String get httpTiming;
+
+  /// No description provided for @httpWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting'**
+  String get httpWaiting;
+
+  /// No description provided for @httpReceiving.
+  ///
+  /// In en, this message translates to:
+  /// **'Receiving'**
+  String get httpReceiving;
 
   /// No description provided for @requestBody.
   ///
@@ -6083,7 +6563,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmAndroidRootDesc.
   ///
   /// In en, this message translates to:
-  /// **'Without root, only apps that trust user certificates, mostly browsers, can be decrypted. With root, every app can.'**
+  /// **'Without root, only apps that trust user certificates are decrypted.'**
   String get mitmAndroidRootDesc;
 
   /// No description provided for @mitmCertificateLinuxTip.
@@ -6347,13 +6827,13 @@ abstract class AppLocalizations {
   /// No description provided for @mitmModuleRulesDesc.
   ///
   /// In en, this message translates to:
-  /// **'Routing rules go in front of the profile’s own.'**
+  /// **'Matched before the profile’s rules.'**
   String get mitmModuleRulesDesc;
 
   /// No description provided for @mitmRequestRulesDesc.
   ///
   /// In en, this message translates to:
-  /// **'The module’s URL-REGEX and USER-AGENT rules became URL rewrites, judged request by request: on every plain HTTP request, and on HTTPS only for hosts in the MITM hostname list.'**
+  /// **'URL-REGEX and USER-AGENT rules run as URL rewrites, on HTTPS only for listed hosts.'**
   String get mitmRequestRulesDesc;
 
   /// No description provided for @mitmModuleSystemTip.
@@ -6383,7 +6863,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmNetworkRisk.
   ///
   /// In en, this message translates to:
-  /// **'When the config is generated, it changes the network settings below, ahead of what you set for the same ones in FlClash. Turning the module off or deleting it undoes this.'**
+  /// **'While on, it overrides these network settings.'**
   String get mitmNetworkRisk;
 
   /// No description provided for @mitmSkipVerifyRisk.
@@ -6401,7 +6881,7 @@ abstract class AppLocalizations {
   /// No description provided for @mitmClientSourceTunTip.
   ///
   /// In en, this message translates to:
-  /// **'With TUN on, this device\'s apps come from the TUN\'s address; a list that leaves it out leaves their traffic undecrypted.'**
+  /// **'With TUN on, include its address to decrypt this device’s apps.'**
   String get mitmClientSourceTunTip;
 
   /// No description provided for @mitmNetworkChanges.
@@ -6788,6 +7268,12 @@ abstract class AppLocalizations {
   /// **'The update could not be downloaded.'**
   String get updateDownloadFailed;
 
+  /// No description provided for @updateFileMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'The update file is not in the release. Download it from the release page.'**
+  String get updateFileMissing;
+
   /// No description provided for @defaultNameserverDesc.
   ///
   /// In en, this message translates to:
@@ -6944,382 +7430,1240 @@ abstract class AppLocalizations {
   /// **'The VPN service could not start.'**
   String get vpnServiceStartFailed;
 
+  /// No description provided for @requestPath.
+  ///
+  /// In en, this message translates to:
+  /// **'Path'**
+  String get requestPath;
+
+  /// No description provided for @statusCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Status code'**
+  String get statusCode;
+
+  /// No description provided for @contentKind.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get contentKind;
+
+  /// No description provided for @httpRewritten.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewritten'**
+  String get httpRewritten;
+
+  /// No description provided for @httpAnswerReject.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get httpAnswerReject;
+
+  /// No description provided for @httpAnswerRedirect.
+  ///
+  /// In en, this message translates to:
+  /// **'Redirected'**
+  String get httpAnswerRedirect;
+
+  /// No description provided for @httpAnswerScript.
+  ///
+  /// In en, this message translates to:
+  /// **'Script response'**
+  String get httpAnswerScript;
+
+  /// No description provided for @httpBodyText.
+  ///
+  /// In en, this message translates to:
+  /// **'Text'**
+  String get httpBodyText;
+
+  /// No description provided for @httpBodyImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Image'**
+  String get httpBodyImage;
+
+  /// No description provided for @regexReplace.
+  ///
+  /// In en, this message translates to:
+  /// **'Regex replace'**
+  String get regexReplace;
+
+  /// No description provided for @owningConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection'**
+  String get owningConnection;
+
+  /// No description provided for @selectHttpRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a request'**
+  String get selectHttpRequest;
+
+  /// No description provided for @selectHttpRequestHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Its request, response and timing appear here'**
+  String get selectHttpRequestHint;
+
+  /// No description provided for @httpConditionShows.
+  ///
+  /// In en, this message translates to:
+  /// **'Requests shown: {count}'**
+  String httpConditionShows(String count);
+
+  /// No description provided for @httpConditionValuesIn.
+  ///
+  /// In en, this message translates to:
+  /// **'{field} in the list'**
+  String httpConditionValuesIn(String field);
+
+  /// No description provided for @httpConditionTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Conditions on one field match any of them, on different fields all.'**
+  String get httpConditionTip;
+
+  /// No description provided for @outboundIpAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Outbound IP address'**
+  String get outboundIpAddress;
+
+  /// No description provided for @config.
+  ///
+  /// In en, this message translates to:
+  /// **'Configuration'**
+  String get config;
+
+  /// No description provided for @advanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced'**
   String get advanced;
 
+  /// No description provided for @ipDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'IP Details'**
   String get ipDetails;
 
+  /// No description provided for @silentLaunchDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Silent launch starts without showing the window.'**
   String get silentLaunchDesc;
 
+  /// No description provided for @accessControlDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Access control picks which apps use the proxy.'**
   String get accessControlDesc;
 
+  /// No description provided for @wakelock.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep screen on'**
   String get wakelock;
 
+  /// No description provided for @secondaryDevelopmentBuild.
+  ///
+  /// In en, this message translates to:
+  /// **'Secondary development build'**
   String get secondaryDevelopmentBuild;
 
+  /// No description provided for @addressHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'WebDAV server address'**
   String get addressHelp;
 
+  /// No description provided for @authenticationDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication asks for a username and password on the local proxy port.'**
   String get authenticationDesc;
 
+  /// No description provided for @autoCloseConnectionsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto close connections drops open connections when you switch proxies.'**
   String get autoCloseConnectionsDesc;
 
+  /// No description provided for @sidebarBlurDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Background blur lets the desktop behind the window show through the sidebar.'**
   String get sidebarBlurDesc;
 
+  /// No description provided for @vpnEnableDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'VPN routes all system traffic through VpnService automatically.'**
   String get vpnEnableDesc;
 
+  /// No description provided for @ntpStatusDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'NTP takes the time from an NTP server instead of the system clock.'**
   String get ntpStatusDesc;
 
+  /// No description provided for @dialerProxyDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Dialer proxy is the outbound used to reach the NTP server.'**
   String get dialerProxyDesc;
 
+  /// No description provided for @snifferStatusDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'The sniffer reads the domain from TLS, HTTP and QUIC traffic so rules can match it.'**
   String get snifferStatusDesc;
 
+  /// No description provided for @overrideDestinationDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Override destination connects to the sniffed domain instead of the original address.'**
   String get overrideDestinationDesc;
 
+  /// No description provided for @parsePureIpDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Parse pure IP sniffs connections that carry only an IP address.'**
   String get parsePureIpDesc;
 
+  /// No description provided for @skipDomainDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'A sniffed domain on the Skip domains list is not used.'**
   String get skipDomainDesc;
 
+  /// No description provided for @fakeipFilterModeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'In Fake-IP filter mode, blacklist excludes matches, whitelist fakes only matches, and rule matches as rules.'**
   String get fakeipFilterModeDesc;
 
+  /// No description provided for @ipv6InboundDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'With IPv6 on, the VPN allows IPv6 inbound.'**
   String get ipv6InboundDesc;
 
+  /// No description provided for @interfaceNameDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Interface name is the network interface outbound connections use.'**
   String get interfaceNameDesc;
 
+  /// No description provided for @advancedConfigDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced configuration holds network, DNS, added rules, and scripts.'**
   String get advancedConfigDesc;
 
+  /// No description provided for @singleAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Single add'**
   String get singleAdd;
 
+  /// No description provided for @batchAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Batch add'**
   String get batchAdd;
 
+  /// No description provided for @batchListInputTip.
+  ///
+  /// In en, this message translates to:
+  /// **'One item per line, or separated by commas'**
   String get batchListInputTip;
 
+  /// No description provided for @batchMapInputTip.
+  ///
+  /// In en, this message translates to:
+  /// **'One entry per line: key, a space, then value'**
   String get batchMapInputTip;
 
+  /// No description provided for @customProfileResources.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom profile resources'**
   String get customProfileResources;
 
+  /// No description provided for @customProfileResourcesDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom profile resources are the proxies, rule providers, filters, and icon sets you add yourself for custom profiles to use.'**
   String get customProfileResourcesDesc;
 
+  /// No description provided for @batteryOptimizationDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Ignore battery optimization keeps the app running in the background.'**
   String get batteryOptimizationDesc;
 
+  /// No description provided for @onDemandDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'On demand pauses the proxy on excluded Wi-Fi.'**
   String get onDemandDesc;
 
+  /// No description provided for @blockConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Block connection'**
   String get blockConnection;
 
-  String get proxyNode;
-
+  /// No description provided for @bypassPrivateRouteDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'With Bypass private addresses on, LAN, loopback and multicast addresses skip TUN.'**
   String get bypassPrivateRouteDesc;
 
+  /// No description provided for @excludeInterfaceDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Traffic arriving on excluded interfaces, such as docker0, skips TUN.'**
   String get excludeInterfaceDesc;
 
+  /// No description provided for @includeUidDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Only traffic from processes of included user IDs goes through TUN.'**
   String get includeUidDesc;
 
+  /// No description provided for @excludeUidDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Traffic from processes of excluded user IDs skips TUN.'**
   String get excludeUidDesc;
 
+  /// No description provided for @excludeSrcPortDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Traffic from excluded source ports skips TUN.'**
   String get excludeSrcPortDesc;
 
+  /// No description provided for @excludeDstPortDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Traffic to excluded destination ports skips TUN.'**
   String get excludeDstPortDesc;
 
+  /// No description provided for @emojiStyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Emoji font'**
   String get emojiStyle;
 
+  /// No description provided for @customFont.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom font'**
   String get customFont;
 
+  /// No description provided for @nodeCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Proxies'**
   String get nodeCount;
 
+  /// No description provided for @ruleCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Rules'**
   String get ruleCount;
 
+  /// No description provided for @providerCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Providers'**
   String get providerCount;
 
+  /// No description provided for @currentProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Current profile'**
   String get currentProfile;
 
+  /// No description provided for @iconRules.
+  ///
+  /// In en, this message translates to:
+  /// **'Regex icons'**
   String get iconRules;
 
+  /// No description provided for @iconRulesTip.
+  ///
+  /// In en, this message translates to:
+  /// **'A group whose name matches the regex takes its icon from the chosen icon set.'**
   String get iconRulesTip;
 
+  /// No description provided for @invalidRegex.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid regular expression'**
   String get invalidRegex;
 
+  /// No description provided for @iconSetRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Icon set removed'**
   String get iconSetRemoved;
 
+  /// No description provided for @iconRulesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Regex icons are empty'**
   String get iconRulesEmpty;
 
+  /// No description provided for @addIconRule.
+  ///
+  /// In en, this message translates to:
+  /// **'Add regex icon'**
   String get addIconRule;
 
+  /// No description provided for @editIconRule.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit regex icon'**
   String get editIconRule;
 
+  /// No description provided for @iconRuleHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'1. Exact match: e.g. ^YouTube\$ matches only the group named YouTube.\n2. Keyword match: e.g. YouTube matches any group whose name contains YouTube.\n3. Multiple match: e.g. (YouTube|Netflix|Disney) matches multiple media groups.\n4. Wildcard: e.g. .* matches all groups to use the selected icon.\n5. Prefix & suffix: e.g. ^PROXY matches prefix, Auto\$ matches suffix; evaluated from top to bottom.'**
   String get iconRuleHelp;
 
+  /// No description provided for @refreshGroupIcons.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh group icons'**
   String get refreshGroupIcons;
 
+  /// No description provided for @refreshGroupIconsTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all cached remote icons and icon-set images, update remote icon sets and fetch fresh icons.'**
   String get refreshGroupIconsTip;
 
+  /// No description provided for @groupIconsRefreshed.
+  ///
+  /// In en, this message translates to:
+  /// **'Group icons refreshed'**
   String get groupIconsRefreshed;
 
+  /// No description provided for @ipRiskAlert.
+  ///
+  /// In en, this message translates to:
+  /// **'IP Risk Alert'**
   String get ipRiskAlert;
 
+  /// No description provided for @ipRiskCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Check IP purity'**
   String get ipRiskCheck;
 
+  /// No description provided for @ipRiskScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Fraud score'**
   String get ipRiskScore;
 
+  /// No description provided for @ipRiskLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Low risk'**
   String get ipRiskLow;
 
+  /// No description provided for @ipRiskMedium.
+  ///
+  /// In en, this message translates to:
+  /// **'Medium risk'**
   String get ipRiskMedium;
 
+  /// No description provided for @ipRiskHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High risk'**
   String get ipRiskHigh;
 
+  /// No description provided for @ipRiskVeryHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'Very high risk'**
   String get ipRiskVeryHigh;
 
+  /// No description provided for @ipRiskHostingOrProxy.
+  ///
+  /// In en, this message translates to:
+  /// **'Hosting or proxy'**
   String get ipRiskHostingOrProxy;
 
+  /// No description provided for @ipRiskDatacenter.
+  ///
+  /// In en, this message translates to:
+  /// **'Datacenter'**
   String get ipRiskDatacenter;
 
+  /// No description provided for @ipRiskResidentialProxy.
+  ///
+  /// In en, this message translates to:
+  /// **'Residential proxy'**
   String get ipRiskResidentialProxy;
 
+  /// No description provided for @ipRiskBlacklist.
+  ///
+  /// In en, this message translates to:
+  /// **'Blacklist flags'**
   String get ipRiskBlacklist;
 
+  /// No description provided for @ipRiskProxyType.
+  ///
+  /// In en, this message translates to:
+  /// **'Proxy type'**
   String get ipRiskProxyType;
 
+  /// No description provided for @ipRiskAnonymousVpn.
+  ///
+  /// In en, this message translates to:
+  /// **'Anonymizing VPN'**
   String get ipRiskAnonymousVpn;
 
+  /// No description provided for @ipRiskTorExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Tor exit node'**
   String get ipRiskTorExit;
 
+  /// No description provided for @ipRiskServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Server'**
   String get ipRiskServer;
 
+  /// No description provided for @ipRiskPublicProxy.
+  ///
+  /// In en, this message translates to:
+  /// **'Public proxy'**
   String get ipRiskPublicProxy;
 
+  /// No description provided for @ipRiskWebProxy.
+  ///
+  /// In en, this message translates to:
+  /// **'Web proxy'**
   String get ipRiskWebProxy;
 
+  /// No description provided for @ipRiskSearchRobot.
+  ///
+  /// In en, this message translates to:
+  /// **'Search engine robot'**
   String get ipRiskSearchRobot;
 
+  /// No description provided for @ipRiskHostname.
+  ///
+  /// In en, this message translates to:
+  /// **'Hostname'**
   String get ipRiskHostname;
 
+  /// No description provided for @ipRiskHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an IP to check'**
   String get ipRiskHint;
 
+  /// No description provided for @ipRiskInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid public IP'**
   String get ipRiskInvalid;
 
+  /// No description provided for @ipRiskSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Source'**
   String get ipRiskSource;
 
+  /// No description provided for @ipRiskSources.
+  ///
+  /// In en, this message translates to:
+  /// **'Scamalytics and IPLocate.io'**
   String get ipRiskSources;
 
+  /// No description provided for @ipRiskAsn.
+  ///
+  /// In en, this message translates to:
+  /// **'ASN'**
   String get ipRiskAsn;
 
+  /// No description provided for @ipRiskHomeBroadband.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium Residential IP'**
   String get ipRiskHomeBroadband;
 
+  /// No description provided for @ipRiskNoteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'About the fraud score'**
   String get ipRiskNoteTitle;
 
+  /// No description provided for @ipRiskNoteDirect.
+  ///
+  /// In en, this message translates to:
+  /// **'Scamalytics can see web traffic from this IP directly. The score of {score} reflects the share of that traffic suspected to be fraudulent.'**
   String ipRiskNoteDirect(Object score);
 
+  /// No description provided for @ipRiskNoteIndirect.
+  ///
+  /// In en, this message translates to:
+  /// **'Scamalytics can\'t see web traffic from this IP directly. The score of {score} is estimated from the overall risk of IPs operated by {isp}.'**
   String ipRiskNoteIndirect(Object score, Object isp);
 
+  /// No description provided for @ipRiskNoteGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'The fraud score (0–100) reflects the share of web traffic from this IP that Scamalytics suspects to be fraudulent.'**
   String get ipRiskNoteGeneric;
 
+  /// No description provided for @ipRiskNoteAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Observed traffic'**
   String get ipRiskNoteAmount;
 
+  /// No description provided for @ipRiskNoteAmountIsp.
+  ///
+  /// In en, this message translates to:
+  /// **'Operator traffic'**
   String get ipRiskNoteAmountIsp;
 
+  /// No description provided for @ipRiskNoteShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Suspected fraud'**
   String get ipRiskNoteShare;
 
+  /// No description provided for @ipRiskAmountLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Low'**
   String get ipRiskAmountLow;
 
+  /// No description provided for @ipRiskAmountMedium.
+  ///
+  /// In en, this message translates to:
+  /// **'Medium'**
   String get ipRiskAmountMedium;
 
+  /// No description provided for @ipRiskAmountHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High'**
   String get ipRiskAmountHigh;
 
+  /// No description provided for @ipRiskShareLittle.
+  ///
+  /// In en, this message translates to:
+  /// **'Very little'**
   String get ipRiskShareLittle;
 
+  /// No description provided for @ipRiskShareSome.
+  ///
+  /// In en, this message translates to:
+  /// **'Some'**
   String get ipRiskShareSome;
 
+  /// No description provided for @ipRiskShareAlmostAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Almost all'**
   String get ipRiskShareAlmostAll;
 
+  /// No description provided for @ipRiskNoteOwner.
+  ///
+  /// In en, this message translates to:
+  /// **'Owner'**
   String get ipRiskNoteOwner;
 
+  /// No description provided for @ipRiskNoteConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection'**
   String get ipRiskNoteConnection;
 
+  /// No description provided for @ipRiskCommercialServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Commercial server'**
   String get ipRiskCommercialServer;
 
+  /// No description provided for @ipRiskNoteProxying.
+  ///
+  /// In en, this message translates to:
+  /// **'May be relaying traffic from elsewhere; the actual user could be anywhere'**
   String get ipRiskNoteProxying;
 
+  /// No description provided for @ipRiskNoteWarningHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'Web traffic from this IP is likely to come from fraudsters.'**
   String get ipRiskNoteWarningHigh;
 
+  /// No description provided for @ipRiskNoteWarningVeryHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'Web traffic from this IP is very likely to come from fraudsters.'**
   String get ipRiskNoteWarningVeryHigh;
 
+  /// No description provided for @ipRiskNoteFootnote.
+  ///
+  /// In en, this message translates to:
+  /// **'This assessment covers web traffic only; other traffic may carry a different risk.'**
   String get ipRiskNoteFootnote;
 
+  /// No description provided for @ipRiskLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Country / region'**
   String get ipRiskLocation;
 
+  /// No description provided for @ipRiskCity.
+  ///
+  /// In en, this message translates to:
+  /// **'Region / city'**
   String get ipRiskCity;
 
+  /// No description provided for @operatorOrAsn.
+  ///
+  /// In en, this message translates to:
+  /// **'Organization / ASN'**
   String get operatorOrAsn;
 
+  /// No description provided for @ipRiskFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load IP information. Try again.'**
   String get ipRiskFailed;
 
+  /// No description provided for @isp.
+  ///
+  /// In en, this message translates to:
+  /// **'ISP'**
   String get isp;
 
+  /// No description provided for @speedTest.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed Test'**
   String get speedTest;
 
+  /// No description provided for @speedTestStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Test'**
   String get speedTestStart;
 
+  /// No description provided for @speedTestAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Test Again'**
   String get speedTestAgain;
 
+  /// No description provided for @speedTestHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Test History'**
   String get speedTestHistory;
 
+  /// No description provided for @speedTestHistoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No test history yet'**
   String get speedTestHistoryEmpty;
 
+  /// No description provided for @speedTestHistoryRetention.
+  ///
+  /// In en, this message translates to:
+  /// **'Kept for 14 days'**
   String get speedTestHistoryRetention;
 
+  /// No description provided for @speedTestClearHistoryTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all speed test history?'**
   String get speedTestClearHistoryTip;
 
+  /// No description provided for @speedTestFollowRules.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow Rules'**
   String get speedTestFollowRules;
 
+  /// No description provided for @speedTestOutbound.
+  ///
+  /// In en, this message translates to:
+  /// **'Outbound'**
   String get speedTestOutbound;
 
+  /// No description provided for @speedTestCoreStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Not started · Direct test'**
   String get speedTestCoreStopped;
 
+  /// No description provided for @speedTestReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready'**
   String get speedTestReady;
 
+  /// No description provided for @speedTestConnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting'**
   String get speedTestConnecting;
 
+  /// No description provided for @speedTestPacketLoss.
+  ///
+  /// In en, this message translates to:
+  /// **'Packet Loss'**
   String get speedTestPacketLoss;
 
+  /// No description provided for @speedTestJitter.
+  ///
+  /// In en, this message translates to:
+  /// **'Jitter'**
   String get speedTestJitter;
 
+  /// No description provided for @speedTestLoadedLatency.
+  ///
+  /// In en, this message translates to:
+  /// **'Loaded Latency'**
   String get speedTestLoadedLatency;
 
+  /// No description provided for @speedTestResponsiveness.
+  ///
+  /// In en, this message translates to:
+  /// **'Responsiveness'**
   String get speedTestResponsiveness;
 
+  /// No description provided for @speedTestDataUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Data Used'**
   String get speedTestDataUsed;
 
+  /// No description provided for @speedTestServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Test Server'**
   String get speedTestServer;
 
+  /// No description provided for @speedTestServerAutoDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically select Speedtest server'**
   String get speedTestServerAutoDesc;
 
+  /// No description provided for @speedTestProtocol.
+  ///
+  /// In en, this message translates to:
+  /// **'Protocol'**
   String get speedTestProtocol;
 
+  /// No description provided for @speedTestMobileDataTip.
+  ///
+  /// In en, this message translates to:
+  /// **'You are on mobile data. One test may use hundreds of MB. Continue?'**
   String get speedTestMobileDataTip;
 
+  /// No description provided for @speedTestErrorRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked by rules'**
   String get speedTestErrorRejected;
 
+  /// No description provided for @speedTestErrorRejectedDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'The current rules route the test domain to REJECT. Choose another outbound and retry.'**
   String get speedTestErrorRejectedDesc;
 
+  /// No description provided for @speedTestErrorBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed test unavailable'**
   String get speedTestErrorBlocked;
 
+  /// No description provided for @speedTestErrorBlockedDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'The outbound may be blocking {provider} speed tests. Switch the test source or the outbound.'**
   String speedTestErrorBlockedDesc(Object provider);
 
+  /// No description provided for @speedTestErrorUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot reach the speed test service'**
   String get speedTestErrorUnavailable;
 
+  /// No description provided for @speedTestErrorTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed test timed out'**
   String get speedTestErrorTimeout;
 
+  /// No description provided for @speedTestErrorNetworkDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Check whether the outbound is available, then retry.'**
   String get speedTestErrorNetworkDesc;
 
+  /// No description provided for @speedTestChangeOutbound.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Outbound'**
   String get speedTestChangeOutbound;
 
+  /// No description provided for @speedTestSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed Test Settings'**
   String get speedTestSettings;
 
+  /// No description provided for @speedTestDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Test Duration'**
   String get speedTestDuration;
 
+  /// No description provided for @speedTestConnections.
+  ///
+  /// In en, this message translates to:
+  /// **'Connections'**
   String get speedTestConnections;
 
+  /// No description provided for @speedTestSingleThread.
+  ///
+  /// In en, this message translates to:
+  /// **'Single'**
   String get speedTestSingleThread;
 
+  /// No description provided for @speedTestMultiThread.
+  ///
+  /// In en, this message translates to:
+  /// **'Multi'**
   String get speedTestMultiThread;
 
+  /// No description provided for @speedTestConnectionsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Multi uses {count} parallel connections to saturate bandwidth'**
   String speedTestConnectionsDesc(Object count);
 
+  /// No description provided for @speedTestProtocolDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'HTTP/3 runs over QUIC (UDP); if unavailable it falls back to HTTP/2, and to HTTP/1.1 if HTTP/2 is unavailable too'**
   String get speedTestProtocolDesc;
 
+  /// No description provided for @speedTestProtocolFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'{protocol} unavailable, fell back to {fallback}'**
   String speedTestProtocolFallback(Object protocol, Object fallback);
 
+  /// No description provided for @speedTestProbing.
+  ///
+  /// In en, this message translates to:
+  /// **'Detecting'**
   String get speedTestProbing;
 
+  /// No description provided for @speedTestRealtime.
+  ///
+  /// In en, this message translates to:
+  /// **'Realtime Throughput'**
   String get speedTestRealtime;
 
+  /// No description provided for @speedTestQuality.
+  ///
+  /// In en, this message translates to:
+  /// **'Network Quality'**
   String get speedTestQuality;
 
+  /// No description provided for @speedTestStreams.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} connections'**
   String speedTestStreams(Object count);
 
+  /// No description provided for @speedTestManual.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual'**
   String get speedTestManual;
 
+  /// No description provided for @speedTestExitNode.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit Node'**
   String get speedTestExitNode;
 
+  /// No description provided for @speedTestRoute.
+  ///
+  /// In en, this message translates to:
+  /// **'Route Rule'**
   String get speedTestRoute;
 
+  /// No description provided for @speedTestCredit.
+  ///
+  /// In en, this message translates to:
+  /// **'Test servers are provided by Speedtest by Ookla.'**
   String get speedTestCredit;
 
+  /// No description provided for @speedTestStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop Test'**
   String get speedTestStop;
 
+  /// No description provided for @trafficStats.
+  ///
+  /// In en, this message translates to:
+  /// **'Traffic Statistics'**
   String get trafficStats;
 
+  /// No description provided for @trafficStatsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'View detailed breakdown of traffic by day, week, or month'**
   String get trafficStatsDesc;
 
+  /// No description provided for @trafficStatsDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Day'**
   String get trafficStatsDay;
 
+  /// No description provided for @trafficStatsWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Week'**
   String get trafficStatsWeek;
 
+  /// No description provided for @trafficStatsMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Month'**
   String get trafficStatsMonth;
 
+  /// No description provided for @trafficStatsTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Traffic'**
   String get trafficStatsTotal;
 
+  /// No description provided for @trafficStatsOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
   String get trafficStatsOverview;
 
+  /// No description provided for @trafficStatsRunningTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Cumulative uptime'**
   String get trafficStatsRunningTime;
 
+  /// No description provided for @trafficStatsHourUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'h'**
   String get trafficStatsHourUnit;
 
+  /// No description provided for @trafficStatsMinuteUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'min'**
   String get trafficStatsMinuteUnit;
 
+  /// No description provided for @trafficStatsTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Traffic Trend'**
   String get trafficStatsTrend;
 
+  /// No description provided for @trafficStatsRuleHits.
+  ///
+  /// In en, this message translates to:
+  /// **'Rule Hits'**
   String get trafficStatsRuleHits;
 
+  /// No description provided for @trafficStatsHitCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} hits'**
   String trafficStatsHitCount(Object count);
 
+  /// No description provided for @trafficStatsRanking.
+  ///
+  /// In en, this message translates to:
+  /// **'Traffic Ranking'**
   String get trafficStatsRanking;
 
+  /// No description provided for @trafficStatsNode.
+  ///
+  /// In en, this message translates to:
+  /// **'Node'**
   String get trafficStatsNode;
 
+  /// No description provided for @trafficStatsDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Traffic statistics not enabled'**
   String get trafficStatsDisabled;
 
+  /// No description provided for @trafficStatsDisabledDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on traffic statistics to record daily usage by domain, process, node, and rule locally.'**
   String get trafficStatsDisabledDesc;
 
+  /// No description provided for @trafficStatsEnable.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Traffic Statistics'**
   String get trafficStatsEnable;
 
+  /// No description provided for @trafficStatsEnableAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable'**
   String get trafficStatsEnableAction;
 
+  /// No description provided for @trafficStatsDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Detailed Breakdown'**
   String get trafficStatsDetail;
 
+  /// No description provided for @trafficStatsDetailDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Record per-domain, process, node, profile, and rule traffic'**
   String get trafficStatsDetailDesc;
 
+  /// No description provided for @trafficStatsSiteIcon.
+  ///
+  /// In en, this message translates to:
+  /// **'Website Icons'**
   String get trafficStatsSiteIcon;
 
+  /// No description provided for @trafficStatsSiteIconDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Fetch website favicons for domain rankings locally'**
   String get trafficStatsSiteIconDesc;
 
+  /// No description provided for @trafficStatsRetention.
+  ///
+  /// In en, this message translates to:
+  /// **'Data Retention'**
   String get trafficStatsRetention;
 
-  String trafficStatsMonths(Object count);
+  /// No description provided for @trafficStatsMonths.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} months'**
+  String trafficStatsMonths(num count);
 
+  /// No description provided for @trafficStatsSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Statistics Settings'**
   String get trafficStatsSettings;
 
+  /// No description provided for @trafficStatsClearTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to clear all saved traffic statistics data?'**
   String get trafficStatsClearTip;
 
+  /// No description provided for @trafficStatsSince.
+  ///
+  /// In en, this message translates to:
+  /// **'Since {date}'**
   String trafficStatsSince(Object date);
 
+  /// No description provided for @trafficStatsDetailOffTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Detailed breakdown is turned off. Only total and hourly traffic are recorded.'**
   String get trafficStatsDetailOffTip;
 
+  /// No description provided for @trafficStatsRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
   String get trafficStatsRefresh;
 
+  /// No description provided for @ipQuery.
+  ///
+  /// In en, this message translates to:
+  /// **'IP Lookup'**
   String get ipQuery;
 
+  /// No description provided for @otherProfiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Other profiles'**
   String get otherProfiles;
 
+  /// No description provided for @customIcon.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom icon'**
   String get customIcon;
 
+  /// No description provided for @remainingShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Left'**
   String get remainingShort;
 
+  /// No description provided for @expired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
   String get expired;
 
+  /// No description provided for @localFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Local file'**
   String get localFile;
 
+  /// No description provided for @lastEdited.
+  ///
+  /// In en, this message translates to:
+  /// **'Last edited'**
   String get lastEdited;
 
+  /// No description provided for @builtIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Built-in'**
   String get builtIn;
 
+  /// No description provided for @projectUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Project URL'**
   String get projectUrl;
 }
 
@@ -7333,13 +8677,8 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) => <String>[
-    'en',
-    'ja',
-    'ko',
-    'ru',
-    'zh',
-  ].contains(locale.languageCode);
+  bool isSupported(Locale locale) =>
+      <String>['en', 'ja', 'ko', 'ru', 'zh'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;

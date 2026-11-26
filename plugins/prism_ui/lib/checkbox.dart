@@ -17,6 +17,9 @@ class Checkbox extends StatelessWidget {
 
   static const _target = 48.0;
   static const _box = 18.0;
+
+  /// What the tap target leaves on each side of the drawn box.
+  static const edgeInset = (_target - _box) / 2;
   static const _pressRadius = _target / 2 - 4;
   static const _duration = Duration(milliseconds: 150);
 

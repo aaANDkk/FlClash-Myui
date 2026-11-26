@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
-import 'package:fl_clash/views/dashboard/style.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -85,6 +84,7 @@ class _IpRiskSheetState extends ConsumerState<IpRiskSheet>
   @override
   Widget build(BuildContext context) {
     final l = context.appLocalizations;
+    final cs = context.colorScheme;
     final proxyIpState =
         routeSettled && widget.ip.isEmpty && widget.proxyName != null
         ? ref.watch(proxyExitIpProvider(widget.proxyName!))
@@ -121,6 +121,9 @@ class _IpRiskSheetState extends ConsumerState<IpRiskSheet>
                 (attributionState?.isLoading ?? false)));
     final hidden = ref.watch(appSettingProvider.select((s) => s.hideIp));
     final switchKey = widget.proxyName ?? effectiveIp;
+    final ipLabel = widget.outbound && widget.proxyName == null
+        ? l.outboundIpAddress
+        : l.ipAddress;
     return Theme(
       data: Theme.of(context).copyWith(visualDensity: VisualDensity.standard),
       child: Scaffold(
@@ -140,7 +143,6 @@ class _IpRiskSheetState extends ConsumerState<IpRiskSheet>
           builder: (context) => NullStatusSwitcher(
             key: ValueKey(switchKey),
             isLoading: !_retrying && isLoading,
-            holdsArrival: false,
             loadingStatus: const Center(child: ActivityIndicator.page()),
             child: ListView(
               padding: EdgeInsets.fromLTRB(
@@ -159,12 +161,10 @@ class _IpRiskSheetState extends ConsumerState<IpRiskSheet>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          l.ipAddress,
+                          ipLabel,
                           style: AppTextStyle.footnote
                               .of(context)
-                              .copyWith(
-                                color: context.colorScheme.onSurfaceVariant,
-                              ),
+                              .copyWith(color: cs.onSurfaceVariant),
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -175,6 +175,7 @@ class _IpRiskSheetState extends ConsumerState<IpRiskSheet>
                               ? AppTextStyle.headline
                                     .of(context, emphasized: true)
                                     .toJetBrainsMono
+                                    .copyWith(color: cs.success)
                               : AppTextStyle.headline.of(
                                   context,
                                   emphasized: true,
@@ -257,17 +258,17 @@ class _IpRiskSheetState extends ConsumerState<IpRiskSheet>
         children: [
           RepaintBoundary(child: RiskScoreCard(risk: risk)),
           const SizedBox(height: 12),
-          if (risk.checks.isNotEmpty) ...[
-            RepaintBoundary(child: RiskChecksCard(risk: risk)),
-            const SizedBox(height: 12),
-          ],
           RepaintBoundary(
-            child: _LocationCard(
+            child: IpAttributionCard(
               risk: risk,
               attribution: attribution,
               hidden: hidden,
             ),
           ),
+          if (risk.checks.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            RepaintBoundary(child: RiskChecksCard(risk: risk)),
+          ],
           ListFooter(text: '${l.ipRiskSource} ${l.ipRiskSources}'),
         ],
       );
@@ -312,150 +313,6 @@ class _IpRiskSheetState extends ConsumerState<IpRiskSheet>
                       ),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LocationCard extends StatelessWidget {
-  const _LocationCard({
-    required this.risk,
-    required this.attribution,
-    required this.hidden,
-  });
-  final IpRisk risk;
-  final IpLocateInfo? attribution;
-  final bool hidden;
-
-  Widget _value(
-    BuildContext context,
-    String title,
-    String value, {
-    bool emoji = false,
-  }) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Text(
-        title,
-        style: AppTextStyle.footnote
-            .of(context)
-            .copyWith(color: context.colorScheme.onSurfaceVariant),
-      ),
-      const SizedBox(height: 6),
-      if (emoji)
-        EmojiText(value, style: AppTextStyle.body.of(context, emphasized: true))
-      else
-        Text(
-          value,
-          style: hidden && value.contains('*****')
-              ? AppTextStyle.body.of(context, emphasized: true).toJetBrainsMono
-              : AppTextStyle.body.of(context, emphasized: true),
-        ),
-    ],
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    final l = context.appLocalizations;
-    final cs = context.colorScheme;
-    final country = risk.countryLabel ?? '';
-    final place = risk.placeLabel ?? '';
-    final hasLocation = country.isNotEmpty || place.isNotEmpty;
-    final info = attribution?.ip == risk.ip ? attribution : null;
-    final company = info?.company ?? '';
-    final network = info?.network ?? '';
-    final asn = info?.asn ?? '';
-    final showAsnPill = asn.isNotEmpty;
-    final rows = <Widget>[
-      if (hasLocation || showAsnPill)
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (hasLocation)
-                  Expanded(
-                    child: Text(
-                      country.isNotEmpty ? l.ipRiskLocation : l.ipRiskCity,
-                      style: AppTextStyle.footnote
-                          .of(context)
-                          .copyWith(color: cs.onSurfaceVariant),
-                    ),
-                  )
-                else
-                  const Spacer(),
-                if (showAsnPill) ...[
-                  const SizedBox(width: 12),
-                  DecoratedBox(
-                    decoration: ShapeDecoration(
-                      color: DashboardColors.of(context).tone,
-                      shape: AppShape.full,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 9,
-                        vertical: 3,
-                      ),
-                      child: Text(
-                        asn,
-                        style: AppTextStyle.footnote
-                            .of(context, emphasized: true)
-                            .toTabular
-                            .copyWith(color: cs.onSurfaceVariant),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            if (country.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              EmojiText(
-                country,
-                style: AppTextStyle.headline.of(context, emphasized: true),
-              ),
-            ],
-            if (place.isNotEmpty) ...[
-              SizedBox(height: country.isNotEmpty ? 4 : 6),
-              Text(
-                place,
-                style: country.isNotEmpty
-                    ? AppTextStyle.subheadline
-                          .of(context)
-                          .copyWith(color: cs.onSurfaceVariant)
-                    : AppTextStyle.body.of(context, emphasized: true),
-              ),
-            ],
-          ],
-        ),
-      if (company.isNotEmpty) _value(context, l.isp, company),
-      if (network.isNotEmpty && network != company)
-        _value(context, l.ipRiskAsn, network),
-      if (!hidden && risk.hostname.isNotEmpty)
-        _value(context, l.ipRiskHostname, risk.hostname),
-    ];
-    if (rows.isEmpty) return const SizedBox.shrink();
-    return SelectionArea(
-      child: Card(
-        radius: AppCorner.xl,
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final (index, row) in rows.indexed) ...[
-              if (index > 0) ...[
-                const SizedBox(height: 14),
-                Divider(
-                  height: 1,
-                  thickness: Divider.separatorThicknessOf(context),
-                ),
-                const SizedBox(height: 14),
-              ],
-              row,
-            ],
           ],
         ),
       ),

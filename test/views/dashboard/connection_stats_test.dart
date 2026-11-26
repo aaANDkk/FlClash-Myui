@@ -1,24 +1,22 @@
 import 'package:fl_clash/core/controller.dart';
 import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/enum/enum.dart';
-import 'package:fl_clash/features/connection/tracker_info_list.dart';
+import 'package:fl_clash/features/connection/connection.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/views/connection/requests.dart';
 import 'package:fl_clash/views/dashboard/widgets/connection_stats.dart';
-import 'package:fl_clash/views/dns_queries.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../helpers/route_cover.dart';
 import '../../helpers/test_app.dart';
 import '../../helpers/test_profiles.dart';
 import '../../helpers/host_scaffold.dart';
-import '../../helpers/core_connections.dart';
-import 'package:fl_clash/features/connection/tracker_speed_ranker.dart';
 
 class _MockCore extends Mock implements CoreHandlerInterface {}
 
@@ -126,6 +124,53 @@ void main() {
     await teardownCard(tester);
   });
 
+  Future<void> holdCounts(WidgetTester tester) async {
+    container.read(runTimeProvider.notifier).value = 1000;
+    await pumpCard(tester);
+    container.read(requestCountProvider.notifier).value = 7;
+    await tester.pump();
+    expect(find.text('7'), findsOneWidget);
+
+    container.read(requestCountProvider.notifier).value = 1284;
+    container.read(dnsQueryCountProvider.notifier).value = 42;
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.text('1,284'), findsNothing);
+  }
+
+  void expectHeldCountsShown() {
+    expect(find.text('1,284'), findsOneWidget);
+    expect(find.text('42'), findsOneWidget);
+  }
+
+  testWidgets('while running, the counts after the first wait for the next '
+      'traffic sample', (tester) async {
+    await holdCounts(tester);
+    container.read(trafficsProvider.notifier).addTraffic(const Traffic());
+    await tester.pump();
+    expectHeldCountsShown();
+
+    await teardownCard(tester);
+  });
+
+  testWidgets('held counts show once the run stops', (tester) async {
+    await holdCounts(tester);
+    container.read(runTimeProvider.notifier).value = null;
+    await tester.pump();
+    expectHeldCountsShown();
+
+    await teardownCard(tester);
+  });
+
+  testWidgets('held counts show when no traffic sample comes', (tester) async {
+    await holdCounts(tester);
+    await tester.pump(const Duration(milliseconds: 800));
+    expect(find.text('1,284'), findsNothing);
+    await tester.pump(const Duration(milliseconds: 100));
+    expectHeldCountsShown();
+
+    await teardownCard(tester);
+  });
+
   testWidgets('a count too long for a third of a phone is shortened in any '
       'locale', (tester) async {
     when(() => core.getConnectionCount()).thenAnswer((_) async => 99999);
@@ -142,15 +187,20 @@ void main() {
   testWidgets('every count opens its own list in a sheet', (tester) async {
     await pumpCard(tester);
 
-    for (final (label, view) in [
-      ('Live connections', RequestsView),
-      ('Recent requests', RequestsView),
-      ('DNS queries', DnsQueriesView),
+    for (final (label, list) in [
+      ('Live connections', ConditionFilterRow<TrackerInfo, ConnectionStatus>),
+      ('Recent requests', ConditionFilterRow<TrackerInfo, ConnectionStatus>),
+      ('DNS queries', ConditionFilterRow<DnsQuery, DnsStatus>),
     ]) {
       await tester.tap(_stat(label));
       await tester.pumpAndSettle();
 
-      expect(find.byType(view), findsOneWidget);
+      final view = find.byType(RequestsView);
+      expect(view, findsOneWidget);
+      expect(
+        find.descendant(of: view, matching: find.byType(list)),
+        findsOneWidget,
+      );
       expect(
         tester.getTopLeft(find.byType(SheetDragHandle)).dy,
         closeTo(_mobileSize.height * (1 - snapSheetDetents.first), 1),
@@ -158,66 +208,13 @@ void main() {
 
       await tester.tapAt(const Offset(200, 20));
       await tester.pumpAndSettle();
-      expect(find.byType(view), findsNothing);
+      expect(view, findsNothing);
     }
 
     await teardownCard(tester);
   });
 
-  testWidgets('a sheet switching feeds opens each at its own start', (
-    tester,
-  ) async {
-    whenConnections<RankedTrackerInfos>(
-      core,
-      () async => [for (var i = 0; i < 100; i++) _request(1000 + i)],
-    );
-    final notifier = container.read(requestsProvider.notifier);
-    for (var i = 0; i < 100; i++) {
-      notifier.addRequest(_request(i));
-    }
-    await pumpCard(tester);
-    await tester.tap(_stat('Recent requests'));
-    await tester.pumpAndSettle();
-    ScrollPosition position() => tester
-        .state<ScrollableState>(
-          find
-              .descendant(
-                of: find.byType(RequestsView),
-                matching: find.byWidgetPredicate(
-                  (widget) =>
-                      widget is Scrollable &&
-                      axisDirectionToAxis(widget.axisDirection) ==
-                          Axis.vertical,
-                ),
-              )
-              .first,
-        )
-        .position;
-    expect(position().pixels, position().maxScrollExtent);
-
-    await tester.tap(find.text('Recent requests').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Running'));
-    await tester.pumpAndSettle();
-    await tester.pump();
-    await tester.pump();
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 2));
-    expect(position().pixels, 0);
-
-    await tester.tap(find.text('Running').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Recent requests').last);
-    await tester.pumpAndSettle();
-    await tester.pump();
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-    expect(position().pixels, position().maxScrollExtent);
-
-    await teardownCard(tester);
-  });
-
-  testWidgets('the requests sheet keeps the newest request at its top while '
+  testWidgets('the requests sheet keeps the newest request at its end while '
       'it is dragged and requests arrive', (tester) async {
     final notifier = container.read(requestsProvider.notifier);
     var next = 0;
@@ -228,7 +225,7 @@ void main() {
     await tester.tap(_stat('Recent requests'));
     await tester.pumpAndSettle();
     final list = find.descendant(
-      of: find.byType(TrackerInfoList),
+      of: find.byType(RecordFeedView<String>),
       matching: find.byType(Scrollable),
     );
     ScrollPosition position() =>
@@ -249,9 +246,28 @@ void main() {
     }
     await gesture.up();
     await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
 
     expect(position().pixels, position().maxScrollExtent);
     expect(find.textContaining('host-${next - 1}.test'), findsWidgets);
+
+    await teardownCard(tester);
+  });
+
+  testWidgets('a page pushed over the card and popped rebuilds none of it', (
+    tester,
+  ) async {
+    when(() => core.getConnectionCount()).thenAnswer((_) async => 34);
+    await pumpCard(tester);
+
+    expect(
+      await rebuildsWhileCovered<ConnectionStatsCard>(
+        tester,
+        find.byType(ConnectionStatsCard),
+      ),
+      0,
+    );
 
     await teardownCard(tester);
   });

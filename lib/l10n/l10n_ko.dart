@@ -189,6 +189,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get autoCheckUpdate => '업데이트 자동 확인';
 
   @override
+  String get updateChannel => '업데이트 채널';
+
+  @override
+  String get updateChannelStable => '정식 버전';
+
+  @override
+  String get updateChannelPre => '프리릴리스';
+
+  @override
   String get checkCertificate => 'TLS 인증서 검증';
 
   @override
@@ -488,7 +497,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get externalController => '외부 컨트롤러';
 
   @override
-  String get externalControllerDesc => '외부 컨트롤러를 사용하면 9090 포트로 코어를 제어할 수 있습니다.';
+  String get externalControllerDesc => '외부 컨트롤러는 9090 포트에서 수신합니다.';
 
   @override
   String get externalControllerSecret => '외부 컨트롤러 시크릿';
@@ -504,9 +513,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get startupAndBackground => '시작 및 백그라운드';
-
-  @override
-  String get requestsAndUpdates => '요청 및 업데이트';
 
   @override
   String get logsAndDiagnostics => '로그 및 진단';
@@ -543,6 +549,236 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get liveConnections => '실시간 연결';
+
+  @override
+  String get speed => '속도';
+
+  @override
+  String get closeActiveConnections => '활성 연결 모두 닫기';
+
+  @override
+  String closeActiveConnectionsTip(int count) {
+    return '활성 연결 $count개를 모두 닫을까요? 사용 중인 앱은 스스로 다시 연결하지만 진행 중인 다운로드나 통화는 끊길 수 있습니다.';
+  }
+
+  @override
+  String get connectionsAll => '전체';
+
+  @override
+  String get connectionsActive => '활성';
+
+  @override
+  String get connectionsFailed => '실패';
+
+  @override
+  String get connectionsDecrypted => '복호화됨';
+
+  @override
+  String get connectionRuleGlobal => '전역 모드';
+
+  @override
+  String get connectionRuleNone => '규칙 없음';
+
+  @override
+  String get failureRefused => '거부됨';
+
+  @override
+  String get failureUnreachable => '도달 불가';
+
+  @override
+  String get failureDns => 'DNS 확인 실패';
+
+  @override
+  String get dnsNoSuchDomain => '도메인이 존재하지 않음';
+
+  @override
+  String get dnsServerFailure => '업스트림 오류';
+
+  @override
+  String get dnsRefused => '업스트림이 거부함';
+
+  @override
+  String get dnsTimedOut => '쿼리 시간 초과';
+
+  @override
+  String get dnsBlockedByRule => '규칙으로 차단됨';
+
+  @override
+  String get failureHandshake => '핸드셰이크 실패';
+
+  @override
+  String get failureOther => '기타 오류';
+
+  @override
+  String get connectionClosed => '종료됨';
+
+  @override
+  String get timeline => '타임라인';
+
+  @override
+  String get connectionInfo => '정보';
+
+  @override
+  String get decryption => '복호화';
+
+  @override
+  String connectionRuleIndex(Object number) {
+    return '$number번째';
+  }
+
+  @override
+  String get handshake => '핸드셰이크';
+
+  @override
+  String get now => '지금';
+
+  @override
+  String get mitmCertificateRefused => '클라이언트가 인증서를 거부함';
+
+  @override
+  String get connectionEndLocal => '로컬에서 닫힘';
+
+  @override
+  String get connectionEndRemote => '원격에서 닫힘';
+
+  @override
+  String get connectionEndFinished => '종료됨';
+
+  @override
+  String get connectionEndReset => '재설정됨';
+
+  @override
+  String get connectionEndCore => '코어가 닫음';
+
+  @override
+  String get fakeIpMapping => 'fake-ip 매핑';
+
+  @override
+  String get dnsFromHosts => 'hosts에서';
+
+  @override
+  String get condition => '조건';
+
+  @override
+  String get addCondition => '조건 추가';
+
+  @override
+  String get conditionField => '필드';
+
+  @override
+  String get conditionContains => '포함';
+
+  @override
+  String get conditionEquals => '같음';
+
+  @override
+  String get conditionTip =>
+      '같은 필드의 조건은 하나만 맞으면 되고, 다른 필드의 조건은 모두 맞아야 합니다. 검색창도 같은 형식을 씁니다. 예: host:github.com -app:chrome';
+
+  @override
+  String get conditionNotContains => '포함 안 함';
+
+  @override
+  String get conditionNotEquals => '같지 않음';
+
+  @override
+  String get editCondition => '조건 편집';
+
+  @override
+  String conditionValuesIn(String field) {
+    return '현재 연결의 $field';
+  }
+
+  @override
+  String conditionShows(String count) {
+    return '연결 $count개로 좁혀집니다';
+  }
+
+  @override
+  String get conditionRows => '같은 줄은 하나만, 모든 줄은 모두 충족';
+
+  @override
+  String get clearAll => '모두 지우기';
+
+  @override
+  String get conditionOr => '또는';
+
+  @override
+  String get selectConnection => '연결을 선택하세요';
+
+  @override
+  String get selectConnectionHint => '타임라인, HTTP 요청, 연결 정보가 여기에 표시됩니다';
+
+  @override
+  String get selectDnsQuery => '쿼리를 선택하세요';
+
+  @override
+  String get selectDnsQueryHint => '응답, 업스트림, 관련 연결이 여기에 표시됩니다';
+
+  @override
+  String get relatedConnections => '관련 연결';
+
+  @override
+  String get upstream => '업스트림';
+
+  @override
+  String get dnsQueryFields => '쿼리';
+
+  @override
+  String dnsQueryAskedBy(String initiator) {
+    return '$initiator에서 요청';
+  }
+
+  @override
+  String get dnsConditionTip => '같은 필드의 조건은 하나만 맞으면 되고, 다른 필드의 조건은 모두 맞아야 합니다.';
+
+  @override
+  String dnsConditionValuesIn(String field) {
+    return '현재 쿼리의 $field';
+  }
+
+  @override
+  String dnsConditionShows(String count) {
+    return '쿼리 $count개로 좁혀집니다';
+  }
+
+  @override
+  String get connectionPath => '경로';
+
+  @override
+  String get processPath => '프로세스 경로';
+
+  @override
+  String get proxyNode => '프록시 노드';
+
+  @override
+  String get closingTime => '종료 시간';
+
+  @override
+  String processUid(int uid) {
+    return 'UID $uid';
+  }
+
+  @override
+  String get onlyThisApp => '이 앱만 보기';
+
+  @override
+  String get onlyThisDomain => '이 도메인만 보기';
+
+  @override
+  String get hideThisHost => '이 호스트 숨기기';
+
+  @override
+  String get copySummary => '요약 복사';
+
+  @override
+  String get copyDomain => '도메인 복사';
+
+  @override
+  String get copyAnswers => '응답 복사';
+
+  @override
+  String get viewHttp => 'HTTP 보기';
 
   @override
   String get inbound => '인바운드';
@@ -755,7 +991,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get writeToSystem => '시스템에 기록';
 
   @override
-  String get writeToSystemDesc => '시스템에 기록하면 시스템 시계도 설정합니다. Android에서는 무시됩니다.';
+  String get writeToSystemDesc => '시스템에 기록은 Android에서 적용되지 않습니다.';
 
   @override
   String get sniffer => '스니퍼';
@@ -765,9 +1001,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get forceDnsMapping => 'DNS 매핑 강제';
-
-  @override
-  String get forceDnsMappingDesc => 'DNS 매핑 강제는 DNS 매핑에서 도메인을 얻은 연결도 스니핑합니다.';
 
   @override
   String get parsePureIp => '순수 IP 분석';
@@ -800,8 +1033,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get addOverrideEntry => '덮어쓰기 항목 추가';
 
   @override
-  String get dnsOverrideDesc =>
-      '여기에 추가한 항목은 모든 URL 및 파일 프로필의 DNS를 대체합니다. 추가하지 않은 항목은 프로필 자체 설정을 유지합니다. 사용자 지정 프로필은 내용에서 DNS를 설정합니다.';
+  String get dnsOverrideDesc => '추가한 항목은 URL 및 파일 프로필의 DNS를 대체합니다.';
 
   @override
   String get settingEntries => '설정';
@@ -831,8 +1063,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get respectRules => '규칙 준수';
 
   @override
-  String get respectRulesDesc =>
-      '규칙 준수는 DNS 연결을 규칙에 따라 라우팅하며 Proxy Server Nameserver가 필요합니다.';
+  String get respectRulesDesc => '규칙 준수에는 Proxy Server Nameserver가 필요합니다.';
 
   @override
   String get dnsMode => 'DNS 모드';
@@ -1070,9 +1301,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get filter => '필터';
-
-  @override
-  String get groupBy => '분류';
 
   @override
   String get hideTimeoutProxies => '시간 초과된 프록시 숨기기';
@@ -2310,9 +2538,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get pickFromAlbum => '앨범에서 선택';
 
   @override
-  String get closeConnections => '연결 종료';
-
-  @override
   String get scrollToSelected => '선택 항목으로 스크롤';
 
   @override
@@ -2332,6 +2557,24 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get noSearchResults => '일치하는 결과 없음';
+
+  @override
+  String get noActiveConnections => '활성 연결이 없습니다';
+
+  @override
+  String get noFailedConnections => '실패한 연결이 없습니다';
+
+  @override
+  String get noFailedDnsQueries => '실패한 DNS 쿼리가 없습니다';
+
+  @override
+  String get noCachedDnsQueries => '캐시에서 응답한 DNS 쿼리가 없습니다';
+
+  @override
+  String get noFailedHttpRequests => '실패한 HTTP 요청이 없습니다';
+
+  @override
+  String get noRewrittenHttpRequests => '재작성된 HTTP 요청이 없습니다';
 
   @override
   String get showPassword => '비밀번호 표시';
@@ -2355,9 +2598,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get outboundIp => '아웃바운드 IP';
-
-  @override
-  String get outboundIpAddress => '아웃바운드 IP 주소';
 
   @override
   String get ipAddress => 'IP 주소';
@@ -2695,8 +2935,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get routingMark => '라우팅 마크';
 
   @override
-  String get strictRouteDesc =>
-      '엄격한 라우팅은 DNS 등의 트래픽이 TUN을 우회하지 못하게 하며, IPv6가 꺼져 있으면 이 기기의 IPv6 연결을 차단합니다.';
+  String get strictRouteDesc => 'IPv6가 꺼져 있으면 엄격한 라우팅이 이 기기의 IPv6 연결도 차단합니다.';
 
   @override
   String get initFailed => '시작 실패';
@@ -2728,7 +2967,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get disableIcmpForwardingDesc =>
-      'ICMP 전달을 끄면 TUN이 ping에 직접 응답하므로 ping에 실제 지연 시간이 표시되지 않습니다.';
+      'ICMP 전달을 끄면 ping에 실제 지연 시간이 표시되지 않습니다.';
 
   @override
   String get excludeInterface => '제외할 인터페이스';
@@ -2737,8 +2976,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get includeInterface => '포함할 인터페이스';
 
   @override
-  String get includeInterfaceDesc =>
-      '포함할 인터페이스로 들어오는 트래픽만 TUN을 거치며, 제외할 인터페이스는 더 이상 적용되지 않습니다.';
+  String get includeInterfaceDesc => '설정하면 제외할 인터페이스는 더 이상 적용되지 않습니다.';
 
   @override
   String get includeUid => '포함할 사용자 ID';
@@ -2764,15 +3002,14 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get tunOverrideDesc =>
-      '여기에 추가한 항목은 모든 프로필의 TUN 설정을 대체합니다. 추가하지 않은 항목은 프로필 자체 설정을 유지합니다. 사용자 지정 프로필이 직접 추가한 항목이 우선합니다.';
+      '추가한 항목은 모든 프로필을 덮어쓰며, 사용자 지정 프로필 자체 항목이 우선합니다.';
 
   @override
-  String get generalOverrideDesc =>
-      '여기에 추가한 항목은 모든 프로필의 해당 설정을 대체합니다. 추가하지 않은 항목은 프로필 자체 설정을 유지하며, 프로필에 없으면 코어 기본값을 사용합니다.';
+  String get generalOverrideDesc => '추가한 항목은 모든 프로필의 해당 설정을 대체합니다.';
 
   @override
   String get profileTunSettingsDesc =>
-      '이 프로필에만 적용되며 네트워크 설정의 TUN 덮어쓰기 항목보다 우선합니다.';
+      '이 프로필에만 적용되며 네트워크 설정의 TUN 덮어쓰기보다 우선합니다.';
 
   @override
   String settingsCount(num count) {
@@ -3168,26 +3405,35 @@ class AppLocalizationsKo extends AppLocalizations {
   String get httpCapture => 'HTTP 캡처';
 
   @override
-  String get httpCaptureDesc =>
-      '호스트 이름에 나열한 호스트의 요청을 기록하며, 연결 세부 정보에서 볼 수 있습니다. 기록은 메모리에만 보관됩니다.';
-
-  @override
-  String get httpCaptureNoHosts =>
-      '나열된 호스트가 없어 아무것도 기록되지 않습니다. MITM 페이지의 호스트 이름이나 연결 세부 정보에서 추가하세요.';
+  String get httpCaptureNoHosts => '호스트 이름에 호스트를 추가할 때까지 아무것도 기록되지 않습니다.';
 
   @override
   String get httpCaptureLimit => '최대 기록 수';
 
   @override
-  String httpCaptureLimitDesc(Object memory, Object body) {
-    return '이 개수에 도달하거나 메모리 $memory를 채우면 가장 오래된 기록부터 삭제됩니다. 본문은 앞부분 $body만 보관합니다.';
-  }
+  String get httpCaptureMemoryOnly => '메모리에만 보관';
 
   @override
   String get httpRequests => 'HTTP 요청';
 
   @override
+  String httpRequestCount(int count) {
+    return 'HTTP 요청 $count개';
+  }
+
+  @override
+  String latestHttpRequest(String request) {
+    return '최근 $request';
+  }
+
+  @override
   String get httpRequestsMissing => '캡처를 켜기 전에 보냈거나 이미 지워진 요청은 표시되지 않습니다.';
+
+  @override
+  String get noHttpRequests => '아직 요청이 없습니다';
+
+  @override
+  String get noHttpRequestsHint => '이 연결은 복호화되었으며, 그 위의 HTTP 요청이 여기에 표시됩니다';
 
   @override
   String get httpRequestCleared => '이 요청의 기록은 지워졌습니다';
@@ -3205,7 +3451,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get originalUrl => '원래 URL';
 
   @override
-  String get timeToFirstByte => '첫 바이트까지 시간';
+  String get httpTiming => '소요 시간';
+
+  @override
+  String get httpWaiting => '응답 대기';
+
+  @override
+  String get httpReceiving => '수신';
 
   @override
   String get requestBody => '요청 본문';
@@ -3338,8 +3590,7 @@ class AppLocalizationsKo extends AppLocalizations {
       '사용자 인증서를 신뢰하는 앱(주로 브라우저)만 복호화됩니다.';
 
   @override
-  String get mitmAndroidRootDesc =>
-      '루팅하지 않으면 사용자 인증서를 신뢰하는 앱(주로 브라우저)만 복호화할 수 있습니다. 루팅하면 모든 앱을 복호화할 수 있습니다.';
+  String get mitmAndroidRootDesc => '루팅하지 않으면 사용자 인증서를 신뢰하는 앱만 복호화됩니다.';
 
   @override
   String get mitmCertificateLinuxTip => 'Flatpak 브라우저에는 내보낸 인증서를 직접 가져와야 합니다.';
@@ -3500,11 +3751,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mitmIgnoredLines => '무시된 줄';
 
   @override
-  String get mitmModuleRulesDesc => '라우팅 규칙은 프로필 자체 규칙보다 앞에 적용됩니다.';
+  String get mitmModuleRulesDesc => '프로필 자체 규칙보다 먼저 적용됩니다.';
 
   @override
   String get mitmRequestRulesDesc =>
-      '이 모듈의 URL-REGEX 및 USER-AGENT 규칙은 URL 재작성으로 바뀌어 요청마다 판단됩니다. 평문 HTTP는 모든 요청이, HTTPS는 MITM 호스트 이름 목록에 있는 연결만 대상입니다.';
+      'URL-REGEX 및 USER-AGENT 규칙은 URL 재작성으로 동작하며, HTTPS는 목록의 호스트에만 적용됩니다.';
 
   @override
   String mitmModuleSystemTip(Object system) {
@@ -3525,8 +3776,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mitmModuleRiskTitle => '이 모듈을 켤까요?';
 
   @override
-  String get mitmNetworkRisk =>
-      '구성을 생성할 때 아래 네트워크 설정을 변경하며, FlClash에서 같은 항목에 한 설정보다 우선합니다. 모듈을 끄거나 삭제하면 원래대로 돌아갑니다.';
+  String get mitmNetworkRisk => '켜져 있는 동안 아래 네트워크 설정을 덮어씁니다.';
 
   @override
   String mitmSkipVerifyRisk(Object hosts) {
@@ -3540,7 +3790,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get mitmClientSourceTunTip =>
-      'TUN이 켜져 있으면 이 기기의 앱은 TUN 주소에서 연결합니다. 목록에 그 주소가 없으면 앱의 트래픽은 복호화되지 않습니다.';
+      'TUN이 켜져 있으면 이 기기의 앱을 복호화하려면 TUN 주소를 포함하세요.';
 
   @override
   String get mitmNetworkChanges => '네트워크 설정';
@@ -3765,6 +4015,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get updateDownloadFailed => '업데이트를 다운로드할 수 없습니다.';
 
   @override
+  String get updateFileMissing => '릴리스에 업데이트 파일이 없습니다. 릴리스 페이지에서 직접 다운로드하세요.';
+
+  @override
   String get defaultNameserverDesc =>
       '다른 DNS 서버의 도메인을 확인합니다. IP 주소만 입력할 수 있습니다.';
 
@@ -3857,6 +4110,65 @@ class AppLocalizationsKo extends AppLocalizations {
   String get vpnServiceStartFailed => 'VPN 서비스를 시작하지 못했습니다.';
 
   @override
+  String get requestPath => '경로';
+
+  @override
+  String get statusCode => '상태 코드';
+
+  @override
+  String get contentKind => '유형';
+
+  @override
+  String get httpRewritten => '재작성됨';
+
+  @override
+  String get httpAnswerReject => '거부됨';
+
+  @override
+  String get httpAnswerRedirect => '리디렉션';
+
+  @override
+  String get httpAnswerScript => '스크립트 응답';
+
+  @override
+  String get httpBodyText => '텍스트';
+
+  @override
+  String get httpBodyImage => '이미지';
+
+  @override
+  String get regexReplace => '정규식 치환';
+
+  @override
+  String get owningConnection => '소속 연결';
+
+  @override
+  String get selectHttpRequest => '요청을 선택하세요';
+
+  @override
+  String get selectHttpRequestHint => '요청, 응답, 소요 시간이 여기에 표시됩니다';
+
+  @override
+  String httpConditionShows(String count) {
+    return '요청 $count개로 좁혀집니다';
+  }
+
+  @override
+  String httpConditionValuesIn(String field) {
+    return '현재 요청의 $field';
+  }
+
+  @override
+  String get httpConditionTip =>
+      '같은 필드의 조건은 하나만 맞으면 되고, 다른 필드의 조건은 모두 맞아야 합니다.';
+
+  @override
+  String get outboundIpAddress => '아웃바운드 IP 주소';
+
+  @override
+  String get config => '구성';
+
+  @override
   String get advanced => '고급';
 
   @override
@@ -3896,7 +4208,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dialerProxyDesc => '다이얼러 프록시는 NTP 서버에 연결할 때 사용하는 아웃바운드입니다.';
 
   @override
-  String get snifferStatusDesc => '스니퍼는 TLS, HTTP, QUIC 트래픽에서 도메인을 읽어 규칙이 일치할 수 있게 합니다.';
+  String get snifferStatusDesc =>
+      '스니퍼는 TLS, HTTP, QUIC 트래픽에서 도메인을 읽어 규칙이 일치할 수 있게 합니다.';
 
   @override
   String get overrideDestinationDesc => '대상 덮어쓰기는 원래 주소 대신 스니핑한 도메인으로 연결합니다.';
@@ -3908,7 +4221,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get skipDomainDesc => '건너뛸 도메인 목록에 있는 스니핑된 도메인은 사용하지 않습니다.';
 
   @override
-  String get fakeipFilterModeDesc => 'Fake-IP 필터 모드에서 블랙리스트는 일치 항목을 제외하고, 화이트리스트는 일치 항목에만 가짜 IP를 사용하며, 규칙은 규칙에 따라 일치시킵니다.';
+  String get fakeipFilterModeDesc =>
+      'Fake-IP 필터 모드에서 블랙리스트는 일치 항목을 제외하고, 화이트리스트는 일치 항목에만 가짜 IP를 사용하며, 규칙은 규칙에 따라 일치시킵니다.';
 
   @override
   String get ipv6InboundDesc => 'IPv6를 켜면 VPN이 IPv6 인바운드를 허용합니다.';
@@ -3935,7 +4249,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get customProfileResources => '사용자 지정 프로필 리소스';
 
   @override
-  String get customProfileResourcesDesc => '사용자 지정 프로필 리소스는 직접 추가해 사용자 지정 프로필에서 쓰는 프록시, 규칙 공급자, 필터, 아이콘 세트입니다.';
+  String get customProfileResourcesDesc =>
+      '사용자 지정 프로필 리소스는 직접 추가해 사용자 지정 프로필에서 쓰는 프록시, 규칙 공급자, 필터, 아이콘 세트입니다.';
 
   @override
   String get batteryOptimizationDesc => '배터리 최적화를 무시하면 앱이 백그라운드에서 계속 실행됩니다.';
@@ -3947,13 +4262,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get blockConnection => '연결 차단';
 
   @override
-  String get proxyNode => '프록시 노드';
+  String get bypassPrivateRouteDesc =>
+      '사설 주소 우회를 켜면 LAN, 루프백, 멀티캐스트 주소는 TUN을 거치지 않습니다.';
 
   @override
-  String get bypassPrivateRouteDesc => '사설 주소 우회를 켜면 LAN, 루프백, 멀티캐스트 주소는 TUN을 거치지 않습니다.';
-
-  @override
-  String get excludeInterfaceDesc => 'docker0와 같이 제외할 인터페이스로 들어오는 트래픽은 TUN을 거치지 않습니다.';
+  String get excludeInterfaceDesc =>
+      'docker0와 같이 제외할 인터페이스로 들어오는 트래픽은 TUN을 거치지 않습니다.';
 
   @override
   String get includeUidDesc => '포함할 사용자 ID의 프로세스 트래픽만 TUN을 거칩니다.';
@@ -4007,13 +4321,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get editIconRule => '정규식 아이콘 수정';
 
   @override
-  String get iconRuleHelp => '1. 완전 일치: 예: ^YouTube\$ 는 이름이 YouTube 인 그룹에만 일치합니다.\n2. 키워드 일치: 예: YouTube 는 이름에 YouTube 가 포함된 모든 그룹에 일치합니다.\n3. 다중 일치: 예: (YouTube|Netflix|Disney) 는 여러 미디어 그룹과 동시에 일치합니다.\n4. 전체 와일드카드: 예: .* 는 모든 그룹과 일치하며 해당 Icon 아이콘을 적용합니다.\n5. 접두사 및 접미사: 예: ^PROXY 는 접두사, Auto\$ 는 접미사에 일치하며 위에서 아래 순서로 적용됩니다.';
+  String get iconRuleHelp =>
+      '1. 완전 일치: 예: ^YouTube\$ 는 이름이 YouTube 인 그룹에만 일치합니다.\n2. 키워드 일치: 예: YouTube 는 이름에 YouTube 가 포함된 모든 그룹에 일치합니다.\n3. 다중 일치: 예: (YouTube|Netflix|Disney) 는 여러 미디어 그룹과 동시에 일치합니다.\n4. 전체 와일드카드: 예: .* 는 모든 그룹과 일치하며 해당 Icon 아이콘을 적용합니다.\n5. 접두사 및 접미사: 예: ^PROXY 는 접두사, Auto\$ 는 접미사에 일치하며 위에서 아래 순서로 적용됩니다.';
 
   @override
   String get refreshGroupIcons => '그룹 아이콘 새로고침';
 
   @override
-  String get refreshGroupIconsTip => '캐시된 원격 아이콘과 아이콘 세트 이미지를 모두 지우고 원격 아이콘 세트를 다시 동기화하여 최신 아이콘을 가져옵니다.';
+  String get refreshGroupIconsTip =>
+      '캐시된 원격 아이콘과 아이콘 세트 이미지를 모두 지우고 원격 아이콘 세트를 다시 동기화하여 최신 아이콘을 가져옵니다.';
 
   @override
   String get groupIconsRefreshed => '그룹 아이콘을 새로고침했습니다';
@@ -4098,16 +4414,17 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String ipRiskNoteDirect(Object score) {
-    return 'Scamalytics는 이 IP의 웹 트래픽을 직접 관측합니다. 점수 ${score}은(는) 그중 사기로 의심되는 트래픽의 비율을 나타냅니다.';
+    return 'Scamalytics는 이 IP의 웹 트래픽을 직접 관측합니다. 점수 $score은(는) 그중 사기로 의심되는 트래픽의 비율을 나타냅니다.';
   }
 
   @override
   String ipRiskNoteIndirect(Object score, Object isp) {
-    return 'Scamalytics는 이 IP의 웹 트래픽을 직접 관측할 수 없습니다. 점수 ${score}은(는) ${isp}이(가) 운영하는 IP 전체의 위험도를 바탕으로 추정한 값입니다.';
+    return 'Scamalytics는 이 IP의 웹 트래픽을 직접 관측할 수 없습니다. 점수 $score은(는) $isp이(가) 운영하는 IP 전체의 위험도를 바탕으로 추정한 값입니다.';
   }
 
   @override
-  String get ipRiskNoteGeneric => '사기 점수(0–100)는 이 IP의 웹 트래픽 중 Scamalytics가 사기로 의심하는 비율을 나타냅니다.';
+  String get ipRiskNoteGeneric =>
+      '사기 점수(0–100)는 이 IP의 웹 트래픽 중 Scamalytics가 사기로 의심하는 비율을 나타냅니다.';
 
   @override
   String get ipRiskNoteAmount => '관측된 트래픽';
@@ -4146,7 +4463,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get ipRiskCommercialServer => '상업용 서버';
 
   @override
-  String get ipRiskNoteProxying => '다른 지역의 트래픽을 중계하고 있을 수 있으며, 실제 사용자는 어디에나 있을 수 있습니다';
+  String get ipRiskNoteProxying =>
+      '다른 지역의 트래픽을 중계하고 있을 수 있으며, 실제 사용자는 어디에나 있을 수 있습니다';
 
   @override
   String get ipRiskNoteWarningHigh => '이 IP의 웹 트래픽은 사기범의 활동일 가능성이 높습니다.';
@@ -4155,7 +4473,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get ipRiskNoteWarningVeryHigh => '이 IP의 웹 트래픽은 사기범의 활동일 가능성이 매우 높습니다.';
 
   @override
-  String get ipRiskNoteFootnote => '이 평가는 웹 트래픽만을 대상으로 하며, 다른 트래픽의 위험도는 다를 수 있습니다.';
+  String get ipRiskNoteFootnote =>
+      '이 평가는 웹 트래픽만을 대상으로 하며, 다른 트래픽의 위험도는 다를 수 있습니다.';
 
   @override
   String get ipRiskLocation => '국가 / 지역';
@@ -4233,20 +4552,22 @@ class AppLocalizationsKo extends AppLocalizations {
   String get speedTestProtocol => '프로토콜';
 
   @override
-  String get speedTestMobileDataTip => '모바일 데이터를 사용 중입니다. 1회 측정에 수백 MB가 사용될 수 있습니다. 계속할까요?';
+  String get speedTestMobileDataTip =>
+      '모바일 데이터를 사용 중입니다. 1회 측정에 수백 MB가 사용될 수 있습니다. 계속할까요?';
 
   @override
   String get speedTestErrorRejected => '규칙에 의해 차단됨';
 
   @override
-  String get speedTestErrorRejectedDesc => '현재 규칙이 측정 도메인을 REJECT로 보냅니다. 다른 아웃바운드를 선택한 후 다시 시도하세요.';
+  String get speedTestErrorRejectedDesc =>
+      '현재 규칙이 측정 도메인을 REJECT로 보냅니다. 다른 아웃바운드를 선택한 후 다시 시도하세요.';
 
   @override
   String get speedTestErrorBlocked => '속도 테스트를 사용할 수 없음';
 
   @override
   String speedTestErrorBlockedDesc(Object provider) {
-    return '아웃바운드가 ${provider} 속도 테스트를 차단하고 있을 수 있습니다. 측정 소스나 아웃바운드를 바꿔 보세요.';
+    return '아웃바운드가 $provider 속도 테스트를 차단하고 있을 수 있습니다. 측정 소스나 아웃바운드를 바꿔 보세요.';
   }
 
   @override
@@ -4278,15 +4599,16 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String speedTestConnectionsDesc(Object count) {
-    return '다중은 ${count}개의 병렬 연결로 대역폭을 채웁니다';
+    return '다중은 $count개의 병렬 연결로 대역폭을 채웁니다';
   }
 
   @override
-  String get speedTestProtocolDesc => 'HTTP/3는 QUIC(UDP)를 사용하며, 사용할 수 없으면 HTTP/2로, HTTP/2도 안 되면 HTTP/1.1로 전환합니다';
+  String get speedTestProtocolDesc =>
+      'HTTP/3는 QUIC(UDP)를 사용하며, 사용할 수 없으면 HTTP/2로, HTTP/2도 안 되면 HTTP/1.1로 전환합니다';
 
   @override
   String speedTestProtocolFallback(Object protocol, Object fallback) {
-    return '${protocol}를 사용할 수 없어 ${fallback}로 전환했습니다';
+    return '$protocol를 사용할 수 없어 $fallback로 전환했습니다';
   }
 
   @override
@@ -4300,7 +4622,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String speedTestStreams(Object count) {
-    return '${count}개 연결';
+    return '$count개 연결';
   }
 
   @override
@@ -4356,7 +4678,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String trafficStatsHitCount(Object count) {
-    return '${count}회';
+    return '$count회';
   }
 
   @override
@@ -4369,7 +4691,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get trafficStatsDisabled => '트래픽 통계 꺼짐';
 
   @override
-  String get trafficStatsDisabledDesc => '켜면 도메인, 프로세스, 노드, 규칙별 일일 사용량을 로컬에 기록합니다.';
+  String get trafficStatsDisabledDesc =>
+      '켜면 도메인, 프로세스, 노드, 규칙별 일일 사용량을 로컬에 기록합니다.';
 
   @override
   String get trafficStatsEnable => '트래픽 통계 사용';
@@ -4393,8 +4716,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get trafficStatsRetention => '데이터 보관 기간';
 
   @override
-  String trafficStatsMonths(Object count) {
-    return '${count}개월';
+  String trafficStatsMonths(num count) {
+    return '$count개월';
   }
 
   @override
@@ -4405,7 +4728,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String trafficStatsSince(Object date) {
-    return '${date}부터';
+    return '$date부터';
   }
 
   @override

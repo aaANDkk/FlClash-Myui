@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prism_ui/table_layout.dart';
 
@@ -87,5 +88,33 @@ void main() {
       'target': 286,
       'exit': 70,
     });
+  });
+
+  testWidgets('a cell is sized by the table', (tester) async {
+    const columns = [
+      TableColumn('target', 'Target', flex: 1),
+      TableColumn('speed', 'Speed', width: 80),
+    ];
+    await tester.pumpWidget(
+      const Directionality(
+        textDirection: TextDirection.ltr,
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: TableCells(
+            columns: columns,
+            widths: [200, 80],
+            height: 30,
+            inset: 8,
+            cells: [Text('a.test'), Text('1 KB/s')],
+          ),
+        ),
+      ),
+    );
+
+    for (final text in ['a.test', '1 KB/s']) {
+      final paragraph = tester.renderObject(find.text(text));
+      final slot = paragraph.parent!.parent! as RenderBox;
+      expect(slot.constraints.isTight, isTrue);
+    }
   });
 }

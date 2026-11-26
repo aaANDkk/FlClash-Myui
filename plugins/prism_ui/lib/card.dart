@@ -122,6 +122,7 @@ class Card extends StatelessWidget {
     this.inert = false,
     this.fillsSelection = false,
     this.selectionTint,
+    this.fill,
     required this.child,
   }) : isSelected = isSelected ?? false;
 
@@ -137,6 +138,10 @@ class Card extends StatelessWidget {
   /// A tint that covers the whole selected card while keeping its own text
   /// colours, for list mode where a filled primary would be too strong.
   final Color? selectionTint;
+
+  /// The resting fill in place of the card's level; transparent where what
+  /// the card sits on already has that color.
+  final Color? fill;
   final bool isError;
   final void Function()? onPressed;
   final void Function()? onLongPress;
@@ -171,6 +176,10 @@ class Card extends StatelessWidget {
       math.max(0, padding.bottom + adjustment.dy),
     );
   }
+
+  /// The least a card takes up, whatever it draws.
+  static Size tapTargetOf(BuildContext context) =>
+      _tapTargetOf(Theme.of(context));
 
   static Size _tapTargetOf(ThemeData theme) {
     if (theme.tapTargetSize != TapTargetSize.padded) {
@@ -226,7 +235,7 @@ class Card extends StatelessWidget {
       fill: switch ((isError, _filled)) {
         (true, _) => colorScheme.errorContainer,
         (_, true) => colorScheme.primary,
-        _ => selectionTint ?? level.colorOf(colorScheme),
+        _ => selectionTint ?? fill ?? level.colorOf(colorScheme),
       },
       shape: shape ?? AppShape.all(radius ?? AppCorner.md),
       side: side,

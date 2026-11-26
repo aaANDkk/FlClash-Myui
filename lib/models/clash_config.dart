@@ -1254,8 +1254,8 @@ abstract class Dns with _$Dns {
     String fakeIpRange,
     @Default('') @JsonKey(name: 'fake-ip-range6') String fakeIpRange6,
     @Default([
-      'dns.msftnsci.com',
-      'www.msftnsci.com',
+      'dns.msftncsi.com',
+      'www.msftncsi.com',
       'www.msftconnecttest.com',
     ])
     @JsonKey(name: 'fake-ip-filter')
@@ -1944,7 +1944,7 @@ extension RuleExt on Rule {
     ].join(',');
   }
 
-  List<String> get searchFields => [ruleAction.name, rawValue];
+  List<String> get searchFields => [ruleAction.value, rawValue];
 }
 
 Set<String> customExitsOf(Iterable<Rule> rules) => {
@@ -2270,13 +2270,9 @@ List<int> mitmCaptureOptions({required bool isAndroid}) =>
 Map<String, Object> _mitmLimits({required bool isAndroid}) =>
     isAndroid ? _androidMitmLimits : _desktopMitmLimits;
 
-int mitmCaptureBytes({required bool isAndroid}) =>
-    _mitmLimits(isAndroid: isAndroid)['capture-bytes']! as int;
-
-int mitmMaxBodySize({required bool isAndroid}) =>
-    _mitmLimits(isAndroid: isAndroid)['max-body-size']! as int;
-
 extension MitmExt on Mitm {
+  bool get capturesHttp => enable && capture;
+
   int captureLimit({required bool isAndroid}) =>
       captureEntries ??
       _mitmLimits(isAndroid: isAndroid)['capture-entries']! as int;

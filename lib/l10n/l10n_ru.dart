@@ -191,6 +191,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get autoCheckUpdate => 'Автопроверка обновлений';
 
   @override
+  String get updateChannel => 'Канал обновлений';
+
+  @override
+  String get updateChannelStable => 'Стабильный';
+
+  @override
+  String get updateChannelPre => 'Предварительный';
+
+  @override
   String get checkCertificate => 'Проверять TLS-сертификаты';
 
   @override
@@ -503,8 +512,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get externalController => 'Внешний контроллер';
 
   @override
-  String get externalControllerDesc =>
-      'Внешний контроллер позволяет управлять ядром через порт 9090.';
+  String get externalControllerDesc => 'Внешний контроллер слушает порт 9090.';
 
   @override
   String get externalControllerSecret => 'Секрет внешнего контроллера';
@@ -520,9 +528,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get startupAndBackground => 'Запуск и фоновая работа';
-
-  @override
-  String get requestsAndUpdates => 'Запросы и обновления';
 
   @override
   String get logsAndDiagnostics => 'Логи и диагностика';
@@ -559,6 +564,247 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get liveConnections => 'Активные соединения';
+
+  @override
+  String get speed => 'Скорость';
+
+  @override
+  String get closeActiveConnections => 'Закрыть все активные соединения';
+
+  @override
+  String closeActiveConnectionsTip(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Закрыть $count активного соединения?',
+      many: 'Закрыть $count активных соединений?',
+      few: 'Закрыть $count активных соединения?',
+      one: 'Закрыть $count активное соединение?',
+    );
+    return '$_temp0 Приложения переподключатся сами, но текущие загрузки и звонки могут прерваться.';
+  }
+
+  @override
+  String get connectionsAll => 'Все';
+
+  @override
+  String get connectionsActive => 'Активные';
+
+  @override
+  String get connectionsFailed => 'Сбои';
+
+  @override
+  String get connectionsDecrypted => 'Расшифрованные';
+
+  @override
+  String get connectionRuleGlobal => 'Глобальный режим';
+
+  @override
+  String get connectionRuleNone => 'Без правила';
+
+  @override
+  String get failureRefused => 'Отклонено';
+
+  @override
+  String get failureUnreachable => 'Недоступно';
+
+  @override
+  String get failureDns => 'Ошибка DNS';
+
+  @override
+  String get dnsNoSuchDomain => 'Домен не существует';
+
+  @override
+  String get dnsServerFailure => 'Сбой вышестоящего сервера';
+
+  @override
+  String get dnsRefused => 'Вышестоящий сервер отклонил запрос';
+
+  @override
+  String get dnsTimedOut => 'Время запроса истекло';
+
+  @override
+  String get dnsBlockedByRule => 'Заблокировано правилом';
+
+  @override
+  String get failureHandshake => 'Ошибка рукопожатия';
+
+  @override
+  String get failureOther => 'Другая ошибка';
+
+  @override
+  String get connectionClosed => 'Закрыто';
+
+  @override
+  String get timeline => 'Хронология';
+
+  @override
+  String get connectionInfo => 'Сведения';
+
+  @override
+  String get decryption => 'Расшифровка';
+
+  @override
+  String connectionRuleIndex(Object number) {
+    return '№ $number';
+  }
+
+  @override
+  String get handshake => 'Рукопожатие';
+
+  @override
+  String get now => 'Сейчас';
+
+  @override
+  String get mitmCertificateRefused => 'Клиент отклонил сертификат';
+
+  @override
+  String get connectionEndLocal => 'Закрыто локально';
+
+  @override
+  String get connectionEndRemote => 'Закрыто удалённой стороной';
+
+  @override
+  String get connectionEndFinished => 'Завершено';
+
+  @override
+  String get connectionEndReset => 'Сброшено';
+
+  @override
+  String get connectionEndCore => 'Закрыто ядром';
+
+  @override
+  String get fakeIpMapping => 'Сопоставление fake-ip';
+
+  @override
+  String get dnsFromHosts => 'Из hosts';
+
+  @override
+  String get condition => 'Условие';
+
+  @override
+  String get addCondition => 'Добавить условие';
+
+  @override
+  String get conditionField => 'Поле';
+
+  @override
+  String get conditionContains => 'Содержит';
+
+  @override
+  String get conditionEquals => 'Равно';
+
+  @override
+  String get conditionTip =>
+      'Условия по одному полю объединяются через «или», по разным полям — через «и». Поиск понимает ту же запись, например host:github.com -app:chrome.';
+
+  @override
+  String get conditionNotContains => 'Не содержит';
+
+  @override
+  String get conditionNotEquals => 'Не равно';
+
+  @override
+  String get editCondition => 'Изменить условие';
+
+  @override
+  String conditionValuesIn(String field) {
+    return '$field в списке';
+  }
+
+  @override
+  String conditionShows(String count) {
+    return 'Останется соединений: $count';
+  }
+
+  @override
+  String get conditionRows => 'В строке — любое, строки — все';
+
+  @override
+  String get clearAll => 'Очистить всё';
+
+  @override
+  String get conditionOr => 'или';
+
+  @override
+  String get selectConnection => 'Выберите соединение';
+
+  @override
+  String get selectConnectionHint =>
+      'Здесь появятся его хронология, HTTP-запросы и сведения о соединении';
+
+  @override
+  String get selectDnsQuery => 'Выберите DNS-запрос';
+
+  @override
+  String get selectDnsQueryHint =>
+      'Здесь появятся ответы, вышестоящий сервер и связанные соединения';
+
+  @override
+  String get relatedConnections => 'Связанные соединения';
+
+  @override
+  String get upstream => 'Вышестоящий сервер';
+
+  @override
+  String get dnsQueryFields => 'Запрос';
+
+  @override
+  String dnsQueryAskedBy(String initiator) {
+    return 'Запросил: $initiator';
+  }
+
+  @override
+  String get dnsConditionTip =>
+      'Условия по одному полю объединяются через «или», по разным полям — через «и».';
+
+  @override
+  String dnsConditionValuesIn(String field) {
+    return '$field в списке';
+  }
+
+  @override
+  String dnsConditionShows(String count) {
+    return 'Останется запросов: $count';
+  }
+
+  @override
+  String get connectionPath => 'Маршрут';
+
+  @override
+  String get processPath => 'Путь процесса';
+
+  @override
+  String get proxyNode => 'Прокси-узел';
+
+  @override
+  String get closingTime => 'Время закрытия';
+
+  @override
+  String processUid(int uid) {
+    return 'UID $uid';
+  }
+
+  @override
+  String get onlyThisApp => 'Только это приложение';
+
+  @override
+  String get onlyThisDomain => 'Только этот домен';
+
+  @override
+  String get hideThisHost => 'Скрыть этот хост';
+
+  @override
+  String get copySummary => 'Копировать сводку';
+
+  @override
+  String get copyDomain => 'Копировать домен';
+
+  @override
+  String get copyAnswers => 'Копировать ответы';
+
+  @override
+  String get viewHttp => 'Показать HTTP';
 
   @override
   String get inbound => 'Входящие';
@@ -775,7 +1021,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get writeToSystemDesc =>
-      '«Записывать в систему» также устанавливает системные часы; Android это игнорирует.';
+      '«Записывать в систему» не действует на Android.';
 
   @override
   String get sniffer => 'Сниффер';
@@ -785,10 +1031,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get forceDnsMapping => 'Принудительно для DNS-сопоставлений';
-
-  @override
-  String get forceDnsMappingDesc =>
-      '«Принудительно для DNS-сопоставлений» анализирует и соединения, домен которых получен из DNS-сопоставления.';
 
   @override
   String get parsePureIp => 'Разбирать чистые IP';
@@ -823,7 +1065,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get dnsOverrideDesc =>
-      'Добавленные здесь параметры заменяют DNS всех профилей из URL и файлов; остальные остаются такими, как в профиле. DNS пользовательского профиля задаётся в его содержимом.';
+      'Добавленные параметры заменяют DNS профилей из URL и файлов.';
 
   @override
   String get settingEntries => 'параметры';
@@ -855,7 +1097,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get respectRulesDesc =>
-      '«Соблюдать правила» направляет DNS-соединения по правилам; нужен Proxy Server Nameserver.';
+      'Для «Соблюдать правила» нужен Proxy Server Nameserver.';
 
   @override
   String get dnsMode => 'Режим DNS';
@@ -1097,9 +1339,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get filter => 'Фильтр';
-
-  @override
-  String get groupBy => 'Группировка';
 
   @override
   String get hideTimeoutProxies => 'Скрывать прокси с таймаутом';
@@ -2383,9 +2622,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get pickFromAlbum => 'Выбрать из галереи';
 
   @override
-  String get closeConnections => 'Закрыть соединения';
-
-  @override
   String get scrollToSelected => 'Прокрутить к выбранному';
 
   @override
@@ -2405,6 +2641,24 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get noSearchResults => 'Ничего не найдено';
+
+  @override
+  String get noActiveConnections => 'Нет активных соединений';
+
+  @override
+  String get noFailedConnections => 'Нет соединений со сбоем';
+
+  @override
+  String get noFailedDnsQueries => 'Нет DNS-запросов со сбоем';
+
+  @override
+  String get noCachedDnsQueries => 'Нет DNS-запросов, отвеченных из кэша';
+
+  @override
+  String get noFailedHttpRequests => 'Нет HTTP-запросов со сбоем';
+
+  @override
+  String get noRewrittenHttpRequests => 'Нет изменённых HTTP-запросов';
 
   @override
   String get showPassword => 'Показать пароль';
@@ -2429,9 +2683,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get outboundIp => 'Исходящий IP';
-
-  @override
-  String get outboundIpAddress => 'Исходящий IP-адрес';
 
   @override
   String get ipAddress => 'IP-адрес';
@@ -2775,7 +3026,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get strictRouteDesc =>
-      'Строгая маршрутизация не даёт трафику вроде DNS обходить TUN, а при выключенном IPv6 блокирует IPv6-соединения этого устройства.';
+      'При выключенном IPv6 строгая маршрутизация блокирует IPv6-соединения этого устройства.';
 
   @override
   String get initFailed => 'Не удалось запустить';
@@ -2807,7 +3058,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get disableIcmpForwardingDesc =>
-      'При отключённой пересылке ICMP TUN сам отвечает на ping, поэтому ping больше не показывает реальную задержку.';
+      'При отключённой пересылке ICMP ping больше не показывает реальную задержку.';
 
   @override
   String get excludeInterface => 'Исключённые интерфейсы';
@@ -2817,7 +3068,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get includeInterfaceDesc =>
-      'Через TUN идёт только трафик с включённых интерфейсов, а исключённые интерфейсы больше не действуют.';
+      'После этого исключённые интерфейсы больше не действуют.';
 
   @override
   String get includeUid => 'Включённые ID пользователей';
@@ -2844,15 +3095,15 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get tunOverrideDesc =>
-      'Добавленные здесь параметры заменяют настройки TUN всех профилей; остальные остаются такими, как в профиле. Параметры, добавленные в самом пользовательском профиле, имеют приоритет.';
+      'Добавленные параметры переопределяют все профили; собственные параметры пользовательского профиля важнее.';
 
   @override
   String get generalOverrideDesc =>
-      'Добавленные здесь параметры заменяют соответствующие настройки всех профилей; остальные остаются такими, как в профиле, а если профиль их не задаёт, действуют значения ядра по умолчанию.';
+      'Добавленные параметры заменяют настройки всех профилей.';
 
   @override
   String get profileTunSettingsDesc =>
-      'Действует только для этого профиля и имеет приоритет над переопределяемыми параметрами TUN в настройках сети.';
+      'Только для этого профиля; важнее переопределений TUN в настройках сети.';
 
   @override
   String settingsCount(num count) {
@@ -3245,27 +3496,46 @@ class AppLocalizationsRu extends AppLocalizations {
   String get httpCapture => 'Захват HTTP';
 
   @override
-  String get httpCaptureDesc =>
-      'Записывает запросы к хостам из списка имён хостов; их можно посмотреть в сведениях о соединении. Записи хранятся только в памяти.';
-
-  @override
   String get httpCaptureNoHosts =>
-      'Хосты не указаны, поэтому ничего не записывается. Добавьте их в поле «Имя хоста» на странице MITM или из сведений о соединении.';
+      'Ничего не записывается, пока в «Имя хоста» не добавлены хосты.';
 
   @override
   String get httpCaptureLimit => 'Максимум записей';
 
   @override
-  String httpCaptureLimitDesc(Object memory, Object body) {
-    return 'Когда записей станет столько или они займут $memory памяти, самые старые удаляются первыми. От каждого тела сохраняются первые $body.';
-  }
+  String get httpCaptureMemoryOnly => 'Хранится только в памяти';
 
   @override
   String get httpRequests => 'HTTP-запросы';
 
   @override
+  String httpRequestCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count HTTP-запроса',
+      many: '$count HTTP-запросов',
+      few: '$count HTTP-запроса',
+      one: '$count HTTP-запрос',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String latestHttpRequest(String request) {
+    return 'Последний: $request';
+  }
+
+  @override
   String get httpRequestsMissing =>
       'Запросы, отправленные до включения захвата или уже удалённые, не показаны.';
+
+  @override
+  String get noHttpRequests => 'Запросов пока нет';
+
+  @override
+  String get noHttpRequestsHint =>
+      'Это соединение расшифровано, и его HTTP-запросы появятся здесь';
 
   @override
   String get httpRequestCleared => 'Запись этого запроса удалена';
@@ -3283,7 +3553,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get originalUrl => 'Исходный URL';
 
   @override
-  String get timeToFirstByte => 'Время до первого байта';
+  String get httpTiming => 'Время';
+
+  @override
+  String get httpWaiting => 'Ожидание ответа';
+
+  @override
+  String get httpReceiving => 'Получение';
 
   @override
   String get requestBody => 'Тело запроса';
@@ -3418,7 +3694,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get mitmAndroidRootDesc =>
-      'Без root можно расшифровать только приложения, доверяющие пользовательским сертификатам, в основном браузеры. С root — любые приложения.';
+      'Без root расшифровываются только приложения, доверяющие пользовательским сертификатам.';
 
   @override
   String get mitmCertificateLinuxTip =>
@@ -3582,12 +3858,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get mitmIgnoredLines => 'Пропущенные строки';
 
   @override
-  String get mitmModuleRulesDesc =>
-      'Правила маршрутизации идут перед правилами профиля.';
+  String get mitmModuleRulesDesc => 'Проверяются раньше правил профиля.';
 
   @override
   String get mitmRequestRulesDesc =>
-      'Правила URL-REGEX и USER-AGENT модуля превращаются в перезаписи URL и проверяются для каждого запроса: для всех запросов по открытому HTTP, а для HTTPS — только для хостов из списка MITM.';
+      'Правила URL-REGEX и USER-AGENT работают как перезаписи URL, для HTTPS — только для хостов из списка.';
 
   @override
   String mitmModuleSystemTip(Object system) {
@@ -3609,7 +3884,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get mitmNetworkRisk =>
-      'При создании конфигурации он меняет сетевые настройки ниже и имеет приоритет над тем, что вы задали для них в FlClash. Если выключить или удалить модуль, всё вернётся.';
+      'Пока модуль включён, он переопределяет эти сетевые настройки.';
 
   @override
   String mitmSkipVerifyRisk(Object hosts) {
@@ -3623,7 +3898,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get mitmClientSourceTunTip =>
-      'При включённом TUN приложения этого устройства подключаются с адреса TUN; если его нет в списке, их трафик не расшифровывается.';
+      'При включённом TUN добавьте его адрес, чтобы расшифровывать приложения этого устройства.';
 
   @override
   String get mitmNetworkChanges => 'Сетевые настройки';
@@ -3860,6 +4135,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get updateDownloadFailed => 'Не удалось загрузить обновление.';
 
   @override
+  String get updateFileMissing =>
+      'В релизе нет файла обновления. Скачайте его вручную со страницы релиза.';
+
+  @override
   String get defaultNameserverDesc =>
       'Разрешает имена других DNS-серверов. Только IP-адреса.';
 
@@ -3955,6 +4234,65 @@ class AppLocalizationsRu extends AppLocalizations {
   String get vpnServiceStartFailed => 'Не удалось запустить службу VPN.';
 
   @override
+  String get requestPath => 'Путь';
+
+  @override
+  String get statusCode => 'Код ответа';
+
+  @override
+  String get contentKind => 'Тип';
+
+  @override
+  String get httpRewritten => 'Изменённые';
+
+  @override
+  String get httpAnswerReject => 'Отклонён';
+
+  @override
+  String get httpAnswerRedirect => 'Перенаправлен';
+
+  @override
+  String get httpAnswerScript => 'Ответ скрипта';
+
+  @override
+  String get httpBodyText => 'Текст';
+
+  @override
+  String get httpBodyImage => 'Изображение';
+
+  @override
+  String get regexReplace => 'Замена по регулярному выражению';
+
+  @override
+  String get owningConnection => 'Соединение';
+
+  @override
+  String get selectHttpRequest => 'Выберите запрос';
+
+  @override
+  String get selectHttpRequestHint => 'Здесь появятся запрос, ответ и время';
+
+  @override
+  String httpConditionShows(String count) {
+    return 'Останется запросов: $count';
+  }
+
+  @override
+  String httpConditionValuesIn(String field) {
+    return '$field в списке';
+  }
+
+  @override
+  String get httpConditionTip =>
+      'Условия по одному полю объединяются через «или», по разным полям — через «и».';
+
+  @override
+  String get outboundIpAddress => 'Исходящий IP-адрес';
+
+  @override
+  String get config => 'Конфигурация';
+
+  @override
   String get advanced => 'Дополнительно';
 
   @override
@@ -3964,7 +4302,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get silentLaunchDesc => 'Тихий запуск не показывает окно.';
 
   @override
-  String get accessControlDesc => 'Контроль доступа выбирает приложения, использующие прокси.';
+  String get accessControlDesc =>
+      'Контроль доступа выбирает приложения, использующие прокси.';
 
   @override
   String get wakelock => 'Не выключать экран';
@@ -3976,46 +4315,60 @@ class AppLocalizationsRu extends AppLocalizations {
   String get addressHelp => 'Адрес сервера WebDAV';
 
   @override
-  String get authenticationDesc => 'Аутентификация требует логин и пароль для локального порта прокси.';
+  String get authenticationDesc =>
+      'Аутентификация требует логин и пароль для локального порта прокси.';
 
   @override
-  String get autoCloseConnectionsDesc => 'Автозакрытие соединений обрывает открытые соединения при смене прокси.';
+  String get autoCloseConnectionsDesc =>
+      'Автозакрытие соединений обрывает открытые соединения при смене прокси.';
 
   @override
-  String get sidebarBlurDesc => 'Размытие фона показывает рабочий стол за окном сквозь боковую панель.';
+  String get sidebarBlurDesc =>
+      'Размытие фона показывает рабочий стол за окном сквозь боковую панель.';
 
   @override
-  String get vpnEnableDesc => 'VPN автоматически направляет весь системный трафик через VpnService.';
+  String get vpnEnableDesc =>
+      'VPN автоматически направляет весь системный трафик через VpnService.';
 
   @override
-  String get ntpStatusDesc => 'NTP берёт время с NTP-сервера, а не из системных часов.';
+  String get ntpStatusDesc =>
+      'NTP берёт время с NTP-сервера, а не из системных часов.';
 
   @override
-  String get dialerProxyDesc => 'Прокси для подключения — исход, через который идёт обращение к NTP-серверу.';
+  String get dialerProxyDesc =>
+      'Прокси для подключения — исход, через который идёт обращение к NTP-серверу.';
 
   @override
-  String get snifferStatusDesc => 'Сниффер определяет домен по трафику TLS, HTTP и QUIC, чтобы правила могли его сопоставить.';
+  String get snifferStatusDesc =>
+      'Сниффер определяет домен по трафику TLS, HTTP и QUIC, чтобы правила могли его сопоставить.';
 
   @override
-  String get overrideDestinationDesc => '«Подменять адрес назначения» подключается к обнаруженному домену вместо исходного адреса.';
+  String get overrideDestinationDesc =>
+      '«Подменять адрес назначения» подключается к обнаруженному домену вместо исходного адреса.';
 
   @override
-  String get parsePureIpDesc => '«Разбирать чистые IP» анализирует соединения, у которых есть только IP-адрес.';
+  String get parsePureIpDesc =>
+      '«Разбирать чистые IP» анализирует соединения, у которых есть только IP-адрес.';
 
   @override
-  String get skipDomainDesc => 'Обнаруженный домен из пропускаемых доменов не используется.';
+  String get skipDomainDesc =>
+      'Обнаруженный домен из пропускаемых доменов не используется.';
 
   @override
-  String get fakeipFilterModeDesc => 'В режиме фильтра Fake-IP blacklist исключает совпадения, whitelist применяется только к ним, rule — по правилам.';
+  String get fakeipFilterModeDesc =>
+      'В режиме фильтра Fake-IP blacklist исключает совпадения, whitelist применяется только к ним, rule — по правилам.';
 
   @override
-  String get ipv6InboundDesc => 'При включённом IPv6 VPN принимает входящий IPv6.';
+  String get ipv6InboundDesc =>
+      'При включённом IPv6 VPN принимает входящий IPv6.';
 
   @override
-  String get interfaceNameDesc => 'Имя интерфейса задаёт сетевой интерфейс для исходящих соединений.';
+  String get interfaceNameDesc =>
+      'Имя интерфейса задаёт сетевой интерфейс для исходящих соединений.';
 
   @override
-  String get advancedConfigDesc => 'Расширенная конфигурация включает сеть, DNS, добавленные правила и скрипты.';
+  String get advancedConfigDesc =>
+      'Расширенная конфигурация включает сеть, DNS, добавленные правила и скрипты.';
 
   @override
   String get singleAdd => 'По одному';
@@ -4024,46 +4377,54 @@ class AppLocalizationsRu extends AppLocalizations {
   String get batchAdd => 'Массовое добавление';
 
   @override
-  String get batchListInputTip => 'По одному значению на строку или через запятую';
+  String get batchListInputTip =>
+      'По одному значению на строку или через запятую';
 
   @override
-  String get batchMapInputTip => 'По одной записи на строку: ключ, пробел, значение';
+  String get batchMapInputTip =>
+      'По одной записи на строку: ключ, пробел, значение';
 
   @override
   String get customProfileResources => 'Ресурсы пользовательских профилей';
 
   @override
-  String get customProfileResourcesDesc => 'Ресурсы пользовательских профилей — это прокси, провайдеры правил, фильтры и наборы значков, которые вы сами добавляете для пользовательских профилей.';
+  String get customProfileResourcesDesc =>
+      'Ресурсы пользовательских профилей — это прокси, провайдеры правил, фильтры и наборы значков, которые вы сами добавляете для пользовательских профилей.';
 
   @override
-  String get batteryOptimizationDesc => 'Игнорирование оптимизации батареи позволяет приложению работать в фоне.';
+  String get batteryOptimizationDesc =>
+      'Игнорирование оптимизации батареи позволяет приложению работать в фоне.';
 
   @override
-  String get onDemandDesc => '«По условию» приостанавливает прокси в исключённых сетях Wi-Fi.';
+  String get onDemandDesc =>
+      '«По условию» приостанавливает прокси в исключённых сетях Wi-Fi.';
 
   @override
   String get blockConnection => 'Заблокировать соединение';
 
   @override
-  String get proxyNode => 'Прокси-узел';
+  String get bypassPrivateRouteDesc =>
+      'При обходе частных адресов адреса LAN, loopback и multicast идут в обход TUN.';
 
   @override
-  String get bypassPrivateRouteDesc => 'При обходе частных адресов адреса LAN, loopback и multicast идут в обход TUN.';
+  String get excludeInterfaceDesc =>
+      'Трафик с исключённых интерфейсов, например с docker0, идёт в обход TUN.';
 
   @override
-  String get excludeInterfaceDesc => 'Трафик с исключённых интерфейсов, например с docker0, идёт в обход TUN.';
+  String get includeUidDesc =>
+      'Через TUN идёт только трафик процессов включённых ID пользователей.';
 
   @override
-  String get includeUidDesc => 'Через TUN идёт только трафик процессов включённых ID пользователей.';
+  String get excludeUidDesc =>
+      'Трафик процессов исключённых ID пользователей идёт в обход TUN.';
 
   @override
-  String get excludeUidDesc => 'Трафик процессов исключённых ID пользователей идёт в обход TUN.';
+  String get excludeSrcPortDesc =>
+      'Трафик с исключённых исходных портов идёт в обход TUN.';
 
   @override
-  String get excludeSrcPortDesc => 'Трафик с исключённых исходных портов идёт в обход TUN.';
-
-  @override
-  String get excludeDstPortDesc => 'Трафик на исключённые порты назначения идёт в обход TUN.';
+  String get excludeDstPortDesc =>
+      'Трафик на исключённые порты назначения идёт в обход TUN.';
 
   @override
   String get emojiStyle => 'Шрифт эмодзи';
@@ -4087,7 +4448,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get iconRules => 'Значки по regex';
 
   @override
-  String get iconRulesTip => 'Группа, имя которой соответствует регулярному выражению, берёт значок из выбранного набора значков.';
+  String get iconRulesTip =>
+      'Группа, имя которой соответствует регулярному выражению, берёт значок из выбранного набора значков.';
 
   @override
   String get invalidRegex => 'Недопустимое регулярное выражение';
@@ -4105,13 +4467,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get editIconRule => 'Изменить значок по regex';
 
   @override
-  String get iconRuleHelp => '1. Точное совпадение: например, ^YouTube\$ соответствует только группе с именем YouTube.\n2. По ключевому слову: например, YouTube соответствует любой группе, содержащей YouTube.\n3. Несколько условий: например, (YouTube|Netflix|Disney) совпадает сразу с несколькими группами.\n4. Подстановочный знак: например, .* соответствует всем группам и применяет выбранный значок Icon.\n5. Префикс и суффикс: например, ^PROXY для префикса, Auto\$ для суффикса; правила применяются сверху вниз.';
+  String get iconRuleHelp =>
+      '1. Точное совпадение: например, ^YouTube\$ соответствует только группе с именем YouTube.\n2. По ключевому слову: например, YouTube соответствует любой группе, содержащей YouTube.\n3. Несколько условий: например, (YouTube|Netflix|Disney) совпадает сразу с несколькими группами.\n4. Подстановочный знак: например, .* соответствует всем группам и применяет выбранный значок Icon.\n5. Префикс и суффикс: например, ^PROXY для префикса, Auto\$ для суффикса; правила применяются сверху вниз.';
 
   @override
   String get refreshGroupIcons => 'Обновить значки групп';
 
   @override
-  String get refreshGroupIconsTip => 'Очистить все кешированные удалённые значки и изображения наборов значков, повторно синхронизировать удалённые наборы и загрузить свежие значки.';
+  String get refreshGroupIconsTip =>
+      'Очистить все кешированные удалённые значки и изображения наборов значков, повторно синхронизировать удалённые наборы и загрузить свежие значки.';
 
   @override
   String get groupIconsRefreshed => 'Значки групп обновлены';
@@ -4196,16 +4560,17 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String ipRiskNoteDirect(Object score) {
-    return 'Scamalytics напрямую видит веб-трафик с этого IP. Оценка ${score} отражает долю этого трафика, подозреваемого в мошенничестве.';
+    return 'Scamalytics напрямую видит веб-трафик с этого IP. Оценка $score отражает долю этого трафика, подозреваемого в мошенничестве.';
   }
 
   @override
   String ipRiskNoteIndirect(Object score, Object isp) {
-    return 'Scamalytics не видит веб-трафик с этого IP напрямую. Оценка ${score} рассчитана по общему риску IP-адресов ${isp}.';
+    return 'Scamalytics не видит веб-трафик с этого IP напрямую. Оценка $score рассчитана по общему риску IP-адресов $isp.';
   }
 
   @override
-  String get ipRiskNoteGeneric => 'Оценка мошенничества (0–100) отражает долю веб-трафика с этого IP, которую Scamalytics подозревает в мошенничестве.';
+  String get ipRiskNoteGeneric =>
+      'Оценка мошенничества (0–100) отражает долю веб-трафика с этого IP, которую Scamalytics подозревает в мошенничестве.';
 
   @override
   String get ipRiskNoteAmount => 'Наблюдаемый трафик';
@@ -4244,16 +4609,20 @@ class AppLocalizationsRu extends AppLocalizations {
   String get ipRiskCommercialServer => 'Коммерческий сервер';
 
   @override
-  String get ipRiskNoteProxying => 'Может проксировать трафик из других регионов; реальный пользователь может находиться где угодно';
+  String get ipRiskNoteProxying =>
+      'Может проксировать трафик из других регионов; реальный пользователь может находиться где угодно';
 
   @override
-  String get ipRiskNoteWarningHigh => 'Веб-трафик с этого IP, вероятно, связан с мошенниками.';
+  String get ipRiskNoteWarningHigh =>
+      'Веб-трафик с этого IP, вероятно, связан с мошенниками.';
 
   @override
-  String get ipRiskNoteWarningVeryHigh => 'Веб-трафик с этого IP с очень высокой вероятностью связан с мошенниками.';
+  String get ipRiskNoteWarningVeryHigh =>
+      'Веб-трафик с этого IP с очень высокой вероятностью связан с мошенниками.';
 
   @override
-  String get ipRiskNoteFootnote => 'Оценка касается только веб-трафика; риск для другого трафика может отличаться.';
+  String get ipRiskNoteFootnote =>
+      'Оценка касается только веб-трафика; риск для другого трафика может отличаться.';
 
   @override
   String get ipRiskLocation => 'Страна / регион';
@@ -4265,7 +4634,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get operatorOrAsn => 'Организация / ASN';
 
   @override
-  String get ipRiskFailed => 'Не удалось загрузить данные IP. Повторите попытку.';
+  String get ipRiskFailed =>
+      'Не удалось загрузить данные IP. Повторите попытку.';
 
   @override
   String get isp => 'Провайдер';
@@ -4325,26 +4695,29 @@ class AppLocalizationsRu extends AppLocalizations {
   String get speedTestServer => 'Сервер теста';
 
   @override
-  String get speedTestServerAutoDesc => 'Автоматически выбирать сервер Speedtest';
+  String get speedTestServerAutoDesc =>
+      'Автоматически выбирать сервер Speedtest';
 
   @override
   String get speedTestProtocol => 'Протокол';
 
   @override
-  String get speedTestMobileDataTip => 'Используются мобильные данные. Один тест может потратить сотни МБ. Продолжить?';
+  String get speedTestMobileDataTip =>
+      'Используются мобильные данные. Один тест может потратить сотни МБ. Продолжить?';
 
   @override
   String get speedTestErrorRejected => 'Заблокировано правилами';
 
   @override
-  String get speedTestErrorRejectedDesc => 'Текущие правила направляют домен теста в REJECT. Выберите другой выход и повторите.';
+  String get speedTestErrorRejectedDesc =>
+      'Текущие правила направляют домен теста в REJECT. Выберите другой выход и повторите.';
 
   @override
   String get speedTestErrorBlocked => 'Тест скорости недоступен';
 
   @override
   String speedTestErrorBlockedDesc(Object provider) {
-    return 'Выход может блокировать тесты ${provider}. Смените источник теста или выход.';
+    return 'Выход может блокировать тесты $provider. Смените источник теста или выход.';
   }
 
   @override
@@ -4354,7 +4727,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get speedTestErrorTimeout => 'Время ожидания истекло';
 
   @override
-  String get speedTestErrorNetworkDesc => 'Проверьте доступность выхода и повторите.';
+  String get speedTestErrorNetworkDesc =>
+      'Проверьте доступность выхода и повторите.';
 
   @override
   String get speedTestChangeOutbound => 'Сменить выход';
@@ -4376,15 +4750,16 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String speedTestConnectionsDesc(Object count) {
-    return 'Несколько — ${count} параллельных соединений для полной загрузки канала';
+    return 'Несколько — $count параллельных соединений для полной загрузки канала';
   }
 
   @override
-  String get speedTestProtocolDesc => 'HTTP/3 работает поверх QUIC (UDP); если он недоступен — откат на HTTP/2, а если недоступен и HTTP/2 — на HTTP/1.1';
+  String get speedTestProtocolDesc =>
+      'HTTP/3 работает поверх QUIC (UDP); если он недоступен — откат на HTTP/2, а если недоступен и HTTP/2 — на HTTP/1.1';
 
   @override
   String speedTestProtocolFallback(Object protocol, Object fallback) {
-    return '${protocol} недоступен, используется ${fallback}';
+    return '$protocol недоступен, используется $fallback';
   }
 
   @override
@@ -4398,7 +4773,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String speedTestStreams(Object count) {
-    return 'Соединений: ${count}';
+    return 'Соединений: $count';
   }
 
   @override
@@ -4411,7 +4786,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get speedTestRoute => 'Правило';
 
   @override
-  String get speedTestCredit => 'Серверы тестирования предоставляет Speedtest by Ookla.';
+  String get speedTestCredit =>
+      'Серверы тестирования предоставляет Speedtest by Ookla.';
 
   @override
   String get speedTestStop => 'Остановить тест';
@@ -4420,7 +4796,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get trafficStats => 'Статистика трафика';
 
   @override
-  String get trafficStatsDesc => 'Подробная разбивка трафика по дням, неделям и месяцам';
+  String get trafficStatsDesc =>
+      'Подробная разбивка трафика по дням, неделям и месяцам';
 
   @override
   String get trafficStatsDay => 'День';
@@ -4454,7 +4831,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String trafficStatsHitCount(Object count) {
-    return '${count} раз';
+    return '$count раз';
   }
 
   @override
@@ -4467,7 +4844,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get trafficStatsDisabled => 'Статистика трафика отключена';
 
   @override
-  String get trafficStatsDisabledDesc => 'Включите сбор статистики для локального учёта трафика по доменам, процессам, узлам и правилам.';
+  String get trafficStatsDisabledDesc =>
+      'Включите сбор статистики для локального учёта трафика по доменам, процессам, узлам и правилам.';
 
   @override
   String get trafficStatsEnable => 'Включить статистику трафика';
@@ -4479,35 +4857,45 @@ class AppLocalizationsRu extends AppLocalizations {
   String get trafficStatsDetail => 'Подробный учёт';
 
   @override
-  String get trafficStatsDetailDesc => 'Записывать детализацию по доменам, процессам, узлам, профилям и правилам';
+  String get trafficStatsDetailDesc =>
+      'Записывать детализацию по доменам, процессам, узлам, профилям и правилам';
 
   @override
   String get trafficStatsSiteIcon => 'Иконки сайтов';
 
   @override
-  String get trafficStatsSiteIconDesc => 'Загружать и кэшировать иконки доменов локально';
+  String get trafficStatsSiteIconDesc =>
+      'Загружать и кэшировать иконки доменов локально';
 
   @override
   String get trafficStatsRetention => 'Срок хранения';
 
   @override
-  String trafficStatsMonths(Object count) {
-    return '{count, plural, few{${count} месяца} other{${count} месяцев}}';
+  String trafficStatsMonths(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count месяцев',
+      few: '$count месяца',
+    );
+    return '$_temp0';
   }
 
   @override
   String get trafficStatsSettings => 'Настройки статистики';
 
   @override
-  String get trafficStatsClearTip => 'Очистить все сохранённые данные статистики трафика?';
+  String get trafficStatsClearTip =>
+      'Очистить все сохранённые данные статистики трафика?';
 
   @override
   String trafficStatsSince(Object date) {
-    return 'С ${date}';
+    return 'С $date';
   }
 
   @override
-  String get trafficStatsDetailOffTip => 'Подробный учёт выключен. Записывается только общий трафик и динамика.';
+  String get trafficStatsDetailOffTip =>
+      'Подробный учёт выключен. Записывается только общий трафик и динамика.';
 
   @override
   String get trafficStatsRefresh => 'Обновить';

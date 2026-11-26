@@ -5,6 +5,7 @@ import 'package:fl_clash/common/service_probe.dart';
 import 'package:fl_clash/core/controller.dart';
 import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/models/models.dart';
+import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/core.dart';
 import 'package:fl_clash/providers/route_state.dart';
@@ -213,30 +214,181 @@ void main() {
     expect(stateOf(scope).valueOf(ServiceTarget.claude), isNotNull);
   });
 
-  testWidgets('a timeout is shown as a status and asked again behind it', (
-    tester,
-  ) async {
+  void answerWith(String Function() status) {
     when(() => core.serviceCheck(any())).thenAnswer((invocation) async {
       final params =
           invocation.positionalArguments.single as ServiceCheckParams;
       sweeps.add(params);
-      return [for (final name in params.names) _item(name, status: 'timeout')];
+      return [_item(params.names.single, status: status())];
     });
+  }
+
+  testWidgets('a failed service recovers while the route holds still', (
+    tester,
+  ) async {
+    var status = 'failed';
+    answerWith(() => status);
     final scope = container();
-    notifierOf(scope).watch(ServiceTarget.youtube);
+    const target = ServiceTarget.youtube;
+    notifierOf(scope).watch(target);
     await tester.pump();
+    expect(stateOf(scope).isLoading(target), isTrue);
+    await tester.pump(probeConfirmDelay);
+    expect(stateOf(scope).entryOf(target).phase, ProbePhase.failed);
 
-    final entry = stateOf(scope).entryOf(ServiceTarget.youtube);
-    expect(entry.phase, ProbePhase.failed);
-    expect(entry.value?.status, ServiceProbeStatus.timeout);
+    for (final minutes in [1, 2, 5, 5]) {
+      final calls = sweeps.length;
+      await tester.pump(
+        Duration(minutes: minutes) - const Duration(milliseconds: 1),
+      );
+      expect(sweeps, hasLength(calls));
+      await tester.pump(const Duration(milliseconds: 1));
+      expect(sweeps, hasLength(calls + 1));
+      expect(stateOf(scope).entryOf(target).phase, ProbePhase.failed);
+    }
+    status = 'available';
+    await tester.pump(const Duration(minutes: 5));
+    expect(
+      stateOf(scope).valueOf(target)?.status,
+      ServiceProbeStatus.available,
+    );
+    final calls = sweeps.length;
+    await tester.pump(const Duration(minutes: 6));
+    expect(sweeps, hasLength(calls));
+    scope.dispose();
+  });
 
+  testWidgets(
+    'a visible timeout backs off but resume uses the normal throttle',
+    (tester) async {
+      answerWith(() => 'timeout');
+      final scope = container();
+      const target = ServiceTarget.youtube;
+      notifierOf(scope).watch(target);
+      await tester.pump();
+      expect(
+        stateOf(scope).valueOf(target)?.status,
+        ServiceProbeStatus.timeout,
+      );
+      await tester.pump(const Duration(minutes: 1));
+      expect(sweeps, hasLength(2));
+
+      scope.read(routeTrackerProvider.notifier).markResumed();
+      await tester.pump();
+      expect(sweeps, hasLength(2));
+      await tester.pump(probeThrottleDuration);
+      expect(sweeps, hasLength(3));
+      notifierOf(scope).unwatch(target);
+      await tester.pump(const Duration(minutes: 6));
+      expect(sweeps, hasLength(3));
+
+      notifierOf(scope).watch(target);
+      scope
+          .read(routeTrackerProvider.notifier)
+          .applySnapshot(
+            const RouteSnapshot(coreEpoch: 1, routeVersion: 1, running: true),
+          );
+      await tester.pump();
+      await tester.pump(const Duration(minutes: 1));
+      expect(sweeps, hasLength(5));
+      scope.dispose();
+    },
+  );
+
+  List<Timer> trackTimers(Duration interval, void Function() start) {
+    final timers = <Timer>[];
+    runZoned(
+      start,
+      zoneSpecification: ZoneSpecification(
+        createTimer: (self, parent, zone, duration, callback) {
+          final timer = parent.createTimer(zone, duration, callback);
+          if (duration == interval) timers.add(timer);
+          return timer;
+        },
+      ),
+    );
+    return timers;
+  }
+
+  testWidgets('a timeout landing while hidden arms no recheck timer', (
+    tester,
+  ) async {
+    final reply = Completer<List<ServiceCheckItem>>();
+    when(() => core.serviceCheck(any())).thenAnswer((_) => reply.future);
+    final scope = container();
+    final timers = trackTimers(
+      const Duration(minutes: 1),
+      () => notifierOf(scope).watch(ServiceTarget.youtube),
+    );
+    await tester.pump();
+    expect(timers, isEmpty);
+    scope.read(appVisibleProvider.notifier).value = false;
+    reply.complete([_item('youtube', status: 'timeout')]);
+    await tester.pump();
+    expect(
+      stateOf(scope).entryOf(ServiceTarget.youtube).phase,
+      ProbePhase.failed,
+    );
+    expect(timers, isEmpty);
+    scope.dispose();
+  });
+
+  testWidgets('hiding a failed service cancels its recheck until shown again', (
+    tester,
+  ) async {
+    answerWith(() => 'timeout');
+    final scope = container();
+    const target = ServiceTarget.youtube;
+    final backoffTimers = trackTimers(
+      const Duration(minutes: 2),
+      () => notifierOf(scope).watch(target),
+    );
+    await tester.pump();
     await tester.pump(const Duration(minutes: 1));
-    expect(sweeps, hasLength(1));
+    expect(backoffTimers.single.isActive, isTrue);
 
-    scope.read(routeTrackerProvider.notifier).markResumed();
-    await tester.pump();
-    await tester.pump(probeThrottleDuration);
+    final visible = scope.read(appVisibleProvider.notifier);
+    visible.value = false;
+    expect(backoffTimers.single.isActive, isFalse);
+    await tester.pump(const Duration(minutes: 2));
     expect(sweeps, hasLength(2));
+    visible.value = true;
+    await tester.pump();
+    expect(sweeps, hasLength(2));
+    await tester.pump(const Duration(minutes: 2));
+    expect(sweeps, hasLength(3));
+    scope.dispose();
+  });
+
+  testWidgets('a reset and a later outage each start at one minute', (
+    tester,
+  ) async {
+    var status = 'timeout';
+    answerWith(() => status);
+    final scope = container();
+    const target = ServiceTarget.youtube;
+    final service = notifierOf(scope);
+    service.watch(target);
+    await tester.pump();
+    await tester.pump(const Duration(minutes: 1));
+    expect(sweeps, hasLength(2));
+
+    scope.read(routeTrackerProvider.notifier).bumpHostEpoch();
+    await tester.pump(probeMoveSettleDuration);
+    expect(sweeps, hasLength(3));
+    status = 'available';
+    await tester.pump(const Duration(minutes: 1));
+    expect(
+      stateOf(scope).valueOf(target)?.status,
+      ServiceProbeStatus.available,
+    );
+
+    status = 'timeout';
+    service.refresh([target]);
+    await tester.pump();
+    expect(sweeps, hasLength(5));
+    await tester.pump(const Duration(minutes: 1));
+    expect(sweeps, hasLength(6));
     scope.dispose();
   });
 

@@ -239,13 +239,15 @@ Widget generateAnimatedSection({
   String? title,
   required List<Widget> items,
   String? footer,
+  bool last = false,
 }) {
   return Column(
     children: [
       if (items.isNotEmpty)
         title != null ? ListHeader(title: title) : const ListSectionGap(),
       AnimatedEntries(grouped: true, children: items),
-      if (items.isNotEmpty && footer != null) ListFooter(text: footer),
+      if (items.isNotEmpty && footer != null)
+        ListFooter(text: footer, last: last),
     ],
   );
 }

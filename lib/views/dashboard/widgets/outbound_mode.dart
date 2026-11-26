@@ -39,14 +39,14 @@ class OutboundModeCard extends ConsumerWidget {
         children: [
           DashboardCardHeader(
             glyph: AppGlyphs.split,
-            title: context.appLocalizations.outboundMode,
+            title: context.appLocalizations.outbound,
           ),
           const SizedBox(height: 12),
-          DashboardConnectedGroup(
+          ConnectedButtonGroup(
             children: [
               for (final (index, item) in Mode.values.indexed)
                 Expanded(
-                  child: DashboardConnectedButton(
+                  child: ConnectedButton(
                     selected: item == mode,
                     first: index == 0,
                     last: index == Mode.values.length - 1,
@@ -121,7 +121,7 @@ class OutboundModeBar extends ConsumerWidget {
             ConstrainedBox(
               constraints: BoxConstraints(maxWidth: constraints.maxWidth / 4),
               child: Text(
-                appLocalizations.outboundMode,
+                appLocalizations.outbound,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: DashboardText.cardTitle(context),
@@ -129,12 +129,12 @@ class OutboundModeBar extends ConsumerWidget {
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: DashboardConnectedGroup(
+              child: ConnectedButtonGroup(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   for (final (index, item) in Mode.values.indexed)
                     Expanded(
-                      child: DashboardConnectedButton(
+                      child: ConnectedButton(
                         selected: item == mode,
                         first: index == 0,
                         last: index == Mode.values.length - 1,

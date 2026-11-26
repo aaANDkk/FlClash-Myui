@@ -1,46 +1,15 @@
+import 'package:collection/collection.dart';
 import 'package:fl_clash/common/common.dart';
-import 'package:fl_clash/enum/enum.dart';
-import 'package:fl_clash/features/ip_quality/ip_address_row.dart';
 import 'package:fl_clash/models/models.dart';
-import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
 import 'package:fl_clash/widgets/widgets.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'detail_tabs.dart';
-import 'mitm_exchanges.dart';
-
-String _endpointText(String ip, String port) {
-  if (ip.isEmpty) {
-    return '';
-  }
-  if (port.isNotEmpty) {
-    return ip.contains(':') ? '[$ip]:$port' : '$ip:$port';
-  }
-  return ip;
-}
-
-void showTrackerInfoDetail(
-  BuildContext context,
-  TrackerInfo trackerInfo,
-  String title,
-) {
-  showSheet<void>(
-    context: context,
-    props: const SheetProps(
-      backgroundColor: Colors.transparent,
-      retainExpandedHeight: true,
-    ),
-    builder: (_) => NestedPagedSheet(
-      builder: (_) => Scaffold(
-        body: TrackerInfoDetailView(trackerInfo: trackerInfo),
-        title: title,
-      ),
-    ),
-  );
-}
+import 'tracker_app_well.dart';
+import 'tracker_clock.dart';
+import 'tracker_menu.dart';
+import 'tracker_selection.dart';
+import 'tracker_texts.dart';
 
 List<PopupMenuItem> trackerInfoMenuItems(
   BuildContext context,
@@ -49,404 +18,194 @@ List<PopupMenuItem> trackerInfoMenuItems(
 }) {
   final appLocalizations = context.appLocalizations;
   final metadata = trackerInfo.metadata;
-  final destination = _endpointText(
+  final destination = trackerEndpointText(
     metadata.destinationIP,
     metadata.destinationPort,
   );
-  Future<void> copy(String text) async {
-    await Clipboard.setData(ClipboardData(text: text));
-    dialogs.showBanner(currentAppLocalizations.copySuccess);
-  }
-
+  final menuActions = TrackerMenuScope.of(context);
+  final close = onClose ?? menuActions?.close;
+  final onlyApp = menuActions?.onlyApp;
+  final hideHost = menuActions?.hideHost;
+  // The row that opened the menu can leave the list before its sheet opens.
+  final formHost = Navigator.of(context).overlay!.context;
   return [
-    if (metadata.host.isNotEmpty)
-      PopupMenuItem(
-        glyph: AppGlyphs.copy,
-        label: appLocalizations.copyHost,
-        onPressed: () => copy(metadata.host),
-      ),
-    if (destination.isNotEmpty)
-      PopupMenuItem(
-        glyph: AppGlyphs.copy,
-        label: appLocalizations.copyDestination,
-        onPressed: () => copy(destination),
-      ),
-    if (onClose != null)
+    if (close != null && trackerInfo.isActive)
       PopupMenuItem(
         glyph: AppGlyphs.block,
         label: appLocalizations.closeConnection,
+        danger: true,
+        onPressed: () => close(trackerInfo),
+      ),
+    if (metadata.host.isNotEmpty)
+      copyMenuItem(
+        appLocalizations.copyHost,
+        trackerCopyText(trackerInfo),
         section: const PopupMenuSection(),
-        onPressed: () => onClose(trackerInfo),
+      ),
+    if (metadata.host.isEmpty && destination.isNotEmpty)
+      copyMenuItem(
+        appLocalizations.copyDestination,
+        trackerCopyText(trackerInfo),
+        section: const PopupMenuSection(),
+      ),
+    if (onlyApp != null && metadata.process.isNotEmpty)
+      PopupMenuItem(
+        glyph: AppGlyphs.filter,
+        label: appLocalizations.onlyThisApp,
+        section: const PopupMenuSection(),
+        onPressed: () => onlyApp(trackerInfo),
+      ),
+    if (hideHost != null && trackerInfo.title.isNotEmpty)
+      PopupMenuItem(
+        glyph: AppGlyphs.eyeOff,
+        label: appLocalizations.hideThisHost,
+        section: onlyApp == null || metadata.process.isEmpty
+            ? const PopupMenuSection()
+            : null,
+        onPressed: () => hideHost(trackerInfo),
+      ),
+    if (rsFeature && metadata.mitm)
+      PopupMenuItem(
+        glyph: AppGlyphs.eye,
+        label: appLocalizations.viewHttp,
+        section: const PopupMenuSection(),
+        onPressed: () => showTrackerInfoDetail(
+          formHost,
+          trackerInfo,
+          appLocalizations.details(appLocalizations.connection),
+          opensRequests: true,
+        ),
       ),
   ];
 }
 
 class TrackerInfoItem extends StatelessWidget {
   final TrackerInfo trackerInfo;
-  final bool isLive;
   final ValueChanged<TrackerInfo>? onClose;
   final String detailTitle;
 
-  /// What the detail opens on, where a memoized row outlives its traffic.
+  /// With its latest traffic, which [traffic] tells of.
   final ValueGetter<TrackerInfo>? latest;
+  final Listenable? traffic;
 
   const TrackerInfoItem({
     super.key,
     required this.trackerInfo,
-    this.isLive = false,
     this.onClose,
     required this.detailTitle,
     this.latest,
+    this.traffic,
   });
 
   @override
   Widget build(BuildContext context) {
-    return ContextMenuRegion(
-      menuItems: trackerInfoMenuItems(context, trackerInfo, onClose: onClose),
-      child: RecordListItem(
-        onTap: () => showTrackerInfoDetail(
-          context,
-          latest?.call() ?? trackerInfo,
-          detailTitle,
-        ),
-        header: _buildHeader(context),
-        body: _TrackerInfoBody(trackerInfo: trackerInfo),
-      ),
+    final selection = TrackerSelection.maybeOf(context);
+    if (selection == null) {
+      return _buildRow(context, selected: false);
+    }
+    return TrackerSelected(
+      id: trackerInfo.id,
+      builder: (context, selected) => _buildRow(context, selected: selected),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
-    final network = Text(
-      trackerInfo.metadata.network.toUpperCase(),
-      style: AppTextStyle.caption1
-          .of(context, emphasized: true)
-          .copyWith(color: context.colorScheme.onSurfaceVariant),
-    );
-    final mitm = trackerInfo.metadata.mitm;
-    if (!isLive) {
-      return RecordHeader(
-        children: [
-          RecordTimestamp(trackerInfo.start.showFull),
-          network,
-          if (mitm) const RecordLabel(label: 'MITM'),
-        ],
-      );
-    }
-    final color = context.colorScheme.onSurfaceVariant;
-    WidgetSpan arrow(Glyph glyph) => WidgetSpan(
-      alignment: PlaceholderAlignment.middle,
-      child: GlyphIcon(glyph, size: 12, color: color),
-    );
-    return RecordHeader(
-      trailing: Text.rich(
-        TextSpan(
-          children: [
-            arrow(AppGlyphs.arrowUp),
-            TextSpan(
-              text: ' ${(trackerInfo.uploadSpeed ?? 0).traffic.show}/s   ',
-            ),
-            arrow(AppGlyphs.arrowDown),
-            TextSpan(
-              text: ' ${(trackerInfo.downloadSpeed ?? 0).traffic.show}/s',
-            ),
-          ],
-        ),
+  Widget _buildRow(BuildContext context, {required bool selected}) {
+    final colorScheme = context.colorScheme;
+    final metadata = trackerInfo.metadata;
+    final secondary = colorScheme.onSurfaceVariant;
+    final failure = trackerInfo.failure;
+    final row = DecorationListItem(
+      isSelected: selected,
+      leading: TrackerAppWell(trackerInfo: trackerInfo, size: 40),
+      title: Text(
+        metadata.host.isNotEmpty
+            ? metadata.host
+            : trackerEndpointText(
+                metadata.destinationIP,
+                metadata.destinationPort,
+              ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: AppTextStyle.subheadline.of(context),
       ),
-      children: [
-        Text(trackerInfo.start.getLastUpdateTimeDesc(context, compact: true)),
-        network,
-        if (mitm) const RecordLabel(label: 'MITM'),
-      ],
+      subtitle: DefaultTextStyle.merge(
+        style: AppTextStyle.caption1
+            .of(context)
+            .toTabular
+            .copyWith(color: secondary),
+        child: failure != null
+            ? RecordLabelLine(
+                labels: trackerLabels(context, trackerInfo),
+                underTitle: true,
+              )
+            : TrackerLifetime(
+                trackerInfo: trackerInfo,
+                builder: (lifetime) => RecordLabelLine(
+                  underTitle: true,
+                  labels: [
+                    if (trackerInfo.chains.lastOrNull case final node?
+                        when node.isNotEmpty)
+                      RecordLabel(label: node),
+                    RecordLabel(label: lifetime),
+                    ...trackerLabels(context, trackerInfo, failure: false),
+                  ],
+                ),
+              ),
+      ),
+      trailing: switch ((traffic, latest)) {
+        (final traffic?, final latest?) => ListenableBuilder(
+          listenable: traffic,
+          builder: (context, _) {
+            final trackerInfo = latest();
+            return MemoBuilder(
+              inputs: [trackerInfo],
+              builder: (_) => TrackerTraffic(trackerInfo: trackerInfo),
+            );
+          },
+        ),
+        _ => TrackerTraffic(trackerInfo: trackerInfo),
+      },
+      onPressed: () =>
+          openTrackerInfo(context, latest?.call() ?? trackerInfo, detailTitle),
+    );
+    return ContextMenuRegion(
+      menuBuilder: (context) => trackerInfoMenuItems(
+        context,
+        latest?.call() ?? trackerInfo,
+        onClose: onClose,
+      ),
+      child: selected ? RecordSelectedRow(child: row) : row,
     );
   }
 }
 
-class _TrackerInfoBody extends StatelessWidget {
+class TrackerTraffic extends StatelessWidget {
   final TrackerInfo trackerInfo;
 
-  const _TrackerInfoBody({required this.trackerInfo});
-
-  Widget _buildTitle(BuildContext context, RecordTextStyles styles) {
-    final metadata = trackerInfo.metadata;
-    final title = Text.rich(
-      TextSpan(
-        children: [
-          TextSpan(
-            text: _endpointText(trackerInfo.title, metadata.destinationPort),
-            style: styles.title,
-          ),
-          if (metadata.host.isNotEmpty && metadata.destinationIP.isNotEmpty)
-            TextSpan(
-              text: '  ${metadata.destinationIP}',
-              style: styles.secondary,
-            ),
-        ],
-      ),
-    );
-    final process = metadata.process;
-    if (process.isEmpty) {
-      return title;
-    }
-    return OwnPackageIcon(
-      packageName: process,
-      size: 24,
-      builder: (context, icon) => icon == null
-          ? title
-          : Row(
-              spacing: 8,
-              children: [
-                GestureDetector(
-                  onTap: () => RecordFilterScope.add(
-                    context,
-                    RecordFilter(RecordFacetKind.app, process),
-                  ),
-                  child: icon,
-                ),
-                Flexible(child: title),
-              ],
-            ),
-    );
-  }
+  const TrackerTraffic({super.key, required this.trackerInfo});
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = context.colorScheme;
-    final styles = RecordTextStyles.of(context);
-    final metadata = trackerInfo.metadata;
-    final rule = trackerInfo.ruleText;
-    final source = [
-      trackerInfo.progressText,
-      _endpointText(metadata.sourceIP, metadata.sourcePort),
-    ].where((text) => text.isNotEmpty).join('  ·  ');
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: 4,
-      children: [
-        _buildTitle(context, styles),
-        Wrap(
-          spacing: 6,
-          runSpacing: 4,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            if (rule.isNotEmpty) Text(rule, style: styles.secondary),
-            for (final (index, chain) in trackerInfo.chains.reversed.indexed)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                spacing: 6,
-                children: [
-                  if (index > 0 || rule.isNotEmpty) const RecordArrow(),
-                  Flexible(
-                    child: TonalChip(
-                      label: chain,
-                      color: context.raisedSurfaceLevel.colorOf(colorScheme),
-                      foregroundColor: colorScheme.onSurfaceVariant,
-                      onPressed: () => RecordFilterScope.add(
-                        context,
-                        RecordFilter(RecordFacetKind.proxy, chain),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-          ],
-        ),
-        if (source.isNotEmpty) Text(source, style: styles.secondary),
-      ],
-    );
-  }
-}
-
-/// Adds the host of a connection to the hostnames or excludes it, so that the
-/// list can be filled from what the apps really connect to.
-class _MitmHostSection extends ConsumerWidget {
-  final Metadata metadata;
-
-  const _MitmHostSection({required this.metadata});
-
-  Future<void> _confirm(
-    BuildContext context,
-    WidgetRef ref, {
-    required String title,
-    required String tip,
-    required Mitm Function(Mitm) update,
-  }) async {
-    final res = await dialogs.showMessage(
-      title: title,
-      message: TextSpan(text: tip),
-    );
-    if (res != true) {
-      return;
-    }
-    ref
-        .read(patchClashConfigProvider.notifier)
-        .update((state) => state.copyWith(mitm: update(state.mitm)));
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final host = metadata.host;
-    final (enable, hostname) = ref.watch(
-      patchClashConfigProvider.select(
-        (state) => (state.mitm.enable, state.mitm.hostname),
+    final secondary = colorScheme.onSurfaceVariant;
+    final total = (trackerInfo.upload + trackerInfo.download).traffic.show;
+    final active = trackerInfo.isActive;
+    return PlainTextLines(spacing: 2, [
+      (
+        text: active ? trackerSpeedText(trackerInfo) : total,
+        style: AppTextStyle.footnote
+            .of(context, emphasized: active)
+            .toTabular
+            .copyWith(color: active ? colorScheme.onSurface : secondary),
       ),
-    );
-    if (!enable || host.isEmpty || metadata.network.toLowerCase() != 'tcp') {
-      return const SizedBox.shrink();
-    }
-    final appLocalizations = context.appLocalizations;
-    final decrypted = metadata.mitm || metadata.mitmRefused;
-    final excludes =
-        !hostname.contains('-$host') && (decrypted || hostname.contains(host));
-    final title = excludes
-        ? appLocalizations.mitmExcludeHost
-        : appLocalizations.mitmDecryptHost;
-    return generateSection(
-      title: appLocalizations.mitm,
-      items: [
-        ListItem(
-          title: Text(title),
-          onTap: () => _confirm(
-            context,
-            ref,
-            title: title,
-            tip: excludes
-                ? appLocalizations.mitmExcludeHostTip(host)
-                : appLocalizations.mitmDecryptHostTip(host),
-            update: (mitm) =>
-                excludes ? mitm.excludingHost(host) : mitm.decryptingHost(host),
-          ),
+      if (active)
+        (
+          text: total,
+          style: AppTextStyle.caption2
+              .of(context)
+              .toTabular
+              .copyWith(color: secondary),
         ),
-      ],
-      footer: metadata.mitmRefused
-          ? appLocalizations.mitmClientRefusedCertificate
-          : null,
-    );
-  }
-}
-
-class TrackerInfoDetailView extends ConsumerWidget {
-  final TrackerInfo trackerInfo;
-
-  const TrackerInfoDetailView({super.key, required this.trackerInfo});
-
-  Widget _buildChains(BuildContext context) {
-    return DetailRow(
-      title: context.appLocalizations.proxyChains,
-      value: Wrap(
-        spacing: 6,
-        runSpacing: 4,
-        alignment: WrapAlignment.end,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          for (final (index, chain) in trackerInfo.chains.reversed.indexed)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 6,
-              children: [
-                if (index > 0) const RecordArrow(),
-                Flexible(child: MetaChip(label: chain)),
-              ],
-            ),
-        ],
-      ),
-    );
-  }
-
-  List<Widget> _buildRows(List<(String, String)> entries) {
-    return [
-      for (final (title, value) in entries)
-        if (value.isNotEmpty) DetailRow.text(title: title, value: value),
-    ];
-  }
-
-  Widget _buildOverview(BuildContext context) {
-    final appLocalizations = context.appLocalizations;
-    final metadata = trackerInfo.metadata;
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(
-        bottom: 20 + context.bottomInset,
-        top: context.sectionsTopPadding,
-      ),
-      children: [
-        generateSection(
-          title: appLocalizations.basicInfo,
-          items: _buildRows([
-            (appLocalizations.creationTime, trackerInfo.start.showFull),
-            (appLocalizations.networkType, metadata.network),
-            (appLocalizations.process, trackerInfo.progressText),
-            (appLocalizations.rule, trackerInfo.ruleText),
-            (appLocalizations.upload, trackerInfo.upload.traffic.show),
-            (appLocalizations.download, trackerInfo.download.traffic.show),
-          ]),
-        ),
-        generateSection(
-          title: appLocalizations.address,
-          items: [
-            ..._buildRows([(appLocalizations.host, metadata.host)]),
-            if (metadata.sourceIP.isNotEmpty)
-              IpAddressRow(
-                title: appLocalizations.source,
-                address: _endpointText(metadata.sourceIP, metadata.sourcePort),
-                allowDetails: false,
-              ),
-            if (metadata.destinationIP.isNotEmpty)
-              IpAddressRow(
-                title: appLocalizations.destination,
-                address: _endpointText(
-                  metadata.destinationIP,
-                  metadata.destinationPort,
-                ),
-                countries: metadata.destinationGeoIP,
-              ),
-            ..._buildRows([
-              (
-                appLocalizations.destinationGeoIP,
-                metadata.destinationGeoIP.join(' '),
-              ),
-              (appLocalizations.destinationIPASN, metadata.destinationIPASN),
-            ]),
-            if (metadata.remoteDestination.isNotEmpty)
-              IpAddressRow(
-                title: appLocalizations.remoteDestination,
-                address: metadata.remoteDestination,
-              ),
-          ],
-        ),
-        generateSection(
-          title: appLocalizations.proxies,
-          items: [
-            ..._buildRows([
-              (appLocalizations.specialProxy, metadata.specialProxy),
-              (appLocalizations.specialRules, metadata.specialRules),
-              (appLocalizations.dnsMode, metadata.dnsMode?.name ?? ''),
-            ]),
-            _buildChains(context),
-          ],
-        ),
-        if (rsFeature) _MitmHostSection(metadata: metadata),
-      ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final appLocalizations = context.appLocalizations;
-    final capturing =
-        trackerInfo.metadata.mitm &&
-        ref.watch(
-          patchClashConfigProvider.select(
-            (state) => state.mitm.enable && state.mitm.capture,
-          ),
-        );
-    return DetailTabs(
-      tabs: [
-        (appLocalizations.overview, _buildOverview),
-        if (capturing)
-          (
-            appLocalizations.httpRequests,
-            (_) => MitmExchangesView(trackerInfo: trackerInfo),
-          ),
-      ],
-    );
+    ]);
   }
 }

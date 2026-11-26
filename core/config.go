@@ -145,6 +145,7 @@ func applyConfig(params *SetupParams) error {
 	// resolving routes while the new config is being applied.
 	cancelAllOutboundIps()
 	cancelAllServiceChecks()
+	cancelAllDelayTests()
 
 	applyOptions(params.Options)
 	cfg, err := loadSetupConfig(params)
@@ -167,6 +168,7 @@ func applyConfig(params *SetupParams) error {
 
 	currentConfig = cfg
 	hub.ApplyConfig(cfg)
+	currentRuleTable.observe()
 	patchSelectGroup(params.SelectedMap)
 	updateListeners(cfg)
 	// After the listeners: a probe sent while the TUN is rebuilt carries the

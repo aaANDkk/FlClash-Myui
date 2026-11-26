@@ -13,7 +13,7 @@ concurrency:
 env:
   IS_STABLE: ${{ !contains(github.ref, '-') }}
   BRANCH_CACHE: ${{ !startsWith(github.ref, 'refs/tags/') }}
-  FLUTTER_VERSION: '3.50.0'
+  FLUTTER_VERSION: '3.50.1'
   GO_VERSION: '1.27.1'
   NDK_VERSION: r28c
 
@@ -175,6 +175,10 @@ jobs:
         run: |
           for patch in core/patches/*.patch; do
             [ -f "$patch" ] || continue
+            if git -C core/Clash.Meta apply --ignore-whitespace --reverse --check "../../$patch" 2>/dev/null; then
+              echo "Skipping already-applied $patch"
+              continue
+            fi
             echo "Applying $patch"
             git -C core/Clash.Meta apply --ignore-whitespace --check "../../$patch"
             git -C core/Clash.Meta apply --ignore-whitespace "../../$patch"
@@ -186,33 +190,39 @@ jobs:
           FLUTTER_MACOS_ARM64_ONLY: ${{ matrix.platform == 'macos' && matrix.arch == 'arm64' }}
         run: dart tool/package.dart ${{ matrix.platform }} ${{ env.IS_STABLE == 'true' && '--env stable' || '' }} -v
 
-      - name: Upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: artifact-${{ matrix.platform }}${{ matrix.arch && format('-{0}', matrix.arch) }}
-          path: ./dist
-          overwrite: true
-
       - name: Verify Android signature
         if: startsWith(matrix.platform,'android')
         env:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS || secrets.FLCLASH_KEY_ALIAS || 'flclash' }}
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD || secrets.FLCLASH_STORE_PASSWORD || 'flclash123456' }}
         run: |
-          for apk in dist/*.apk; do
-            [ -e "$apk" ] || continue
-            apksigner=$(ls "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -n 1)
-            expected=$(keytool -list -v -keystore android/app/keystore.jks -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" | sed -n 's/.*SHA256: *//p' | tr -d ':' | tr 'A-F' 'a-f')
+          shopt -s nullglob
+          apks=(dist/*.apk)
+          if [ "${#apks[@]}" -ne 3 ]; then
+            echo "::error::Expected three Android APKs"
+            exit 1
+          fi
+          apksigner=$(ls "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -n 1)
+          expected=$(keytool -list -v -keystore android/app/keystore.jks -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" | sed -n 's/.*SHA256: *//p' | tr -d ':' | tr 'A-F' 'a-f')
+          for apk in "${apks[@]}"; do
             actual=$("$apksigner" verify --print-certs "$apk" | sed -n 's/.*SHA-256 digest: *//p' | head -n 1 | tr -d ':' | tr 'A-F' 'a-f')
             echo "keystore: $expected"
             echo "apk:      $actual ($apk)"
             if [ -z "$expected" ] || [ -z "$actual" ]; then
-              echo "::warning::Could not compare the two certificates; check $apk by hand."
+              echo "::error::Could not compare the Android signing certificates for $apk."
+              exit 1
             elif [ "$expected" != "$actual" ]; then
               echo "::error::$apk is not signed with the release keystore."
               exit 1
             fi
           done
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifact-${{ matrix.platform }}${{ matrix.arch && format('-{0}', matrix.arch) }}
+          path: ./dist
+          overwrite: true
 
   publish:
     if: startsWith(github.ref, 'refs/tags/')
@@ -229,9 +239,21 @@ jobs:
       - name: Download
         uses: actions/download-artifact@v4
         with:
-          path: ./dist/
+          path: ./artifacts/
           pattern: artifact-*
-          merge-multiple: true
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: Merge and verify build manifests
+        run: |
+          flutter pub get
+          dart tool/package.dart merge artifacts/* --out dist
+          dart tool/package.dart check dist
+          rm dist/manifest.json
 
       - name: Delete existing release if same tag
         shell: bash
@@ -247,14 +269,9 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           version="${TAG#v}"
+          version="${version//+/.}"
           build_version=$(sed -n 's/^version: *\([^+ ]*\).*/\1/p' pubspec.yaml | head -n 1)
-          sed "s|BUILD_VERSION|$build_version|g; s|VERSION|$version|g" .github/release_template.md > release.md
-
-      - name: Generate sha256
-        run: |
-          cd ./dist
-          rm -f manifest.json *-SHA256SUMS
-          sha256sum ./* > SHA256SUMS
+          sed "s|BUILD_VERSION|$build_version|g; s|VERSION|$version|g; s|TAG|$TAG|g" .github/release_template.md > release.md
 
       - name: Release
         uses: softprops/action-gh-release@v2

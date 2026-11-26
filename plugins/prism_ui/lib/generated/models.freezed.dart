@@ -16,7 +16,8 @@ T _$identity<T>(T value) => value;
 mixin _$IconButtonData implements DiagnosticableTreeMixin {
 
  Glyph get glyph; VoidCallback? get onPressed; String? get tooltip; bool get isLoading;/// Non-null makes the button a toggle that shows this state.
- bool? get isSelected;
+ bool? get isSelected;/// Non-null makes the button open these items as a menu.
+ List<PopupMenuItem> Function()? get menuItems;
 /// Create a copy of IconButtonData
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -29,26 +30,26 @@ void debugFillProperties(DiagnosticPropertiesBuilder properties) {
   final _this = this as IconButtonData;
   properties
     ..add(DiagnosticsProperty('type', 'IconButtonData'))
-    ..add(DiagnosticsProperty('glyph', _this.glyph))..add(DiagnosticsProperty('onPressed', _this.onPressed))..add(DiagnosticsProperty('tooltip', _this.tooltip))..add(DiagnosticsProperty('isLoading', _this.isLoading))..add(DiagnosticsProperty('isSelected', _this.isSelected));
+    ..add(DiagnosticsProperty('glyph', _this.glyph))..add(DiagnosticsProperty('onPressed', _this.onPressed))..add(DiagnosticsProperty('tooltip', _this.tooltip))..add(DiagnosticsProperty('isLoading', _this.isLoading))..add(DiagnosticsProperty('isSelected', _this.isSelected))..add(DiagnosticsProperty('menuItems', _this.menuItems));
 }
 
 @override
 bool operator ==(Object other) {
   final _this = this as IconButtonData;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is IconButtonData&&(identical(other.glyph, _this.glyph) || other.glyph == _this.glyph)&&(identical(other.onPressed, _this.onPressed) || other.onPressed == _this.onPressed)&&(identical(other.tooltip, _this.tooltip) || other.tooltip == _this.tooltip)&&(identical(other.isLoading, _this.isLoading) || other.isLoading == _this.isLoading)&&(identical(other.isSelected, _this.isSelected) || other.isSelected == _this.isSelected));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is IconButtonData&&(identical(other.glyph, _this.glyph) || other.glyph == _this.glyph)&&(identical(other.onPressed, _this.onPressed) || other.onPressed == _this.onPressed)&&(identical(other.tooltip, _this.tooltip) || other.tooltip == _this.tooltip)&&(identical(other.isLoading, _this.isLoading) || other.isLoading == _this.isLoading)&&(identical(other.isSelected, _this.isSelected) || other.isSelected == _this.isSelected)&&(identical(other.menuItems, _this.menuItems) || other.menuItems == _this.menuItems));
 }
 
 
 @override
 int get hashCode {
   final _this = this as IconButtonData;
-  return Object.hash(runtimeType,_this.glyph,_this.onPressed,_this.tooltip,_this.isLoading,_this.isSelected);
+  return Object.hash(runtimeType,_this.glyph,_this.onPressed,_this.tooltip,_this.isLoading,_this.isSelected,_this.menuItems);
 }
 
 @override
 String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
   final _this = this as IconButtonData;
-  return 'IconButtonData(glyph: ${_this.glyph}, onPressed: ${_this.onPressed}, tooltip: ${_this.tooltip}, isLoading: ${_this.isLoading}, isSelected: ${_this.isSelected})';
+  return 'IconButtonData(glyph: ${_this.glyph}, onPressed: ${_this.onPressed}, tooltip: ${_this.tooltip}, isLoading: ${_this.isLoading}, isSelected: ${_this.isSelected}, menuItems: ${_this.menuItems})';
 }
 
 
@@ -59,7 +60,7 @@ abstract mixin class $IconButtonDataCopyWith<$Res>  {
   factory $IconButtonDataCopyWith(IconButtonData value, $Res Function(IconButtonData) _then) = _$IconButtonDataCopyWithImpl;
 @useResult
 $Res call({
- Glyph glyph, VoidCallback? onPressed, String? tooltip, bool isLoading, bool? isSelected
+ Glyph glyph, VoidCallback? onPressed, String? tooltip, bool isLoading, bool? isSelected, List<PopupMenuItem> Function()? menuItems
 });
 
 
@@ -76,14 +77,15 @@ class _$IconButtonDataCopyWithImpl<$Res>
 
 /// Create a copy of IconButtonData
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? glyph = null,Object? onPressed = freezed,Object? tooltip = freezed,Object? isLoading = null,Object? isSelected = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? glyph = null,Object? onPressed = freezed,Object? tooltip = freezed,Object? isLoading = null,Object? isSelected = freezed,Object? menuItems = freezed,}) {
   return _then(IconButtonData(
 glyph: null == glyph ? _self.glyph : glyph // ignore: cast_nullable_to_non_nullable
 as Glyph,onPressed: freezed == onPressed ? _self.onPressed : onPressed // ignore: cast_nullable_to_non_nullable
 as VoidCallback?,tooltip: freezed == tooltip ? _self.tooltip : tooltip // ignore: cast_nullable_to_non_nullable
 as String?,isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
 as bool,isSelected: freezed == isSelected ? _self.isSelected : isSelected // ignore: cast_nullable_to_non_nullable
-as bool?,
+as bool?,menuItems: freezed == menuItems ? _self.menuItems : menuItems // ignore: cast_nullable_to_non_nullable
+as List<PopupMenuItem> Function()?,
   ));
 }
 
@@ -168,10 +170,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Glyph glyph,  VoidCallback? onPressed,  String? tooltip,  bool isLoading,  bool? isSelected)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Glyph glyph,  VoidCallback? onPressed,  String? tooltip,  bool isLoading,  bool? isSelected,  List<PopupMenuItem> Function()? menuItems)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _IconButtonData() when $default != null:
-return $default(_that.glyph,_that.onPressed,_that.tooltip,_that.isLoading,_that.isSelected);case _:
+return $default(_that.glyph,_that.onPressed,_that.tooltip,_that.isLoading,_that.isSelected,_that.menuItems);case _:
   return orElse();
 
 }
@@ -189,10 +191,10 @@ return $default(_that.glyph,_that.onPressed,_that.tooltip,_that.isLoading,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Glyph glyph,  VoidCallback? onPressed,  String? tooltip,  bool isLoading,  bool? isSelected)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Glyph glyph,  VoidCallback? onPressed,  String? tooltip,  bool isLoading,  bool? isSelected,  List<PopupMenuItem> Function()? menuItems)  $default,) {final _that = this;
 switch (_that) {
 case _IconButtonData():
-return $default(_that.glyph,_that.onPressed,_that.tooltip,_that.isLoading,_that.isSelected);case _:
+return $default(_that.glyph,_that.onPressed,_that.tooltip,_that.isLoading,_that.isSelected,_that.menuItems);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -209,10 +211,10 @@ return $default(_that.glyph,_that.onPressed,_that.tooltip,_that.isLoading,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Glyph glyph,  VoidCallback? onPressed,  String? tooltip,  bool isLoading,  bool? isSelected)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Glyph glyph,  VoidCallback? onPressed,  String? tooltip,  bool isLoading,  bool? isSelected,  List<PopupMenuItem> Function()? menuItems)?  $default,) {final _that = this;
 switch (_that) {
 case _IconButtonData() when $default != null:
-return $default(_that.glyph,_that.onPressed,_that.tooltip,_that.isLoading,_that.isSelected);case _:
+return $default(_that.glyph,_that.onPressed,_that.tooltip,_that.isLoading,_that.isSelected,_that.menuItems);case _:
   return null;
 
 }
@@ -224,7 +226,7 @@ return $default(_that.glyph,_that.onPressed,_that.tooltip,_that.isLoading,_that.
 
 
 class _IconButtonData with DiagnosticableTreeMixin implements IconButtonData {
-  const _IconButtonData({required this.glyph, required this.onPressed, this.tooltip, this.isLoading = false, this.isSelected});
+  const _IconButtonData({required this.glyph, required this.onPressed, this.tooltip, this.isLoading = false, this.isSelected, this.menuItems});
   
 
 @override final  Glyph glyph;
@@ -233,6 +235,8 @@ class _IconButtonData with DiagnosticableTreeMixin implements IconButtonData {
 @override@JsonKey() final  bool isLoading;
 /// Non-null makes the button a toggle that shows this state.
 @override final  bool? isSelected;
+/// Non-null makes the button open these items as a menu.
+@override final  List<PopupMenuItem> Function()? menuItems;
 
 /// Create a copy of IconButtonData
 /// with the given fields replaced by the non-null parameter values.
@@ -245,23 +249,23 @@ _$IconButtonDataCopyWith<_IconButtonData> get copyWith => __$IconButtonDataCopyW
 void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     properties
     ..add(DiagnosticsProperty('type', 'IconButtonData'))
-    ..add(DiagnosticsProperty('glyph', glyph))..add(DiagnosticsProperty('onPressed', onPressed))..add(DiagnosticsProperty('tooltip', tooltip))..add(DiagnosticsProperty('isLoading', isLoading))..add(DiagnosticsProperty('isSelected', isSelected));
+    ..add(DiagnosticsProperty('glyph', glyph))..add(DiagnosticsProperty('onPressed', onPressed))..add(DiagnosticsProperty('tooltip', tooltip))..add(DiagnosticsProperty('isLoading', isLoading))..add(DiagnosticsProperty('isSelected', isSelected))..add(DiagnosticsProperty('menuItems', menuItems));
 }
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _IconButtonData&&(identical(other.glyph, glyph) || other.glyph == glyph)&&(identical(other.onPressed, onPressed) || other.onPressed == onPressed)&&(identical(other.tooltip, tooltip) || other.tooltip == tooltip)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.isSelected, isSelected) || other.isSelected == isSelected));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _IconButtonData&&(identical(other.glyph, glyph) || other.glyph == glyph)&&(identical(other.onPressed, onPressed) || other.onPressed == onPressed)&&(identical(other.tooltip, tooltip) || other.tooltip == tooltip)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.isSelected, isSelected) || other.isSelected == isSelected)&&(identical(other.menuItems, menuItems) || other.menuItems == menuItems));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,glyph,onPressed,tooltip,isLoading,isSelected);
+    return Object.hash(runtimeType,glyph,onPressed,tooltip,isLoading,isSelected,menuItems);
 }
 
 @override
 String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
-    return 'IconButtonData(glyph: $glyph, onPressed: $onPressed, tooltip: $tooltip, isLoading: $isLoading, isSelected: $isSelected)';
+    return 'IconButtonData(glyph: $glyph, onPressed: $onPressed, tooltip: $tooltip, isLoading: $isLoading, isSelected: $isSelected, menuItems: $menuItems)';
 }
 
 
@@ -272,7 +276,7 @@ abstract mixin class _$IconButtonDataCopyWith<$Res> implements $IconButtonDataCo
   factory _$IconButtonDataCopyWith(_IconButtonData value, $Res Function(_IconButtonData) _then) = __$IconButtonDataCopyWithImpl;
 @override @useResult
 $Res call({
- Glyph glyph, VoidCallback? onPressed, String? tooltip, bool isLoading, bool? isSelected
+ Glyph glyph, VoidCallback? onPressed, String? tooltip, bool isLoading, bool? isSelected, List<PopupMenuItem> Function()? menuItems
 });
 
 
@@ -289,14 +293,15 @@ class __$IconButtonDataCopyWithImpl<$Res>
 
 /// Create a copy of IconButtonData
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? glyph = null,Object? onPressed = freezed,Object? tooltip = freezed,Object? isLoading = null,Object? isSelected = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? glyph = null,Object? onPressed = freezed,Object? tooltip = freezed,Object? isLoading = null,Object? isSelected = freezed,Object? menuItems = freezed,}) {
   return _then(_IconButtonData(
 glyph: null == glyph ? _self.glyph : glyph // ignore: cast_nullable_to_non_nullable
 as Glyph,onPressed: freezed == onPressed ? _self.onPressed : onPressed // ignore: cast_nullable_to_non_nullable
 as VoidCallback?,tooltip: freezed == tooltip ? _self.tooltip : tooltip // ignore: cast_nullable_to_non_nullable
 as String?,isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
 as bool,isSelected: freezed == isSelected ? _self.isSelected : isSelected // ignore: cast_nullable_to_non_nullable
-as bool?,
+as bool?,menuItems: freezed == menuItems ? _self.menuItems : menuItems // ignore: cast_nullable_to_non_nullable
+as List<PopupMenuItem> Function()?,
   ));
 }
 

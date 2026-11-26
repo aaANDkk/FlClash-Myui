@@ -1,6 +1,6 @@
 # FlClash Myui
 
-基于 [FlClash 官方 0.9.4](https://github.com/chen08209/FlClash/tree/v0.9.4) 的个性化定制版本，增强 IP 查询、配置登机牌与图标集、流量统计、网络测速、仪表盘、字体与 Emoji 定制，以及 Android VPN 后台保活与液态玻璃流畅度。
+基于 [FlClash 官方 0.9.5](https://github.com/chen08209/FlClash/tree/v0.9.5) 的个性化定制版本，增强 IP 查询、配置登机牌与图标集、流量统计、网络测速、仪表盘、字体与 Emoji 定制，以及 Android VPN 后台保活与液态玻璃流畅度。
 
 支持 Android、Windows、macOS、Linux，开源、无广告。
 
@@ -10,20 +10,28 @@
 
 | 平台 | 安装包 |
 | --- | --- |
-| Android | [ARM64](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.4/FlClash-dev-0.9.4-android-arm64.apk) · [ARMv7](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.4/FlClash-dev-0.9.4-android-armv7.apk) · [x86_64](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.4/FlClash-dev-0.9.4-android-amd64.apk) |
-| Windows x64 | [EXE 安装版](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.4/FlClash-dev-0.9.4-windows-amd64-setup.exe) · [ZIP 便携版](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.4/FlClash-dev-0.9.4-windows-amd64-portable.zip) |
-| Windows ARM64 | [EXE 安装版](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.4/FlClash-dev-0.9.4-windows-arm64-setup.exe) · [ZIP 便携版](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.4/FlClash-dev-0.9.4-windows-arm64-portable.zip) |
-| macOS | [Apple Silicon](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.4/FlClash-dev-0.9.4-macos-arm64.dmg) · [Intel](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.4/FlClash-dev-0.9.4-macos-amd64.dmg) |
-| Linux x64 | [AppImage](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.4/FlClash-dev-0.9.4-linux-amd64.AppImage) · [DEB](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.4/FlClash-dev-0.9.4-linux-amd64.deb) · [RPM](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.4/FlClash-dev-0.9.4-linux-amd64.rpm) |
-| Linux ARM64 | [AppImage](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.4/FlClash-dev-0.9.4-linux-arm64.AppImage) · [DEB](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.4/FlClash-dev-0.9.4-linux-arm64.deb) · [RPM](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.4/FlClash-dev-0.9.4-linux-arm64.rpm) |
+| Android | [ARM64](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.5/FlClash-0.9.5-android-arm64.apk) · [ARMv7](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.5/FlClash-0.9.5-android-armv7.apk) · [x86_64](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.5/FlClash-0.9.5-android-amd64.apk) |
+| Windows x64 | [EXE 安装版](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.5/FlClash-0.9.5-windows-amd64-setup.exe) · [ZIP 便携版](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.5/FlClash-0.9.5-windows-amd64-portable.zip) |
+| Windows ARM64 | [EXE 安装版](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.5/FlClash-0.9.5-windows-arm64-setup.exe) · [ZIP 便携版](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.5/FlClash-0.9.5-windows-arm64-portable.zip) |
+| macOS | [Apple Silicon](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.5/FlClash-0.9.5-macos-arm64.dmg) · [Intel](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.5/FlClash-0.9.5-macos-amd64.dmg) |
+| Linux x64 | [AppImage](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.5/FlClash-0.9.5-linux-amd64.AppImage) · [DEB](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.5/FlClash-0.9.5-linux-amd64.deb) · [RPM](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.5/FlClash-0.9.5-linux-amd64.rpm) |
+| Linux ARM64 | [AppImage](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.5/FlClash-0.9.5-linux-arm64.AppImage) · [DEB](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.5/FlClash-0.9.5-linux-arm64.deb) · [RPM](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.5/FlClash-0.9.5-linux-arm64.rpm) |
 
-选择与你的系统和设备架构对应的安装包，点击即可下载。
+选择与你的设备架构对应的安装包。[SHA-256 校验文件](https://github.com/aaANDkk/FlClash-Myui/releases/download/v0.9.5/FlClash-0.9.5-SHA256SUMS)
 
-## 相比官方 0.9.4 的主要改动
+## 0.9.5 更新
+
+- 连接与 DNS 查询集中到「请求」页。连接详情新增时间线与路由路径，公网 IP 仍可直接打开风险与归属详情，并继承隐藏 IP 设置。
+- 升级代理列表、仪表盘、配置加载与编辑器的渲染性能，继续提供配置登机牌、独立 IP 查询、流量统计、网络测速和自定义字体。
+- 统一 IP 查询、IP 详情和出站 IP 的欺诈值刻度与标签。缺少类型数据时显示「未知」。
+- 恢复随应用内置的 GeoSite 数据，启动时自动修复已知的损坏缓存。切换配置时取消旧配置的延迟测试，避免其结果覆盖当前节点状态。
+- 关于页新增自动检查更新及更新频道设置。macOS 支持应用内安装更新。
+
+## Myui 定制功能
 
 ### 独立 IP 查询与风险评估
 
-- **独立「IP 查询」页面**：位于工具页 `DNS 查询 → IP 查询 → 流量统计 → 网速测试 → 资源`；默认自动检测并展示当前「出站 IP 地址」，支持输入任意公网 IPv4 / IPv6（自动提取端口）即时查询，提供一键切回出站 IP 与隐藏 IP 隐私保护；首载与二次搜索加载动画严格居中于屏幕正中央，路由转场落定后再触发探测与渲染，搭配 `ip_cache.dat` 内存缓存，进入页面丝滑无掉帧。
+- **独立「IP 查询」页面**：位于工具页「IP 查询」；默认自动检测并展示当前「出站 IP 地址」，支持输入任意公网 IPv4 / IPv6（自动提取端口）即时查询，提供一键切回出站 IP 与隐藏 IP 隐私保护；首载与二次搜索加载动画严格居中于屏幕正中央，路由转场落定后再触发探测与渲染，搭配 `ip_cache.dat` 内存缓存，进入页面丝滑无掉帧。
 - **横竖屏自适应与登机牌归属卡**：横屏顶部并排展示欺诈值与命中标记（右侧三组命中标记保持原始固定尺寸单行展示，窗口收窄时优先压缩左卡，且欺诈值「类型」去除左侧圆点对齐左边缘），下方归属信息卡片采用带上下半圆缺口的竖虚线分隔国家/地区与运营商、ASN、主机名，撕口中线始终与上方双卡缝隙严格垂直对齐；竖屏采用流式纵向卡片。
 - **双源并发与全局联动**：Scamalytics 与 IPLocate.io 双源并行查询、自动重试（最多 3 次）与 30 天本地持久化缓存；请求详情与 DNS 查询结果中的公网 IP 支持直接点击弹出 IP 风险与归属详情。
 
@@ -37,7 +45,7 @@
 
 - **本地流量统计**：总览卡片采用 20 刻度分段圆环展示下载与上传占比，底部灰块集中呈现跨设备休眠累计运行时长（剥离单调时钟防止深睡漏计，标题采用实测字形基线对齐）及代理/直连分流明细；支持按 **3 / 6 / 12 个自然月**保留数据，按时间范围查看域名、进程、节点、配置和规则的流量与请求排行。
 - **Speedtest by Ookla 网络测速**：支持指定出站节点与测速服务器，实时展示赛博仪表盘、下载/上传双通道波形、阶段进度、延迟、抖动、负载延迟与响应性指标，支持测速设置与历史记录管理。
-- **全站统一 `tone2` 轨道色**：首页当前配置、配置页远程波浪条与用量圆环、IP 查询欺诈值刻度条、流量统计圆环与排行横条、网速测试仪表盘与阶段进度条的未填充灰轨统一接入 `DashboardColors.tone2`（`SurfaceLevel.inset`），深浅色层次一致。
+- **统一灰色底轨**。配置用量、流量统计与网速测试的灰色底轨使用同一套主题色。IP 欺诈值使用绿、琥珀、红渐变刻度。
 
 ### 动态流体关于页、字体与液态玻璃
 
@@ -55,7 +63,7 @@
 ### Android 后台保活与系统体验
 
 - **Android VPN 保活与防崩溃根治**：重开应用时若原生 VPN 已在运行则直接无感接管启动时间与状态，不再重复执行配置重载或重启网卡；原生 `VpnService` / `ProxyService` 升级为 `startService` + `START_STICKY` 粘性前台服务，防止主界面被后台清理断开绑定时连带销毁 VPN；为 `establish()`（300ms 延迟重试）与 `protect(fd)`（5 次重试）增加瞬时容错，并在收到延迟停止回调时双向复核 `isRunRequested` 运行意图；同时在 Android 端移除 Drift 常驻后台子 Isolate，彻底根治系统回收主界面释放 Vulkan 设备后延迟析构 `VkFramebuffer` 引发崩溃连带断 VPN 的问题，完整保留 120Hz Impeller Vulkan 与液态玻璃效果。
-- **桌面端与多语言细节**：电脑首页新增亮屏锁按钮并记忆开关状态；Windows 单色托盘未运行时随任务栏深浅色自动切换黑白图标（适配 `v0.9.4` `rust_api` 托盘架构）；Windows 采用连续曲率圆角与自适应宽度侧边栏；GeoIP、ASN、GeoSite 默认改用 `bett-rules` 下载源；语言精简为简体中文、英语、日语、韩语和俄语（适配官方 `gen-l10n` 并自动规范简体中文中英文间距）；修复公开仓库应用内更新的 `SHA256SUMS` 校验清单匹配。
+- **桌面端与多语言细节**：电脑首页新增亮屏锁按钮并记忆开关状态；Windows 单色托盘未运行时随任务栏深浅色自动切换黑白图标；Windows 采用连续曲率圆角与自适应宽度侧边栏；GeoIP、ASN、GeoSite 默认改用 `bett-rules` 下载源；语言精简为简体中文、英语、日语、韩语和俄语（适配官方 `gen-l10n` 并自动规范简体中文中英文间距）。
 
 ## 致谢与许可
 

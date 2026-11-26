@@ -397,6 +397,58 @@ void main() {
     expect(container.read(navigationStateProvider).currentIndex, 0);
   });
 
+  test('requests joins the mobile bar only while HTTP is captured, and '
+      'stays in the desktop sidebar either way', () {
+    container
+        .read(currentPageLabelProvider.notifier)
+        .toPage(PageLabel.requests);
+    List<PageLabel> bar() => [
+      for (final item
+          in container.read(currentNavigationItemsStateProvider).value)
+        item.label,
+    ];
+    List<PageLabel> tools() => [
+      for (final item
+          in container.read(moreToolsSelectorStateProvider).navigationItems)
+        item.label,
+    ];
+
+    for (final enable in [false, true]) {
+      for (final capture in [false, true]) {
+        container
+            .read(patchClashConfigProvider.notifier)
+            .update(
+              (state) => state.copyWith(
+                mitm: state.mitm.copyWith(enable: enable, capture: capture),
+              ),
+            );
+        final reason = 'decrypting: $enable, capturing: $capture';
+        final joinsBar = rsFeature && enable && capture;
+
+        container
+            .read(viewSizeProvider.notifier)
+            .update((_) => Size(maxMobileWidth.toDouble(), 800));
+        expect(bar().contains(PageLabel.requests), joinsBar, reason: reason);
+        expect(tools().contains(PageLabel.requests), !joinsBar, reason: reason);
+        expect(
+          container.read(shownPageLabelProvider),
+          joinsBar ? PageLabel.requests : bar().first,
+          reason: reason,
+        );
+
+        container
+            .read(viewSizeProvider.notifier)
+            .update((_) => const Size(1200, 800));
+        expect(bar(), contains(PageLabel.requests), reason: reason);
+        expect(
+          container.read(shownPageLabelProvider),
+          PageLabel.requests,
+          reason: reason,
+        );
+      }
+    }
+  });
+
   test('layout and page state providers compose their dependencies', () {
     final profile = Profile.normal(label: 'Primary');
     _profiles(container).replace([profile]);
@@ -604,6 +656,29 @@ void main() {
     final vpnOptions = scoped.read(sharedStateProvider).vpnOptions!;
     expect(vpnOptions.enable, isFalse);
     expect(vpnOptions.systemProxy, isFalse);
+  });
+
+  test('the shared state tells the service whether MITM is on', () {
+    loadAppLocalizations(const Locale('en'));
+    final scoped = ProviderContainer(
+      overrides: [
+        profilesProvider.overrideWith(TestProfiles.new),
+        mitmModuleNetworkProvider.overrideWith(
+          (ref) async => const MitmNetwork(),
+        ),
+      ],
+    );
+    addTearDown(scoped.dispose);
+    scoped.listen(sharedStateProvider, (_, _) {});
+    expect(scoped.read(sharedStateProvider).mitm, isFalse);
+
+    scoped
+        .read(patchClashConfigProvider.notifier)
+        .update(
+          (state) => state.copyWith(mitm: state.mitm.copyWith(enable: true)),
+        );
+    expect(scoped.read(sharedStateProvider).mitm, isTrue);
+    expect(scoped.read(sharedStateProvider).toJson()['mitm'], isTrue);
   });
 
   test('selection and delay providers resolve groups and profile state', () {

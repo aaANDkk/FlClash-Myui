@@ -64,12 +64,28 @@ class _LogsViewState extends ConsumerState<LogsView>
     });
   }
 
-  List<IconButtonData> _buildActions() {
+  List<PopupMenuItem> _buildMenuItems(BuildContext context, LogLevel logLevel) {
+    final appLocalizations = context.appLocalizations;
     return [
-      IconButtonData(
+      PopupMenuItem(
         glyph: AppGlyphs.export,
-        tooltip: context.appLocalizations.exportLogs,
+        label: appLocalizations.exportLogs,
         onPressed: _handleExport,
+      ),
+      PopupMenuItem(
+        glyph: AppGlyphs.sliders,
+        label: appLocalizations.logLevel,
+        subtitle: logLevel.name,
+        subItems: [
+          for (final option in LogLevel.values)
+            PopupMenuItem(
+              label: option.name,
+              checked: option == logLevel,
+              onPressed: () => ref
+                  .read(patchClashConfigProvider.notifier)
+                  .update((state) => state.copyWith(logLevel: option)),
+            ),
+        ],
       ),
     ];
   }
@@ -116,18 +132,33 @@ class _LogsViewState extends ConsumerState<LogsView>
       onFilter: _filters.add,
       child: _buildBody(context),
     );
-    return ListenableBuilder(
-      listenable: Listenable.merge([_filters, _filters.options]),
+    return Consumer(
       child: body,
-      builder: (context, body) {
-        final pinned = !ViewScope.isMobileOf(context);
-        return Scaffold(
-          iconActions: _buildActions(),
-          keywords: _filters.keywordsOf(pinned: pinned),
-          menuItems: _filters.menuItems(context, pinned: pinned),
-          searchState: AppBarSearchState(onSearch: _listController.search),
-          title: context.appLocalizations.logs,
-          body: body!,
+      builder: (context, ref, body) {
+        final logLevel = ref.watch(
+          patchClashConfigProvider.select((state) => state.logLevel),
+        );
+        return ListenableBuilder(
+          listenable: Listenable.merge([_filters, _filters.options]),
+          child: body,
+          builder: (context, body) {
+            return Scaffold(
+              iconActions: [
+                if (_filters.options.value.isNotEmpty)
+                  IconButtonData(
+                    glyph: AppGlyphs.filter,
+                    tooltip: context.appLocalizations.filter,
+                    onPressed: null,
+                    menuItems: _filters.optionMenuItems,
+                  ),
+              ],
+              keywords: _filters.keywords,
+              menuItems: _buildMenuItems(context, logLevel),
+              searchState: AppBarSearchState(onSearch: _listController.search),
+              title: context.appLocalizations.logs,
+              body: body!,
+            );
+          },
         );
       },
     );
@@ -155,7 +186,7 @@ class _LogsViewState extends ConsumerState<LogsView>
 
   Widget _buildList(BuildContext context, LogsState state, List<Log> logs) {
     final selectable = !ViewScope.isMobileOf(context);
-    final padding = EdgeInsets.only(
+    final padding = context.listInsets.page(
       top: context.contentTopPadding,
       bottom: 16 + context.bottomInset,
     );
@@ -311,7 +342,10 @@ void _showLogDetail(BuildContext context, Log log) {
           onPressed: () => _copyLog(context, log),
         ),
       ],
-      body: _LogDetailView(log: log),
+      body: ListTextScope(
+        scale: ListTextScale.compact,
+        child: _LogDetailView(log: log),
+      ),
     ),
   );
 }
@@ -335,7 +369,7 @@ class _LogDetailView extends StatelessWidget {
   Widget build(BuildContext context) {
     final appLocalizations = context.appLocalizations;
     return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(
+      padding: context.listInsets.page().copyWith(
         bottom: 20 + context.bottomInset,
         top: context.sectionsTopPadding,
       ),
@@ -355,10 +389,7 @@ class _LogDetailView extends StatelessWidget {
           items: [
             DecorationListItem(
               minVerticalPadding: 14,
-              title: SelectableText(
-                log.payload,
-                style: AppTextStyle.subheadline.of(context),
-              ),
+              title: SelectableText(log.payload),
             ),
           ],
         ),

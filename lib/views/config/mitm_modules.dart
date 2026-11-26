@@ -247,10 +247,12 @@ class MitmModulesView extends ConsumerWidget {
           label: appLocalizations.nullTip(appLocalizations.mitmModule),
         ),
         child: PrismReorderableListView(
-          padding: const EdgeInsets.all(16).copyWith(
-            top: context.contentTopPadding,
-            bottom: 16 + context.bottomInset,
-          ),
+          padding: context.listInsets
+              .page(top: 16, bottom: 16)
+              .copyWith(
+                top: context.contentTopPadding,
+                bottom: 16 + context.bottomInset,
+              ),
           itemCount: modules.length,
           itemBuilder: (_, index) => _MitmModuleRow(
             key: ValueKey(modules[index].id),
@@ -335,7 +337,12 @@ class _MitmModuleRow extends ConsumerWidget {
         child: ItemPositionProvider(
           position: ItemPosition.get(index, total),
           child: DecorationListItem(
-            contentPadding: const EdgeInsets.only(left: 16),
+            contentPadding: EdgeInsetsDirectional.only(
+              start: context.listInsets.leading,
+              end: isUpdating
+                  ? context.listInsets.trailing
+                  : context.listInsets.trailing - Switch.edgeInset,
+            ),
             title: Text(
               module.name,
               maxLines: 1,
@@ -347,18 +354,12 @@ class _MitmModuleRow extends ConsumerWidget {
                   : appLocalizations.local,
               style: context.listCaptionStyle,
             ),
-            trailing: Padding(
-              padding: const EdgeInsetsDirectional.only(end: 8),
-              child: isUpdating
-                  ? const Padding(
-                      padding: EdgeInsetsDirectional.only(end: 8),
-                      child: ActivityIndicator(size: 24),
-                    )
-                  : Switch(
-                      value: module.enabled,
-                      onChanged: (value) => _setEnabled(ref, module, value),
-                    ),
-            ),
+            trailing: isUpdating
+                ? const ActivityIndicator(size: 24)
+                : Switch(
+                    value: module.enabled,
+                    onChanged: (value) => _setEnabled(ref, module, value),
+                  ),
             onPressed: () =>
                 BaseNavigator.push(context, MitmModuleView(id: module.id)),
           ),
@@ -437,7 +438,7 @@ class MitmModuleView extends ConsumerWidget {
         return ListItem.open(
           title: Text(title),
           subtitle: Text([count, ?note].join('\n')),
-          widget: _MitmModuleLinesView(
+          builder: (_) => _MitmModuleLinesView(
             title: title,
             lines: [for (final line in lines) (line, issues[line])],
             views: views,
@@ -648,7 +649,7 @@ class MitmModuleView extends ConsumerWidget {
         child: module == null
             ? const SizedBox()
             : ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(
+                padding: context.listInsets.page().copyWith(
                   top: context.sectionsTopPadding,
                   bottom: 16 + context.bottomInset,
                 ),
@@ -672,6 +673,7 @@ class MitmModuleView extends ConsumerWidget {
                       title: appLocalizations.mitmAttachments,
                       items: _attachmentItems(context, ref, module),
                       footer: appLocalizations.mitmAttachmentsDesc,
+                      last: content == null && networkChanges.isEmpty,
                     ),
                   if (content != null && content.arguments.isNotEmpty)
                     generateSection(
@@ -690,6 +692,7 @@ class MitmModuleView extends ConsumerWidget {
                           _networkItem(context, state),
                       ],
                       footer: appLocalizations.mitmNetworkRisk,
+                      last: content == null,
                     ),
                   if (content != null)
                     generateSection(
@@ -731,7 +734,7 @@ class MitmModuleView extends ConsumerWidget {
                                 content.skipped.length,
                               ),
                             ),
-                            widget: _MitmModuleLinesView(
+                            builder: (_) => _MitmModuleLinesView(
                               title: appLocalizations.mitmIgnoredLines,
                               notes: true,
                               lines: [
@@ -749,6 +752,7 @@ class MitmModuleView extends ConsumerWidget {
                         if (content.requestRules > 0)
                           appLocalizations.mitmRequestRulesDesc,
                       ].join(' '),
+                      last: true,
                     ),
                 ],
               ),
@@ -947,7 +951,7 @@ class _MitmModuleLinesView extends StatelessWidget {
     return Scaffold(
       title: title,
       body: PrismListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(
+        padding: context.listInsets.page().copyWith(
           top: context.contentTopPadding,
           bottom: 16 + context.bottomInset,
         ),

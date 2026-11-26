@@ -33,7 +33,7 @@ class _ReleaseAdapter implements HttpClientAdapter {
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
-    if (options.uri.path.endsWith('/SHA256SUMS')) {
+    if (options.uri.path.endsWith('/${updateChecksumsName('v0.8.96')}')) {
       return ResponseBody.fromString(sums, 200);
     }
     return asset();
@@ -175,18 +175,26 @@ void main() {
   });
 
   group('a build that updates itself', () {
-    const asset = 'FlClash-dev-0.8.96-android-arm64.apk';
+    const asset = 'FlClash-0.8.96-android-arm64.apk';
     final package = utf8.encode('package');
     final digest = sha256.convert(package).toString();
     late Directory home;
     late SelfUpdateAsset? Function() resolveAsset;
     late HttpClientAdapter adapter;
+    late Future<bool> Function(Uri) launch;
+    late List<Uri> launched;
 
     setUp(() async {
       home = await Directory.systemTemp.createTemp('self_update');
       await useAppPaths(home);
       resolveAsset = resolveSelfUpdateAsset;
       adapter = request.releaseDio.httpClientAdapter;
+      launch = launchReleasePage;
+      launched = [];
+      launchReleasePage = (uri) async {
+        launched.add(uri);
+        return true;
+      };
       resolveSelfUpdateAsset = () => (
         os: ReleaseOs.android,
         arch: ReleaseArch.arm64,
@@ -198,6 +206,7 @@ void main() {
     tearDown(() async {
       resolveSelfUpdateAsset = resolveAsset;
       request.releaseDio.httpClientAdapter = adapter;
+      launchReleasePage = launch;
       await home.delete(recursive: true);
     });
 
@@ -228,7 +237,7 @@ void main() {
 
     testWidgets('reports a file that fails its check', (tester) async {
       request.releaseDio.httpClientAdapter = _ReleaseAdapter(
-        sums: '$digest  ./$asset\n',
+        sums: '$digest  $asset\n',
         asset: () => ResponseBody.fromBytes(utf8.encode('tampered'), 200),
       );
 
@@ -250,11 +259,43 @@ void main() {
       await tapCancel(tester);
     });
 
+    testWidgets('opens the release page for a file the release lacks', (
+      tester,
+    ) async {
+      request.releaseDio.httpClientAdapter = _ReleaseAdapter(
+        sums: '$digest  FlClash-0.8.96-android-armv7.apk\n',
+        asset: () => ResponseBody.fromBytes(package, 200),
+      );
+
+      final printed = <String>[];
+      final previousPrint = debugPrint;
+      debugPrint = (message, {wrapWidth}) => printed.add(message ?? '');
+      addTearDown(() => debugPrint = previousPrint);
+
+      final container = await startUpdate(tester);
+      await settleUntil(tester, () => launched.isNotEmpty);
+      await tester.pump();
+
+      expect(container.read(updateDownloadStateProvider), isNull);
+      expect(launched, [
+        Uri.parse('https://github.com/$repository/releases/tag/v0.8.96'),
+      ]);
+      expect(
+        printed,
+        contains(
+          '[APP] banner: The update file is not in the release. '
+          'Download it from the release page.',
+        ),
+      );
+      expect(shows('Update failed'), isFalse);
+      await tester.pump(const Duration(seconds: 10));
+    });
+
     testWidgets('downloads without blocking and waits to install', (
       tester,
     ) async {
       request.releaseDio.httpClientAdapter = _ReleaseAdapter(
-        sums: '$digest  ./$asset\n',
+        sums: '$digest  $asset\n',
         asset: () => ResponseBody.fromBytes(package, 200),
       );
 
@@ -283,7 +324,7 @@ void main() {
       final body = StreamController<Uint8List>();
       addTearDown(body.close);
       request.releaseDio.httpClientAdapter = _ReleaseAdapter(
-        sums: '$digest  ./$asset\n',
+        sums: '$digest  $asset\n',
         asset: () => ResponseBody(body.stream, 200),
       );
 

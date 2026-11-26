@@ -730,4 +730,209 @@ void main() {
     expect(find.text('top'), findsNothing);
     expect(find.text('open'), findsOneWidget);
   });
+
+  testWidgets('a drag back snapshots the top page before it moves', (
+    tester,
+  ) async {
+    late CardPageRoute<void> route;
+    await _pumpOpener(tester, (context) {
+      route = CardPageRoute<void>(
+        builder: (_) => const HostScaffold(
+          body: Align(alignment: Alignment.topLeft, child: Text('top')),
+        ),
+      );
+      Navigator.of(context).push(route);
+    });
+
+    List<bool> snapshots() => [
+      for (final widget in tester.widgetList<SnapshotWidget>(
+        find.byType(SnapshotWidget, skipOffstage: false),
+      ))
+        widget.controller.allowSnapshotting,
+    ];
+
+    expect(snapshots(), [false, false]);
+
+    final gesture = await tester.startGesture(const Offset(12, 300));
+    await gesture.moveBy(const Offset(31, 0));
+    await tester.pump();
+    expect(route.isDragBackActive, isTrue);
+    expect(route.animation!.value, 1.0);
+    expect(snapshots(), [false, true]);
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(route.isDragBackActive, isFalse);
+    expect(snapshots(), [false, false]);
+  });
+
+  for (final direction in TextDirection.values) {
+    testWidgets('a covered card route clips its paint to the uncovered strip '
+        '(${direction.name})', (tester) async {
+      final navKey = GlobalKey<NavigatorState>();
+      const size = Size(412, 892);
+      tester.view.devicePixelRatio = 2;
+      tester.view.physicalSize = size * 2;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(
+            size: size,
+            devicePixelRatio: 2,
+            displayCornerRadii: BorderRadius.all(Radius.circular(40)),
+          ),
+          child: HostApp(
+            navigatorKey: navKey,
+            builder: (_, child) =>
+                Directionality(textDirection: direction, child: child!),
+            home: const HostScaffold(body: Text('home')),
+          ),
+        ),
+      );
+      navKey.currentState!.push(
+        CardPageRoute<void>(
+          builder: (_) => const HostScaffold(body: Text('top')),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      List<ClipRectLayer> narrowClips() {
+        final found = <ClipRectLayer>[];
+        void walk(Layer? layer) {
+          if (layer == null) {
+            return;
+          }
+          if (layer is ClipRectLayer &&
+              layer.clipBehavior == Clip.hardEdge &&
+              layer.clipRect != null &&
+              layer.clipRect!.height == size.height &&
+              layer.clipRect!.width < size.width) {
+            found.add(layer);
+          }
+          if (layer is ContainerLayer) {
+            for (
+              var child = layer.firstChild;
+              child != null;
+              child = child.nextSibling
+            ) {
+              walk(child);
+            }
+          }
+        }
+
+        walk(tester.binding.renderViews.first.debugLayer);
+        return found;
+      }
+
+      int rsuperClips() {
+        var count = 0;
+        void walk(Layer? layer) {
+          if (layer == null) {
+            return;
+          }
+          if (layer is ClipRSuperellipseLayer) {
+            count++;
+          }
+          if (layer is ContainerLayer) {
+            for (
+              var child = layer.firstChild;
+              child != null;
+              child = child.nextSibling
+            ) {
+              walk(child);
+            }
+          }
+        }
+
+        walk(tester.binding.renderViews.first.debugLayer);
+        return count;
+      }
+
+      final sign = direction == TextDirection.ltr ? 1.0 : -1.0;
+      final startX = direction == TextDirection.ltr ? 12.0 : size.width - 12.0;
+      final gesture = await tester.startGesture(Offset(startX, 300));
+      await gesture.moveBy(Offset(31 * sign, 0));
+      await tester.pump();
+      await gesture.moveBy(Offset(20 * sign, 0));
+      await tester.pump(const Duration(milliseconds: 16));
+
+      final clips = narrowClips();
+      expect(clips, hasLength(1));
+      final rect = clips.single.clipRect!;
+      expect(rect.width, lessThan(size.width * 0.4));
+      if (direction == TextDirection.ltr) {
+        expect(rect.left, 0);
+      } else {
+        expect(rect.right, size.width);
+      }
+      expect(rsuperClips(), 1);
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(narrowClips(), isEmpty);
+    });
+
+    testWidgets('a covered card route stays unclipped during leading overdrag '
+        '(${direction.name})', (tester) async {
+      final navKey = GlobalKey<NavigatorState>();
+      const size = Size(412, 892);
+      tester.view.devicePixelRatio = 2;
+      tester.view.physicalSize = size * 2;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(
+            size: size,
+            devicePixelRatio: 2,
+            displayCornerRadii: BorderRadius.all(Radius.circular(40)),
+          ),
+          child: HostApp(
+            navigatorKey: navKey,
+            builder: (_, child) => ColoredBox(
+              color: const Color(0xFFFF00FF),
+              child: Directionality(textDirection: direction, child: child!),
+            ),
+            home: const HostScaffold(body: Text('home')),
+          ),
+        ),
+      );
+      navKey.currentState!.push(
+        CardPageRoute<void>(
+          builder: (_) => const HostScaffold(body: Text('top')),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final backdrop = ColorScheme.of(
+        tester.element(find.text('top')),
+      ).surfaceContainerLowest;
+      final expected = Color.alphaBlend(
+        const Color.from(alpha: 0.1, red: 0, green: 0, blue: 0),
+        backdrop,
+      );
+
+      final sign = direction == TextDirection.ltr ? 1.0 : -1.0;
+      final gesture = await tester.startGesture(Offset(size.width / 2, 300));
+      await gesture.moveBy(Offset(31 * sign, 0));
+      await gesture.moveBy(Offset(-100 * sign, 0));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final sample = await _pixelAt(
+        tester,
+        Offset(
+          direction == TextDirection.ltr ? size.width - 10 : 10,
+          size.height / 2,
+        ),
+      );
+      expect((sample.r - expected.r).abs(), lessThan(2 / 255));
+      expect((sample.g - expected.g).abs(), lessThan(2 / 255));
+      expect((sample.b - expected.b).abs(), lessThan(2 / 255));
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+    });
+  }
 }

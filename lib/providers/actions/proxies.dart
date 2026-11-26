@@ -112,10 +112,12 @@ class ProxiesAction extends _$ProxiesAction {
     return ref.read(currentProfileProvider)?.selectedMap[groupName] ?? '';
   }
 
-  Future<void> updateGroups() async {
+  Future<void> updateGroups({bool Function()? shouldRetry}) async {
     try {
+      var coreFailed = false;
       ref.read(groupsProvider.notifier).value = await retry(
         task: () async {
+          coreFailed = false;
           final sortType = ref.read(
             proxiesStyleSettingProvider.select((state) => state.sortType),
           );
@@ -134,6 +136,7 @@ class ProxiesAction extends _$ProxiesAction {
               defaultTestUrl: testUrl,
             );
           } catch (e) {
+            coreFailed = true;
             commonPrint.log(
               'updateGroups error: $e',
               logLevel: coreFailureLogLevel(e),
@@ -141,7 +144,10 @@ class ProxiesAction extends _$ProxiesAction {
             return [];
           }
         },
-        retryIf: (res) => res.isEmpty,
+        retryIf: (res) =>
+            res.isEmpty &&
+            (shouldRetry?.call() ?? true) &&
+            (coreFailed || (globalState.lastConfigCounts?.groups ?? 1) > 0),
       );
     } catch (e) {
       // The Core failure path already runs inside the retry task above; a
@@ -447,8 +453,13 @@ class ProxiesAction extends _$ProxiesAction {
         setDelay(delay);
       }
     } catch (error) {
-      if (error is CoreMethodException && error.isCoreUnavailable) {
-        job.cancelled = true;
+      if (error is CoreMethodException) {
+        if (error.isCoreUnavailable) {
+          job.cancelled = true;
+        }
+        if (error.code == 'empty_result') {
+          return;
+        }
       }
       commonPrint.log(
         'Delay test failed for ${target.proxyName}: $error',

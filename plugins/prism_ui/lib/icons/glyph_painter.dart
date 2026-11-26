@@ -48,9 +48,13 @@ class GlyphPainter extends CustomPainter {
         : 1 - fill / _detailSwap;
     canvas.save();
     canvas.scale(size.shortestSide / Glyph.size);
+    final cutsDetails =
+        cut &&
+        detailScale > 0 &&
+        glyph.shapes.any((shape) => shape.role == GlyphRole.detail);
     // Opaque strokes under one alpha keep a translucent color even on overlaps,
     // and cutouts clear only the glyph's own layer.
-    if (color.a < 1 || (cut && detailScale > 0)) {
+    if (color.a < 1 || cutsDetails) {
       canvas.saveLayer(
         _grid,
         Paint()..color = Color.fromRGBO(0, 0, 0, color.a),

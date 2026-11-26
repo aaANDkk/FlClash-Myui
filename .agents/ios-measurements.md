@@ -152,6 +152,53 @@ tuning.
   (0, 8), times 3 in dark. A resting tab bar on a white page has almost no shadow (1-3/255); FlClash's `dockShadows` is
   5-7%. That is a difference in the resting state and is kept.
 
+## Tab bar layout
+
+- Measured on iPhone 16e, 17 and 17 Pro Max (390, 402, 440 pt) with a UITabBarController, and on a standalone
+  UITabBar swept from 300 to 480 pt wide, dumping view frames. The bar is 62 high and 21 from the screen's sides and
+  bottom at every width, the 34 pt home indicator inset included; its items stand 4 in from its ends and are 54 high.
+  Two or three items take 86 each and center the bar (188 and 274 wide); four and five fill the width.
+- An item centers its symbol (18 pt Medium, large scale) 24 below the bar's top and sets its 10 pt title, Medium and
+  Semibold when selected, in a 12 high frame 39 below the top. A title never shrinks: a long one widens its item at
+  its neighbours' expense and truncates at the tail once wider than its lens less 22.
+- The resting lens is the selected item's frame, symmetric about the item's center; the layout does not depend on
+  which item is selected. Fitted to the whole sweep (17 locales' titles and 36 sets of equal titles, 300 to 480 in
+  half points) within 0.001 pt, for four and five items, with span the bar less 4 at each end: each item wants a
+  room of its title plus 12, at least 54. While the span is less than the rooms plus 78 (five items) or 82 (four),
+  the items split the span by title: the cells take the span less 20 in proportion to their rooms (an equal cut
+  once the rooms no longer fit) and each lens is its cell plus 20, so neighbours overlap by 20. Past that the lenses
+  are even, each the span plus `(n-1)·8.25` over n for five items (`40/3` for four with titles of 42 or less, `28/3`
+  for four with longer ones), and at least the widest title plus 34 (five) or 40 (four); four short titles keep the
+  lens at least 94. Where that even lens would overlap its neighbours by more than 20 (five) or 22 (four), the items
+  split by title again with an overlap of 22 or 28. So Chinese titles stay equal at every width (77 at 402, 84 on a
+  64 pitch at 390), while English ones are unequal until the bar is wide enough: Dashboard, Proxies, Requests,
+  Profiles and Tools take 96.3, 82.8, 87.4, 82.8 and 82.8 on a 402 screen (Tools' room at its floor of 54),
+  and are equal again at 440 (87.7). The five-item lens drops by about 10 where a sweep crosses into the even
+  branch: 85.3 to 75.9 between 397.5 and 398 for Chinese, and the Dashboard lens 98.7 to 87.7 at 414 for English.
+- FlClash: `navigation_dock.dart` follows the bar, the item's symbol and title, and this rule (`_dockLayout`); the
+  lens, a drag, a fling and the hover highlight move between the items' centers, interpolating the lens width between
+  neighbours (the drag mapping on iOS was not measured), while a tap, press or hover picks the destination whose cell
+  is under the pointer. Label widths are measured once per change of label, style, text scale or direction. Deliberate
+  deviations: where UIKit crowds four or five items with an overlap of 20, the dock keeps neighbours overlapping by
+  8.25, its cells sharing the span less 8.25 by the same rule, since at 20 a 375 wide English bar looked crowded. Five
+  short titles so narrow smoothly to 71.6 at 375 instead of dropping at 398; the looser 22 and 28 still follow UIKit,
+  so four long titles jump from 8.25 to 28 where they reach it (French at 378, Russian at 372). A title that does not
+  fit shrinks to 9 dp and then ellipsizes behind a tooltip; three or fewer items stay even, the bar not widening for a
+  long title; four items stop at 360 wide; five items stop at 398, the row of the widest iPhone (440), and center in a
+  wider window such as a narrow desktop one, where a bar filling the row would grow its lens with it (the standalone
+  sweep grows linearly to 480, which puts the lens near 118 at 600); the selected title keeps Medium, its color alone
+  marking it; and the bottom margin is at least the system bar's inset, since on Android that can be a three-button
+  bar.
+
+## Top bar button inset
+
+- Measured on iOS 27 at 375, 390, 402, 420 and 440 pt (UINavigationController over an insetGrouped table, dumped view
+  frames and 3x screenshots): the 44 pt glass of a bar button ends at the bar's `layoutMargins`, 16 at 375/390/402
+  and 20 at 420/440, the same as the table's inner inset at every width and not its card margin; at 400-402 iOS sets
+  the card 20 from the edge and the button 16.
+- FlClash: on a phone `appBarActionInset` is `ListInsets.of(context).leading`; desktop keeps 20 for a regular bar and
+  16 for a sheet.
+
 ## Top bar button symbols and bar button reveal
 
 - Symbols: a bar button is `textStyle=body, weight=Medium, scale=Large`. Line widths: plus/xmark about 1.95 pt,
@@ -333,6 +380,116 @@ white, 150 ms scroll view delay, no scaling, hover 4%). Measurements:
   fill alpha .32→.354. A UIButton in a scroll view follows the cell rule (lights after about 165 ms).
 - Deliberate deviation: the measured cell behaviour is a systemGray4 replacement, while FlClash uses an onSurface 10%
   state layer ("press = 10% state layer"), plus a 4% hover on desktop pointers.
+
+## Inset grouped list
+
+Measured from `UITableView(style: .insetGrouped)` with `UIListContentConfiguration` cells (`cell`, `subtitleCell`,
+`valueCell`) and `titleForHeader`/`titleForFooter`, on iPhone SE (375), 13 mini (375), 16e (390), 16 Pro and 17 Pro
+(402), iPhone 11 (414), Pro Max (440), iPad mini and iPad Pro 13, and in a table narrowed to a set width inside the
+window. Text positions are label frames; UIKit sets a label `font.lineHeight` tall (body 20.29, subheadline 17.90,
+footnote 15.51), so baselines are compared, not boxes.
+
+- Width rule: the card stands 16 in at 375 and 390 wide and 20 in from 400 up (402, 414, 440, every iPad width,
+  portrait, landscape and split); it never narrows to the readable width. Text, separators and the accessory keep 16
+  inside the card up to 402 wide and 20 from 404 up. A sheet or a narrowed table follows its own width, not the
+  screen's; interior containers on iPad keep 16.
+- Corner: `UIView.cornerConfiguration` is `.fixed(26)` on every device and at every text size, continuous.
+- Rows: one line 53.0 (body baseline 32.54 from the top), two lines 69.33 (title baseline 31.88, subtitle baseline
+  50.33). An icon's center sits 12 past the text inset and the text moves to 40 past it; SF Symbol `wifi` is
+  24.67×17.67 in a 28.67×22 frame. A value (`valueCell`) is body regular on the title's baseline, 8.33 before the
+  chevron.
+- Accessories end at the outer margin: the chevron's visible 7×12 ends 20.67 in from the card's edge at 402, a switch's
+  63×28 track 20 in. The separator is a 1/3 pt hairline at the row's bottom, from the text start to the inner inset
+  before the card's edge.
+- Header: 38 tall above the first card, title baseline 10.46 above the card. Footer: first baseline 20.13 below the
+  card, footnote lines about 15.9 apart; a titled header after a footer has its baseline 37.74 below the footer's
+  baseline (one line; 69.74 below the first of three lines) where it would be 52.21 below a bare card. A section with
+  neither header nor footer starts 35 below the card before it; an untitled section after a footer starts 27.87 below
+  the footer's baseline.
+- Dynamic Type: margins and corner stay put, rows grow with their text (XXXL body 23: one line 60, two lines 84, icon
+  text at 63.67; AX-XL: 79 and 122). Header and footer text from `titleForHeader`/`titleForFooter` does not scale.
+- FlClash: `ListInsets` in `prism_ui/lib/metrics.dart` (`context.listInsets`, from `ViewScope` or the view's width)
+  gives the margin and inner inset, under 400 → 16/16, 400 to 402 → 20/16, over 402 → 20/20; pages and sheets pad with
+  `listInsets.page()`. `AppCorner.listGroup = 26` rounds a run's ends. `ListRow` pads one line
+  `listRowVerticalPadding` 15.5 above and below its text (53 at body) and stacks two lines
+  `listTwoLineRowVerticalPadding` 10 in from each edge, so a row is its padding plus its text at any text size; a row
+  that drops its padding still stands a padded line tall, none under `listRowMinHeight` 44, and a side taller than the
+  text stands the row as tall. A leading glyph keeps its own size in the
+  `listLeadingSlotWidth` 24 slot, centered 12 past the inset with the text 40 past it. `ListItem` ends its chevron,
+  picker, checkbox and switch at `listInsets.trailing` by the glyph's own inset (`_chevronInset`,
+  `_OptionsValueButton.endInset`, `Checkbox.edgeInset`, `Switch.edgeInset`). `ListHeader` stands 35 (`listSectionGap`)
+  above its title and 6 below; `ListFooter` starts 6.5 below the card and hangs into the next section's gap so a titled
+  header after it lands as iOS sets it. Measured at 402×874 with SF Pro: card, one-line row height, text and icon x
+  match exactly; baselines are within 0.38 (one line), 0.12 (header), 0.28 (footer) and 0.10 (a titled header after a
+  one-line footer, 37.84); the chevron ends at 20.50, the picker at 20.44, the switch track at 19.70, the checkbox at
+  19.83.
+- Deliberate deviation: an untitled section after a footer starts 7.45 closer than iOS. UIKit sizes a header by the
+  footer before it, which a sliver list cannot compose; FlClash matches the common case, a titled header after a
+  footer.
+- Deliberate deviation: a footer of several lines keeps `footnote`'s 18 line height (about 15.9 in UIKit), the
+  Typography rule every footnote follows, so a three-line footer is 4.1 taller.
+- Deliberate deviation: the switch is the Material 52×32 track; only its end is aligned to iOS's.
+- Deliberate deviation: the separator is the hairline `list_row_separator.dart` snaps to whole device pixels (2 px at
+  3x, at 52.5) rather than iOS's single pixel at 52.0.
+- Deliberate deviation: FlClash scales headers and footers with the text scale.
+- Deliberate deviation: a two-line row is 62, not 69.33: 10 above and below a title and subtitle stacked with no
+  overlap. FlClash has no 29 pt icon plate to fill the height, and its subtitles are mostly a short status, so the
+  iOS row reads loose.
+- Deliberate deviation: a detail (connection, request, DNS query, outbound IP, log) sets its list a step smaller under
+  `ListTextScope(scale: ListTextScale.compact)`: titles and values subheadline 15, subtitles footnote 13, headers
+  subheadline semibold 15, with the same paddings, so its rows stand 51 and 58. Its rows carry dense values such as
+  addresses, hops and headers, which crowd at body. iOS has no such page, so its spacing is FlClash's own, set with
+  that design rather than measured: a value stands at least 24 from its key (`_valueGap` in `lib/widgets/record.dart`);
+  the head's well is 40 on a phone and 48 on desktop, with the line under its name at the list's subtitle size
+  (`DetailHeader`); the head stands 16 above the tabs on a phone and 20 on desktop, and the tabs 20 above the first
+  section (`_clearance` in `lib/features/connection/detail_tabs.dart`); a `FigureCard` figure is headline 17. The tabs
+  and the status segments over the request lists are `TonalButtonSize.section`, 36 tall with 15 labels padded 14 on
+  each side.
+- Deliberate deviation: desktop uses the same sizes, at the iPad rule (20/20), and no longer tightens rows with
+  `VisualDensity.compact`.
+- Deliberate deviation: a leading icon stays a 24 dp line glyph with no plate. iOS's 29 pt settings icon is a filled
+  rounded square around an 18-20 pt symbol, and a bare glyph grown to that size reads far heavier than the rows'
+  text; only the slot, its center and the text start follow iOS.
+
+## Outline disclosure (group unfold and fold)
+
+Measured from a `UICollectionView` list (`.insetGrouped` and `.plain` appearances) whose parent rows carry
+`UICellAccessory.outlineDisclosure`, both with the parent as a section header outside the card
+(`headerMode .firstItemInSection`, style `.header`) and as a row inside the card (style `.cell`), with groups of 6 and
+40 children; the animations were read from the `CASpringAnimation`s on the layers and filmed at 60 fps. For comparison
+SwiftUI's `DisclosureGroup` and `Section(isExpanded:)` (`.sidebar`) were measured the same way.
+
+- One spring drives every part: mass 1, stiffness 631.65, damping 50.27, critically damped (response 0.25 s, bounce
+  0); the `CASpringAnimation` lasts 0.367 s, where it is within a thousandth of its target. The motion starts on
+  touch-up and the next frame already moves.
+- The children move as one rigid block from behind the parent, clipped at the parent's bottom edge, so the block's
+  bottom shows first. They neither fade, stagger nor scale. The block travels its on-screen extent: a group of 6 moves
+  312 (6 × 52), a group of 40 moves 728, from the parent to the bottom of the screen. The card's bottom corners move
+  with the block.
+- What follows the group moves with the same spring by the group's full height (2080 for 40 rows).
+- The chevron turns 90° on the same spring, from pointing at the label to pointing down. In the in-card variant the
+  parent's bottom corners and its separator animate with it.
+- Folding runs the same spring toward 0; it is not the unfold played backwards. A tap during the motion turns it
+  around from where it stands at the speed it had (additive animations). A second tap within about 160 ms of the
+  first is ignored; from about 260 ms on it reverses.
+- SwiftUI differs: `DisclosureGroup` and `Section(isExpanded:)` fade their rows in place while what follows slides over
+  them, on a spring of stiffness 438.65, damping 41.89 (response 0.3). In `.insetGrouped`, `Section(isExpanded:)` has
+  no control to fold it.
+- FlClash follows the UIKit outline. `UnfoldMotion` in `prism_ui/lib/collapsible_section.dart` holds the spring and
+  runs it from the controller's current value and velocity (`SpringSimulation`, tolerance 1e-3, so it ends at 0.367 s
+  from rest); reduced motion (`context.disableAnimations`) jumps to the end. `SliverCollapsibleGroups` slides the
+  screen of entries it shows as one block in a bottom-aligned `SizeTransition`; the proxy page's `UnfoldSliver`
+  (`lib/views/proxies/unfold.dart`) lifts its rows by the part of the block still behind the header, clips them at the
+  header's bottom and grows the group card with the block's bottom, building each row as it comes out. Both chevrons
+  turn from -90° by `UnfoldMotion.chevronTurns`: `Glyphs.chevronDown` on the prism header, `Glyphs.caretDown` (fill 1)
+  on the proxy page's.
+- Deliberate deviation: what follows a group moves with the block's bottom, by the group's on-screen extent, not by
+  its full height. For a group taller than the screen the content below leaves the screen slower than in UIKit; a
+  sliver list knows the full height only once it has laid out every row.
+- Deliberate deviation: every tap reverses the motion, including one within 160 ms of the last.
+- Deliberate deviation: the proxy page's header squares its bottom corners when the group settles open instead of
+  animating them; while the group moves, the card behind the rows reaches up behind the header's rounded corners, so
+  no gap shows.
 
 ## Navigation push/pop and zoom transitions
 

@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:prism_ui/route_scope.dart';
 
 /// A sheet's own navigator, which holds only the pages of that sheet.
 class SheetPagesNavigator extends Navigator {
@@ -22,6 +23,9 @@ final _covers = Expando<ProxyAnimation>();
 
 ProxyAnimation _coverOf(Route<dynamic> route) =>
     _covers[route] ??= ProxyAnimation(kAlwaysDismissedAnimation);
+
+/// Runs to 1 as a sheet covers [route].
+Animation<double> sheetCoverOfRoute(Route<dynamic> route) => _coverOf(route);
 
 /// Hands the route below the sheet's entrance, for it to step back behind.
 mixin SheetCoverRouteMixin<T> on TransitionRoute<T> {
@@ -53,13 +57,13 @@ mixin SheetCoverRouteMixin<T> on TransitionRoute<T> {
 
 /// Runs to 1 as a sheet covers the page or sheet that [context] is on.
 Animation<double> sheetCoverOf(BuildContext context) {
-  var route = ModalRoute.of(context);
+  var route = routeOf(context);
   while (route != null) {
     final navigator = route.navigator;
     if (navigator == null || navigator.widget is! SheetPagesNavigator) {
       return _coverOf(route);
     }
-    route = ModalRoute.of(navigator.context);
+    route = routeOf(navigator.context);
   }
   return kAlwaysDismissedAnimation;
 }

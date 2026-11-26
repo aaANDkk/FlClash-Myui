@@ -16,8 +16,8 @@ body:
     attributes:
       label: 版本 / Version
       description: >-
-        工具 → 关于，图标下方的版本号，如 `v0.9.3`；不要写“最新版”。/
-        Tools → About, the version under the icon, such as `v0.9.3`; not "latest".
+        工具 → 关于，图标下方的版本号，如 `v0.9.3` 或 `v0.9.5-pre.1`；不要写“最新版”。/
+        Tools → About, the version under the icon, such as `v0.9.3` or `v0.9.5-pre.1`; not "latest".
       placeholder: v0.9.3
     validations:
       required: true
@@ -32,12 +32,12 @@ body:
     attributes:
       label: 安装包 / Package
       description: >-
-        从 Releases 下载的文件名里有架构，如 `FlClash-0.9.3-windows-amd64-setup.exe`。/
-        The file name from Releases carries the architecture, such as `FlClash-0.9.3-windows-amd64-setup.exe`.
+        从 Releases 下载的文件名里有架构，如 `FlClash-0.9.4-windows-amd64-setup.exe`。/
+        The file name from Releases carries the architecture, such as `FlClash-0.9.4-windows-amd64-setup.exe`.
       options:
-        - Android APK arm64-v8a
-        - Android APK armeabi-v7a
-        - Android APK x86_64
+        - Android APK arm64
+        - Android APK armv7
+        - Android APK amd64
         - Android F-Droid
         - Windows amd64 安装版 / installer (setup.exe)
         - Windows amd64 便携版 / portable (zip)
@@ -139,7 +139,7 @@ body:
       description: |
         1. 工具 → 常规 → 日志与诊断：打开“日志捕获”，“日志等级”选 debug。/ Tools → General → Logs and diagnostics: turn on "Logcat" and set "Log level" to debug.
         2. 复现一次问题。/ Reproduce the problem once.
-        3. 打开“日志”页（桌面在侧边栏，手机在“工具”页顶部），点右上角“导出日志”，用文本编辑器打开导出的文件，把问题前后的部分粘贴在这里。/ Open the "Logs" page (the sidebar on desktop, the top of "Tools" on a phone), press "Export logs" at the top right, open the file in a text editor and paste the part around the problem here.
+        3. 打开“工具”页顶部的“日志”，点右上角“导出日志”，用文本编辑器打开导出的文件，把问题前后的部分粘贴在这里。/ Open "Logs" at the top of "Tools", press "Export logs" at the top right, open the file in a text editor and paste the part around the problem here.
 
         不要贴截图；粘贴前删掉节点域名和 IP。Android 闪退后日志为空时，贴 `adb logcat -b crash -d` 的输出。/ No screenshots; remove node domains and IP addresses first. When Android crashes and the log is empty, paste the output of `adb logcat -b crash -d`.
       render: text

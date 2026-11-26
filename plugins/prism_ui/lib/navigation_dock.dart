@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -27,13 +28,22 @@ const double _edgeMargin = 21;
 const double _shadowRoom = 8;
 const double _hitSlop = 8;
 const double _maxItemExtent = 86;
-const double _minLensWidth = 84;
+const double _minCell = 54;
+const double _titleRoom = 12;
+// UIKit overlaps crowded destinations by 20, which reads as cramped under an
+// English bar 375 wide; the uncrowded overlap keeps them apart.
+const double _crowdedOverlap = 8.25;
+const double _minFourLens = 94;
 const _fullWidthCount = 5;
+// The widest iPhone: five destinations fill its row, and a wider window
+// centers a bar as wide as that row.
+const double _widestPhone = 440;
 const double _iconSize = 28;
-const double _labelGap = 2;
+const double _labelGap = 1;
 const double _labelInset = 2;
 const double _labelSize = 10;
-const double _labelLeading = 14.5;
+const double _labelLeading = 12;
+const double _contentLift = 1;
 const double _minLabelSize = 9;
 const double _pressGrowth = 1 / 8;
 const double _maxPressGrowth = 16;
@@ -50,7 +60,7 @@ const double _jellyStretch = 0.2;
 const double _jellyBrake = 25;
 const double _jellySquash = 0.15;
 const double _jellyAspect = 1.4;
-// A fifth of a dp at each edge of the widest mobile lens, 134 dp lifted.
+// Under a fifth of a dp at each edge of the widest lens, 110 dp lifted.
 const double _jellyRest = 3e-3;
 const double _glowReach = 28;
 const double _glowGrowth = 3;
@@ -110,42 +120,239 @@ double _rubberBand(double overshoot, double limit) {
 
 double _saturate(double value) => 1 - 2 / (math.exp(2 * value) + 1);
 
-/// The lens's box, measured from the start edge of the destination at 0.
-Rect _lensRect({
-  required double position,
-  required double stretch,
-  required double pitch,
-  required double width,
-  required double height,
-  required double lift,
-}) {
-  final growth = _lensGrowth * 2 * lift;
-  final lensWidth = (width + growth) * (1 + stretch);
-  final lensHeight = (height + growth) * (1 - stretch * _jellyAspect);
-  return Rect.fromLTWH(
-    (position + 0.5) * pitch - lensWidth / 2,
-    (height - lensHeight) / 2,
-    lensWidth,
-    lensHeight,
-  );
+/// Where the destinations rest along the bar: each takes a cell, the cells
+/// tiling the bar between [inset]s, and its lens rests centered on its cell.
+@immutable
+class _DockLayout {
+  _DockLayout({required this.inset, required this.cells, required this.lenses})
+    : centers = _centersOf(inset, cells);
+
+  factory _DockLayout.even(double span, int count, double lens) {
+    if (count <= 1) {
+      return _DockLayout(
+        inset: _barPadding,
+        cells: [if (count == 1) math.max(span - _barPadding * 2, 0)],
+        lenses: [if (count == 1) span],
+      );
+    }
+    final overlap = (lens * count - span) / (count - 1);
+    return _DockLayout(
+      inset: overlap / 2,
+      cells: List.filled(count, math.max(lens - overlap, 0)),
+      lenses: List.filled(count, lens),
+    );
+  }
+
+  /// Cells in proportion to [rooms] when they all fit, or each the same
+  /// amount short of its room when they do not; lenses overlap by [overlap].
+  factory _DockLayout.titled(double span, List<double> rooms, double overlap) {
+    final room = math.max(span - overlap, 0.0);
+    final total = rooms.fold(0.0, (sum, room) => sum + room);
+    final cells = total <= room
+        ? [for (final want in rooms) want * room / total]
+        : _squeeze(rooms, room);
+    return _DockLayout(
+      inset: overlap / 2,
+      cells: cells,
+      lenses: [for (final cell in cells) cell + overlap],
+    );
+  }
+
+  final double inset;
+  final List<double> cells;
+  final List<double> lenses;
+  final List<double> centers;
+
+  /// Takes the same amount off every room to fit [room], as UIKit does,
+  /// though never so much that a cell could not hold its glyph.
+  static List<double> _squeeze(List<double> rooms, double room) {
+    final floor = math.min(room / rooms.length, _iconSize + _labelInset * 2);
+    final wide = rooms.toList()..sort((a, b) => b.compareTo(a));
+    var cut = 0.0;
+    var taken = 0.0;
+    for (var count = 1; count <= wide.length; count++) {
+      taken += wide[count - 1];
+      cut = (taken - (room - (wide.length - count) * floor)) / count;
+      if (count == wide.length || wide[count] - cut <= floor) {
+        break;
+      }
+    }
+    return [for (final want in rooms) math.max(want - cut, floor)];
+  }
+
+  static List<double> _centersOf(double inset, List<double> cells) {
+    final centers = <double>[];
+    var start = inset;
+    for (final cell in cells) {
+      centers.add(start + cell / 2);
+      start += cell;
+    }
+    return centers;
+  }
+
+  int get _last => cells.length - 1;
+
+  double cellStart(int index) => centers[index] - cells[index] / 2;
+
+  /// The span between the centers either side of [position], or of the
+  /// nearest pair past either end.
+  double pitchAt(double position) {
+    if (_last < 1) {
+      return cells.isEmpty ? 1 : cells.first;
+    }
+    final index = position.floor().clamp(0, _last - 1);
+    return centers[index + 1] - centers[index];
+  }
+
+  double centerAt(double position) {
+    if (cells.isEmpty) {
+      return 0;
+    }
+    if (_last < 1) {
+      return centers.first + position * pitchAt(0);
+    }
+    final index = position.floor().clamp(0, _last - 1);
+    return centers[index] + (position - index) * pitchAt(position);
+  }
+
+  double lensAt(double position) {
+    if (cells.isEmpty) {
+      return 0;
+    }
+    final clamped = position.clamp(0.0, _last.toDouble());
+    final index = clamped.floor();
+    if (index >= _last) {
+      return lenses[_last];
+    }
+    return lerpDouble(lenses[index], lenses[index + 1], clamped - index)!;
+  }
+
+  /// The destination whose cell holds [dx], or the nearer end's past either.
+  int indexAt(double dx) {
+    var end = inset;
+    for (var index = 0; index < _last; index++) {
+      end += cells[index];
+      if (dx < end) {
+        return index;
+      }
+    }
+    return math.max(_last, 0);
+  }
+
+  /// Where [dx] lies, in destinations: whole at their centers and in
+  /// proportion between them.
+  double positionOf(double dx) {
+    if (cells.isEmpty) {
+      return 0;
+    }
+    var index = 0;
+    while (index < _last - 1 && dx > centers[index + 1]) {
+      index++;
+    }
+    return index + (dx - centers[index]) / pitchAt(index.toDouble());
+  }
+
+  /// The lens's box when at [position], from the bar's inner start edge.
+  Rect lensRect({
+    required double position,
+    required double stretch,
+    required double height,
+    required double lift,
+  }) {
+    final growth = _lensGrowth * 2 * lift;
+    final width = (lensAt(position) + growth) * (1 + stretch);
+    final lensHeight = (height + growth) * (1 - stretch * _jellyAspect);
+    return Rect.fromLTWH(
+      centerAt(position) - width / 2,
+      (height - lensHeight) / 2,
+      width,
+      lensHeight,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is _DockLayout &&
+      other.inset == inset &&
+      listEquals(other.cells, cells) &&
+      listEquals(other.lenses, lenses);
+
+  @override
+  int get hashCode =>
+      Object.hash(inset, Object.hashAll(cells), Object.hashAll(lenses));
 }
 
-/// Spaces destinations as iOS's tab bar does: the resting lens overhangs its
-/// destination by [_barPadding] and never narrows below [_minLensWidth].
-({double pitch, double lens, double inset}) _dockLayout(
-  double span,
-  int count,
-) {
-  if (count <= 1) {
-    return (pitch: span - _barPadding * 2, lens: span, inset: _barPadding);
+typedef _Spread = ({
+  double rest,
+  double reach,
+  double most,
+  double loose,
+  double slack,
+});
+
+/// How UIKit's floating tab bar (iOS 27) sets out five destinations: the lens
+/// overlap while they rest evenly, how far a lens reaches past the widest
+/// title, the most an even overlap may reach before the bar sets them out by
+/// title instead, the overlap they then take, and the span they need past
+/// their rooms to rest evenly at all. Fitted to its frames across 300-480 pt
+/// (.agents/ios-measurements.md, Tab bar layout).
+const _Spread _fiveSpread = (
+  rest: 8.25,
+  reach: 34,
+  most: 20,
+  loose: 22,
+  slack: 78,
+);
+
+/// [_fiveSpread] for four destinations, which rest further apart while every
+/// title is short.
+_Spread _fourSpread({required bool shortTitles}) => (
+  rest: shortTitles ? 40 / 3 : 28 / 3,
+  reach: 40,
+  most: 22,
+  loose: 28,
+  slack: 82,
+);
+
+/// Sets out destinations whose labels are [titles] wide across [span] as
+/// iOS's tab bar does. Each wants a cell [_titleRoom] wider than its title
+/// and at least [_minCell]. Until the span has room to spare, the cells take
+/// the span in proportion to those, with their lenses overlapping by
+/// [_crowdedOverlap]; past it, the lenses rest evenly, as wide as the widest
+/// title needs, unless that would overlap them too far.
+_DockLayout _dockLayout(double span, List<double> titles) {
+  final count = titles.length;
+  if (count <= 3) {
+    return _DockLayout.even(
+      span,
+      count,
+      (span + _barPadding * 2 * (count - 1)) / math.max(count, 1),
+    );
   }
-  final pitch = (span - _barPadding * 2) / count;
-  if (pitch + _barPadding * 2 >= _minLensWidth) {
-    return (pitch: pitch, lens: pitch + _barPadding * 2, inset: _barPadding);
+  final widest = titles.reduce(math.max);
+  final rooms = [
+    for (final title in titles) math.max(_minCell, title + _titleRoom),
+  ];
+  final shortTitles = widest + _titleRoom <= _minCell;
+  final spread = count == 4
+      ? _fourSpread(shortTitles: shortTitles)
+      : _fiveSpread;
+  final wanted = rooms.reduce((sum, room) => sum + room);
+  if (span < wanted + spread.slack) {
+    return _DockLayout.titled(span, rooms, _crowdedOverlap);
   }
-  final lens = math.min(_minLensWidth, span);
-  final closed = (span - lens) / (count - 1);
-  return (pitch: closed, lens: lens, inset: (lens - closed) / 2);
+  final lens = math.max(
+    (span + spread.rest * (count - 1)) / count,
+    widest + spread.reach,
+  );
+  if ((lens * count - span) / (count - 1) > spread.most) {
+    return _DockLayout.titled(span, rooms, spread.loose);
+  }
+  return _DockLayout.even(
+    span,
+    count,
+    count == 4 && shortTitles ? math.max(lens, _minFourLens) : lens,
+  );
 }
 
 /// A value that springs toward a target the finger may move every frame.
@@ -326,6 +533,23 @@ class NavigationDock extends StatelessWidget {
         _labelSize;
   }
 
+  /// Where each lens rests on a bar [barWidth] wide whose labels are
+  /// [labelWidths] wide, from the bar's start edge.
+  @visibleForTesting
+  static List<({double start, double width})> restingLensesOf(
+    double barWidth,
+    List<double> labelWidths,
+  ) {
+    final layout = _dockLayout(barWidth - _barPadding * 2, labelWidths);
+    return [
+      for (final (index, center) in layout.centers.indexed)
+        (
+          start: _barPadding + center - layout.lenses[index] / 2,
+          width: layout.lenses[index],
+        ),
+    ];
+  }
+
   static double _bottomMarginOf(BuildContext context) =>
       math.max(_edgeMargin, MediaQuery.paddingOf(context).bottom);
 
@@ -355,7 +579,7 @@ class NavigationDock extends StatelessWidget {
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
                       maxWidth: destinations.length >= _fullWidthCount
-                          ? double.infinity
+                          ? _widestPhone - _edgeMargin * 2
                           : destinations.length * _maxItemExtent +
                                 _barPadding * 4,
                     ),
@@ -920,10 +1144,43 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
 
   int get _selectedIndex => widget.selectedIndex.clamp(0, _lastIndex);
 
-  ({double pitch, double lens, double inset}) get _layout => _dockLayout(
-    context.size!.width - _barPadding * 2,
-    widget.destinations.length,
-  );
+  _DockLayout _layout = _DockLayout.even(0, 0, 0);
+  ({
+    List<String> labels,
+    TextStyle style,
+    TextScaler scaler,
+    TextDirection direction,
+    Locale? locale,
+  })?
+  _measuredFor;
+  List<({double width, double height})> _labelSizes = const [];
+
+  // Text layout is the dear part of setting out the bar, so it runs only when
+  // a label or what shapes it changes, not on every rebuild.
+  List<({double width, double height})> _measureLabels(TextStyle style) {
+    final key = (
+      labels: [
+        for (final destination in widget.destinations) destination.label,
+      ],
+      style: style,
+      scaler: MediaQuery.textScalerOf(context),
+      direction: Directionality.of(context),
+      locale: Localizations.maybeLocaleOf(context),
+    );
+    final last = _measuredFor;
+    if (last == null ||
+        !listEquals(last.labels, key.labels) ||
+        last.style != key.style ||
+        last.scaler != key.scaler ||
+        last.direction != key.direction ||
+        last.locale != key.locale) {
+      _measuredFor = key;
+      _labelSizes = [
+        for (final label in key.labels) _measureLabel(context, label, style),
+      ];
+    }
+    return _labelSizes;
+  }
 
   @override
   void initState() {
@@ -937,8 +1194,11 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
     _glow.addListener(_shine);
     _glowSpread.addListener(_shine);
     _hoverAt.addListener(_leanContent);
+    PaintingBinding.instance.systemFonts.addListener(_remeasureLabels);
     _syncParallax();
   }
+
+  void _remeasureLabels() => setState(() => _measuredFor = null);
 
   @override
   void didUpdateWidget(covariant FloatingNavigationBar oldWidget) {
@@ -967,6 +1227,7 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
     _glowSpread.dispose();
     _touchGlow.dispose();
     _hoverAt.dispose();
+    PaintingBinding.instance.systemFonts.removeListener(_remeasureLabels);
     super.dispose();
   }
 
@@ -1040,8 +1301,7 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
     final dx = Directionality.of(context) == TextDirection.ltr
         ? localPosition.dx
         : width - localPosition.dx;
-    final layout = _layout;
-    final position = (dx - _barPadding - layout.inset) / layout.pitch - 0.5;
+    final position = _layout.positionOf(dx - _barPadding);
     if (position < 0) {
       return _rubberBand(position, _overdrag);
     }
@@ -1051,7 +1311,8 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
     return position;
   }
 
-  int _indexAt(double position) => position.round().clamp(0, _lastIndex);
+  int _indexAt(double position) =>
+      _layout.indexAt(_layout.centerAt(position)).clamp(0, _lastIndex);
 
   double _leanAt(double position) {
     final index = _indexAt(position);
@@ -1212,7 +1473,7 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
     if (!_dragging || pressed == null) {
       return;
     }
-    final extent = _layout.pitch;
+    final extent = _layout.pitchAt(_lens.target);
     final direction = Directionality.of(context) == TextDirection.ltr ? 1 : -1;
     final lead =
         velocityX /
@@ -1254,14 +1515,7 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
       leading: _labelLeading,
       weight: FontWeight.w500,
     );
-    final labels = [
-      for (final destination in widget.destinations)
-        _measureLabel(context, destination.label, labelStyle),
-    ];
-    final widest = labels.fold(
-      0.0,
-      (width, label) => math.max(width, label.width),
-    );
+    final labels = _measureLabels(labelStyle);
     final lineHeight = labels.fold(
       0.0,
       (height, label) => math.max(height, label.height),
@@ -1296,36 +1550,45 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
               child: _FilledBoundary(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
-                    final layout = _dockLayout(
-                      constraints.maxWidth,
-                      widget.destinations.length,
+                    final layout = _layout = _dockLayout(constraints.maxWidth, [
+                      for (final label in labels) label.width,
+                    ]);
+                    double roomOf(int index) =>
+                        layout.cells[index] - _labelInset * 2;
+                    var labelScale = 1.0;
+                    for (final (index, label) in labels.indexed) {
+                      if (label.width > roomOf(index)) {
+                        labelScale = math.min(
+                          labelScale,
+                          roomOf(index) / label.width,
+                        );
+                      }
+                    }
+                    labelScale = math.max(
+                      labelScale,
+                      _minLabelSize / _labelSize,
                     );
-                    final room = layout.pitch - _labelInset * 2;
-                    final labelScale = widest <= room
-                        ? 1.0
-                        : math.max(room / widest, _minLabelSize / _labelSize);
-                    Rect lensRect() => _lensRect(
+                    Rect lensRect() => layout.lensRect(
                       position: _lens.value,
                       stretch: _jelly.value,
-                      pitch: layout.pitch,
-                      width: layout.lens,
                       height: constraints.maxHeight,
                       lift: _lift.value,
-                    ).shift(Offset(layout.inset, 0));
+                    );
                     Widget items(_LensPart part) => Padding(
                       padding: EdgeInsets.symmetric(horizontal: layout.inset),
                       child: Row(
                         children: [
                           for (final (index, destination)
                               in widget.destinations.indexed)
-                            Expanded(
+                            SizedBox(
+                              width: layout.cells[index],
                               child: _FloatingBarItem(
                                 destination: destination,
                                 selected: index == _selectedIndex,
                                 index: index,
                                 part: part,
                                 lens: _lens,
-                                lensWidth: layout.lens,
+                                slots: layout,
                                 jelly: _jelly,
                                 parallax: _parallax[index],
                                 lift: _lift,
@@ -1334,7 +1597,8 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
                                 ),
                                 labelHeight: lineHeight,
                                 labelOverflows:
-                                    labels[index].width * labelScale > room,
+                                    labels[index].width * labelScale >
+                                    roomOf(index),
                                 onActivate: () => widget.onSelected(index),
                               ),
                             ),
@@ -1360,10 +1624,9 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
                             animation: _hoverMotion,
                             builder: (_, _) => _HoverHighlight(
                               start:
-                                  layout.inset +
-                                  (_hover.value + 0.5) * layout.pitch -
-                                  layout.lens / 2,
-                              width: layout.lens,
+                                  layout.centerAt(_hover.value) -
+                                  layout.lensAt(_hover.value) / 2,
+                              width: layout.lensAt(_hover.value),
                               opacity: _hoverShow.value,
                             ),
                           ),
@@ -1615,7 +1878,7 @@ class _FloatingBarItem extends StatefulWidget {
     required this.index,
     required this.part,
     required this.lens,
-    required this.lensWidth,
+    required this.slots,
     required this.jelly,
     required this.parallax,
     required this.lift,
@@ -1633,7 +1896,7 @@ class _FloatingBarItem extends StatefulWidget {
   /// the destination it copies takes the presses and the focus.
   final _LensPart part;
   final _Spring lens;
-  final double lensWidth;
+  final _DockLayout slots;
   final ValueListenable<double> jelly;
   final ValueListenable<double> parallax;
   final ValueListenable<double> lift;
@@ -1676,7 +1939,7 @@ class _FloatingBarItemState extends State<_FloatingBarItem> {
     final content = _LensTint(
       part: widget.part,
       lens: widget.lens,
-      lensWidth: widget.lensWidth,
+      slots: widget.slots,
       jelly: widget.jelly,
       lift: widget.lift,
       parallax: widget.parallax,
@@ -1684,7 +1947,12 @@ class _FloatingBarItemState extends State<_FloatingBarItem> {
       color: tint,
       textDirection: Directionality.of(context),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: _labelInset),
+        padding: const EdgeInsets.fromLTRB(
+          _labelInset,
+          0,
+          _labelInset,
+          _contentLift,
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -1751,7 +2019,7 @@ class _LensTint extends SingleChildRenderObjectWidget {
   const _LensTint({
     required this.part,
     required this.lens,
-    required this.lensWidth,
+    required this.slots,
     required this.jelly,
     required this.lift,
     required this.parallax,
@@ -1763,7 +2031,7 @@ class _LensTint extends SingleChildRenderObjectWidget {
 
   final _LensPart part;
   final _Spring lens;
-  final double lensWidth;
+  final _DockLayout slots;
   final ValueListenable<double> jelly;
   final ValueListenable<double> lift;
   final ValueListenable<double> parallax;
@@ -1776,7 +2044,7 @@ class _LensTint extends SingleChildRenderObjectWidget {
     return _RenderLensTint(
       part: part,
       lens: lens,
-      lensWidth: lensWidth,
+      slots: slots,
       jelly: jelly,
       lift: lift,
       parallax: parallax,
@@ -1791,7 +2059,7 @@ class _LensTint extends SingleChildRenderObjectWidget {
     renderObject
       ..part = part
       ..lens = lens
-      ..lensWidth = lensWidth
+      ..slots = slots
       ..jelly = jelly
       ..lift = lift
       ..parallax = parallax
@@ -1805,7 +2073,7 @@ class _RenderLensTint extends RenderProxyBox {
   _RenderLensTint({
     required _LensPart part,
     required _Spring lens,
-    required double lensWidth,
+    required _DockLayout slots,
     required ValueListenable<double> jelly,
     required ValueListenable<double> lift,
     required ValueListenable<double> parallax,
@@ -1814,7 +2082,7 @@ class _RenderLensTint extends RenderProxyBox {
     required TextDirection textDirection,
   }) : _part = part,
        _lens = lens,
-       _lensWidth = lensWidth,
+       _slots = slots,
        _jelly = jelly,
        _lift = lift,
        _parallax = parallax,
@@ -1850,12 +2118,12 @@ class _RenderLensTint extends RenderProxyBox {
     markNeedsPaint();
   }
 
-  double _lensWidth;
-  set lensWidth(double value) {
-    if (value == _lensWidth) {
+  _DockLayout _slots;
+  set slots(_DockLayout value) {
+    if (value == _slots) {
       return;
     }
-    _lensWidth = value;
+    _slots = value;
     markNeedsPaint();
   }
 
@@ -1954,14 +2222,14 @@ class _RenderLensTint extends RenderProxyBox {
   }
 
   Rect get _lensBounds {
-    final rect = _lensRect(
-      position: _lens.value - _index,
-      stretch: _jelly.value,
-      pitch: size.width,
-      width: _lensWidth,
-      height: size.height,
-      lift: _lift.value,
-    );
+    final rect = _slots
+        .lensRect(
+          position: _lens.value,
+          stretch: _jelly.value,
+          height: size.height,
+          lift: _lift.value,
+        )
+        .shift(Offset(-_slots.cellStart(_index), 0));
     return _textDirection == TextDirection.ltr
         ? rect
         : Rect.fromLTRB(

@@ -53,8 +53,8 @@ String _$safeModeHash() => r'3ef07344f5a8dbf775ccf0a4861c0317ec8b2266';
 final packageIconSourceProvider = PackageIconSourceProvider._();
 
 final class PackageIconSourceProvider
-    extends $FunctionalProvider<App?, App?, App?>
-    with $Provider<App?> {
+    extends $FunctionalProvider<AppIconSource?, AppIconSource?, AppIconSource?>
+    with $Provider<AppIconSource?> {
   PackageIconSourceProvider._()
     : super(
         from: null,
@@ -71,24 +71,24 @@ final class PackageIconSourceProvider
 
   @$internal
   @override
-  $ProviderElement<App?> $createElement($ProviderPointer pointer) =>
+  $ProviderElement<AppIconSource?> $createElement($ProviderPointer pointer) =>
       $ProviderElement(pointer);
 
   @override
-  App? create(Ref ref) {
+  AppIconSource? create(Ref ref) {
     return packageIconSource(ref);
   }
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(App? value) {
+  Override overrideWithValue(AppIconSource? value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<App?>(value),
+      providerOverride: $SyncValueProvider<AppIconSource?>(value),
     );
   }
 }
 
-String _$packageIconSourceHash() => r'b9b233f207f9dce3809537c3458e7a70192dd52d';
+String _$packageIconSourceHash() => r'382b2ece75e0827f4f89f37861cc228cb7f5936c';
 
 /// Android: su is there and granted FlClash's last request.
 
@@ -400,7 +400,7 @@ abstract class _$Logs extends $Notifier<FixedList<Log>> {
 final requestsProvider = RequestsProvider._();
 
 final class RequestsProvider
-    extends $NotifierProvider<Requests, FixedList<TrackerInfo>> {
+    extends $NotifierProvider<Requests, ConnectionLog> {
   RequestsProvider._()
     : super(
         from: null,
@@ -420,28 +420,27 @@ final class RequestsProvider
   Requests create() => Requests();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(FixedList<TrackerInfo> value) {
+  Override overrideWithValue(ConnectionLog value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<FixedList<TrackerInfo>>(value),
+      providerOverride: $SyncValueProvider<ConnectionLog>(value),
     );
   }
 }
 
-String _$requestsHash() => r'fe172892ec899bd6fd53dcbfebf65cd9e856efa7';
+String _$requestsHash() => r'f212f4034a9e68265ef76296f78e0063b9a49c16';
 
-abstract class _$Requests extends $Notifier<FixedList<TrackerInfo>> {
-  FixedList<TrackerInfo> build();
+abstract class _$Requests extends $Notifier<ConnectionLog> {
+  ConnectionLog build();
   @$mustCallSuper
   @override
   WhenComplete runBuild() {
-    final ref =
-        this.ref as $Ref<FixedList<TrackerInfo>, FixedList<TrackerInfo>>;
+    final ref = this.ref as $Ref<ConnectionLog, ConnectionLog>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<FixedList<TrackerInfo>, FixedList<TrackerInfo>>,
-              FixedList<TrackerInfo>,
+              AnyNotifier<ConnectionLog, ConnectionLog>,
+              ConnectionLog,
               Object?,
               Object?
             >;
@@ -500,6 +499,55 @@ abstract class _$DnsQueries extends $Notifier<FixedList<DnsQuery>> {
     return element.handleCreate(ref, build);
   }
 }
+
+/// The rules the Core routes by, each named as a request names its rule;
+/// listed again once a config is applied or the Core connects, never retried
+/// before that.
+
+@ProviderFor(activeRules)
+final activeRulesProvider = ActiveRulesProvider._();
+
+/// The rules the Core routes by, each named as a request names its rule;
+/// listed again once a config is applied or the Core connects, never retried
+/// before that.
+
+final class ActiveRulesProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<RuleTable>,
+          RuleTable,
+          FutureOr<RuleTable>
+        >
+    with $FutureModifier<RuleTable>, $FutureProvider<RuleTable> {
+  /// The rules the Core routes by, each named as a request names its rule;
+  /// listed again once a config is applied or the Core connects, never retried
+  /// before that.
+  ActiveRulesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: _noRetry,
+        name: r'activeRulesProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$activeRulesHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<RuleTable> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<RuleTable> create(Ref ref) {
+    return activeRules(ref);
+  }
+}
+
+String _$activeRulesHash() => r'10d9b0ae5309d15ace7d97dea4630cb94e2de101';
 
 @ProviderFor(DnsQueryCount)
 final dnsQueryCountProvider = DnsQueryCountProvider._();
@@ -1119,12 +1167,63 @@ final class AppVisibleProvider extends $NotifierProvider<AppVisible, bool> {
   }
 }
 
-String _$appVisibleHash() => r'98f3d41169c74da3d8655695627c8e4a5413c73d';
+String _$appVisibleHash() => r'522938ff1950aa9c9707f6c6b67d7b94d3827c1f';
 
 /// False while the window is hidden or the Android activity is in the
 /// background; work that only feeds the UI waits for it to come back.
 
 abstract class _$AppVisible extends $Notifier<bool> {
+  bool build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<bool, bool>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<bool, bool>,
+              bool,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+@ProviderFor(ScreensSeen)
+final screensSeenProvider = ScreensSeenProvider._();
+
+final class ScreensSeenProvider extends $NotifierProvider<ScreensSeen, bool> {
+  ScreensSeenProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'screensSeenProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$screensSeenHash();
+
+  @$internal
+  @override
+  ScreensSeen create() => ScreensSeen();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$screensSeenHash() => r'7f7e3b15b35e3f4b72428c060133e873444caa17';
+
+abstract class _$ScreensSeen extends $Notifier<bool> {
   bool build();
   @$mustCallSuper
   @override

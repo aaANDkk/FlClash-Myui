@@ -397,14 +397,15 @@ through its push. Check a UI change against these before moving anything to an i
   `ImageFilter.blur` layer; `Opacity` over a subtree, a translucent glyph, and an `SvgPicture` with a `colorFilter` each
   cost a layer. A page that scales as a whole is drawn from a `SnapshotWidget` while it scales,
   since Impeller rasterizes text again at every step of a scale.
-- Keep transitions clear. Page Arrival in `.agents/architecture.md` is binding: a page holds its push until its first
-  content is in (`NullStatusSwitcher`, `ArrivalHold`), a feed holds its refreshes while its route moves, and the editor
-  mounts once its route settles. A route's transition wrapper keeps one structure for every state: switching it moves
+- Keep transitions clear. Page Arrival in `.agents/architecture.md` is binding: a push never waits for a load, as a
+  page waiting on its data slides in with a spinner and mounts its content once the route settles
+  (`NullStatusSwitcher`), a feed holds its refreshes while its route moves, and the editor mounts once its route
+  settles. A route's transition wrapper keeps one structure for every state: switching it moves
   the page under a `GlobalKey`, which rebuilds every element with an inherited dependency.
-- Split a first screen that overruns a frame. The frames a push holds still are frames too: a first screen that takes
-  more than 8 ms to build and lay out is built in parts across them, each part one frame, and the push holds for the
-  last (`ArrivalHold`). `CustomProfileView` builds its proxy groups a frame after its overview this way; one frame of
-  both took 9 to 15 ms on a phone while the menu it was opened from closed.
+- Split a first screen that overruns a frame. A first screen that takes more than 8 ms to build and lay out is built
+  in parts, each part one frame: `NextFrame` mounts its child a frame after itself, and `ArrivalHold` holds a push still
+  for the parts, at most `arrivalHoldLimit` (50 ms). `CustomProfileView` builds its proxy groups a frame after its
+  overview this way; one frame of both took 9 to 15 ms on a phone while the menu it was opened from closed.
 - Build no rows ahead while anything moves. A list on a page coming in takes its cache extent from
   `ArrivalCacheExtentMixin` or `ArrivalCacheExtentBuilder`: none until its route settles and no ticker runs, since the
   rows built ahead at the moment the route settles overran a frame of the bar items still fading in.
@@ -483,6 +484,10 @@ the singleton calls `CoreController.resetInstance()` in `tearDown`. It also only
 when nothing has read it yet: that is a top-level `final`, bound to whichever instance existed at the first read, which
 in a shared isolate is another file's.
 
+MITM sources, tests and fixtures name only reserved hosts (`a.test`, `example.com`) and neutral samples written for the
+test, never a published third-party module or a real app's ad or tracking endpoint; `test/lint/mitm_fixtures_test.dart`
+enforces it, and a real host the product itself needs goes in `test/lint/mitm_fixture_hosts.txt` with its reason.
+
 ### Shared Test Isolate
 
 `tool/test.dart` imports many test files into one entrypoint, so process-wide state outlives the file that set it, and
@@ -508,6 +513,10 @@ a file alone so it cannot fail the run, and lists it; fix it where it reads the 
 Construct the Android lib handler with `CoreLib.scoped(fakeService)`. The `service` global is gated on `Platform.isAndroid`
 and is therefore null on every test host, so a `CoreLib()` built from it silently takes the null-service fallback on every
 path. `CoreLib.scoped` binds an explicit `Service` instead; reset the singleton with `CoreLib.resetInstance()` in `tearDown`.
+
+`RustLib.initMock` replaces the Rust bridge for the whole isolate, so follow it with `addTearDown(RustLib.dispose)`. A
+mock left behind makes the next `initEditorNative` throw that the bridge is initialized twice, and hands every later
+`EditorView` the mock's null `RopeBridge`.
 
 Three globals in `lib/common` reach real host state and carry a `@visibleForTesting` seam to stand in front of it:
 `AutoLaunch.entry`, `listNetworkInterfaces` and `LinkManager.uriLinkStream`. Replace the entry in particular — every
@@ -656,7 +665,7 @@ Subjects follow Conventional Commits and are enforced by the `commit-msg` hook i
 Write what the change does, not that something changed: `perf(views): stop redoing per-frame work in build`, not
 `Optimize more details`.
 
-Install the hooks once with `pre-commit install --hook-type pre-commit --hook-type pre-push --hook-type commit-msg`.
+Install the hooks once with `pre-commit install --hook-type pre-commit --hook-type commit-msg`. CI analyzes every pushed branch, so no hook runs on push.
 
 ### Fixup Commits
 

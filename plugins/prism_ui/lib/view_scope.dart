@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
+import 'package:prism_ui/metrics.dart';
 
-enum ViewScopeAspect { size, isMobile, windowControls }
+enum ViewScopeAspect { size, isMobile, windowControls, listInsets }
 
 class ViewScope extends InheritedModel<ViewScopeAspect> {
   const ViewScope({
@@ -38,6 +39,14 @@ class ViewScope extends InheritedModel<ViewScopeAspect> {
     return scope!.isMobile;
   }
 
+  static ListInsets? listInsetsOf(BuildContext context) =>
+      InheritedModel.inheritFrom<ViewScope>(
+        context,
+        aspect: ViewScopeAspect.listInsets,
+      )?.listInsets;
+
+  ListInsets get listInsets => ListInsets.forWidth(size.width);
+
   static Size windowControlsOf(BuildContext context) =>
       _of(context, ViewScopeAspect.windowControls).windowControls;
 
@@ -57,6 +66,7 @@ class ViewScope extends InheritedModel<ViewScopeAspect> {
       ViewScopeAspect.isMobile => isMobile != oldWidget.isMobile,
       ViewScopeAspect.windowControls =>
         windowControls != oldWidget.windowControls,
+      ViewScopeAspect.listInsets => listInsets != oldWidget.listInsets,
     },
   );
 }

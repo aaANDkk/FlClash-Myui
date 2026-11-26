@@ -68,7 +68,7 @@ void main() {
     unawaited(navigatorKey.currentState!.push(route));
 
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 150));
+    await tester.pump(const Duration(milliseconds: 30));
     expect(route.animation!.value, 0);
 
     ready.value = true;
@@ -147,29 +147,244 @@ void main() {
     expect(route.animation!.value, closeTo(0.5 + firstFrame, 0.01));
   });
 
-  testWidgets('a first load holds the push while it runs', (tester) async {
+  testWidgets(
+    'a first load pushes immediately with loading and reveals after settle',
+    (tester) async {
+      await pumpHome(tester);
+      final loading = ValueNotifier(true);
+      addTearDown(loading.dispose);
+      final route = FadePageRoute<void>(
+        builder: (_) => ValueListenableBuilder(
+          valueListenable: loading,
+          builder: (_, loading, _) =>
+              NullStatusSwitcher(isLoading: loading, child: const Text('page')),
+        ),
+      );
+      unawaited(navigatorKey.currentState!.push(route));
+
+      await tester.pump();
+      expect(
+        find.byType(ActivityIndicator, skipOffstage: false),
+        findsOneWidget,
+      );
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(route.animation!.value, greaterThan(0));
+
+      loading.value = false;
+      await tester.pump();
+      expect(find.text('page'), findsNothing);
+      expect(find.byType(ActivityIndicator), findsOneWidget);
+
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(route.animation!.value, 1);
+      expect(find.text('page'), findsNothing);
+      expect(find.byType(ActivityIndicator), findsOneWidget);
+
+      await tester.pump(const Duration(milliseconds: 60));
+      expect(find.text('page'), findsOneWidget);
+
+      await tester.pumpAndSettle();
+      expect(find.text('page'), findsOneWidget);
+      expect(find.byType(ActivityIndicator), findsNothing);
+    },
+  );
+
+  testWidgets('fast ready data skips loading without waiting', (tester) async {
+    await pumpHome(tester);
+    final route = FadePageRoute<void>(
+      builder: (_) =>
+          const NullStatusSwitcher(isLoading: false, child: Text('ready')),
+    );
+    unawaited(navigatorKey.currentState!.push(route));
+
+    await tester.pump();
+    expect(find.text('ready', skipOffstage: false), findsOneWidget);
+    expect(find.byType(ActivityIndicator, skipOffstage: false), findsNothing);
+    expect(tester.binding.hasScheduledFrame, isTrue);
+
+    await tester.pumpAndSettle();
+    expect(find.text('ready'), findsOneWidget);
+  });
+
+  testWidgets('a shown loading state stays at least minimumLoadingDuration', (
+    tester,
+  ) async {
     await pumpHome(tester);
     final loading = ValueNotifier(true);
     addTearDown(loading.dispose);
     final route = FadePageRoute<void>(
       builder: (_) => ValueListenableBuilder(
         valueListenable: loading,
-        builder: (_, loading, _) =>
-            NullStatusSwitcher(isLoading: loading, child: const Text('page')),
+        builder: (_, loading, _) => NullStatusSwitcher(
+          isLoading: loading,
+          loadingStatus: const Text('loading'),
+          child: const Text('content'),
+        ),
       ),
     );
     unawaited(navigatorKey.currentState!.push(route));
 
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 150));
-    expect(route.animation!.value, 0);
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(route.animation!.value, 1);
 
     loading.value = false;
-    await tester.pump(Duration.zero);
-    expect(find.text('page'), findsOneWidget);
-    await tester.pump(Duration.zero);
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(find.text('loading'), findsOneWidget);
+    expect(find.text('content'), findsNothing);
+
+    await tester.pump(const Duration(milliseconds: 60));
+    await tester.pump();
+    expect(find.text('content'), findsOneWidget);
+
+    await tester.pumpAndSettle();
+    expect(find.text('loading'), findsNothing);
+    expect(find.text('content'), findsOneWidget);
+  });
+
+  testWidgets('popping mid-loading cancels the timer and never reveals', (
+    tester,
+  ) async {
+    await pumpHome(tester);
+    final loading = ValueNotifier(true);
+    addTearDown(loading.dispose);
+    final route = FadePageRoute<void>(
+      builder: (_) => ValueListenableBuilder(
+        valueListenable: loading,
+        builder: (_, loading, _) => NullStatusSwitcher(
+          isLoading: loading,
+          loadingStatus: const Text('loading'),
+          child: const Text('content'),
+        ),
+      ),
+    );
+    unawaited(navigatorKey.currentState!.push(route));
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    navigatorKey.currentState!.pop();
+    loading.value = false;
+    await tester.pump();
+    expect(find.text('content'), findsNothing);
+
+    await tester.pumpAndSettle();
+    expect(find.text('loading'), findsNothing);
+    expect(find.text('content'), findsNothing);
+  });
+
+  testWidgets('disposing mid-loading leaves no pending timer', (tester) async {
+    await pumpHome(tester);
+    unawaited(
+      navigatorKey.currentState!.push(
+        FadePageRoute<void>(
+          builder: (_) => const NullStatusSwitcher(
+            isLoading: true,
+            loadingStatus: Text('loading'),
+            child: Text('content'),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(find.text('loading'), findsOneWidget);
+
+    await tester.pumpWidget(const HostApp(home: SizedBox()));
+    await tester.pump();
+    expect(find.text('loading'), findsNothing);
+  });
+
+  testWidgets('a covered page reveals once the page over it has moved in', (
+    tester,
+  ) async {
+    await pumpHome(tester);
+    final loading = ValueNotifier(true);
+    addTearDown(loading.dispose);
+    final routeA = FadePageRoute<void>(
+      builder: (_) => ValueListenableBuilder(
+        valueListenable: loading,
+        builder: (_, loading, _) => NullStatusSwitcher(
+          isLoading: loading,
+          loadingStatus: const Text('loading'),
+          child: const Text('page-a'),
+        ),
+      ),
+    );
+    unawaited(navigatorKey.currentState!.push(routeA));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    loading.value = false;
+    await tester.pump();
+
+    final routeB = FadePageRoute<void>(builder: (_) => const Text('page-b'));
+    unawaited(navigatorKey.currentState!.push(routeB));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
-    expect(route.animation!.value, greaterThan(0));
+    expect(routeB.animation!.isAnimating, isTrue);
+    expect(find.text('page-a', skipOffstage: false), findsNothing);
+
+    await tester.pumpAndSettle();
+    await tester.pump(minimumLoadingDuration);
+    await tester.pump();
+    expect(routeB.animation!.isCompleted, isTrue);
+    expect(find.text('page-a', skipOffstage: false), findsOneWidget);
+  });
+
+  testWidgets('a home page shows its content as soon as it is loaded', (
+    tester,
+  ) async {
+    final loading = ValueNotifier(true);
+    addTearDown(loading.dispose);
+    await tester.pumpWidget(
+      HostApp(
+        navigatorKey: navigatorKey,
+        home: ValueListenableBuilder(
+          valueListenable: loading,
+          builder: (_, loading, _) => NullStatusSwitcher(
+            isLoading: loading,
+            child: const Text('content'),
+          ),
+        ),
+      ),
+    );
+    expect(find.byType(ActivityIndicator), findsOneWidget);
+
+    loading.value = false;
+    await tester.pump();
+    expect(find.text('content'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.byType(ActivityIndicator), findsNothing);
+  });
+
+  testWidgets('a status dropped once loaded still leaves as it came', (
+    tester,
+  ) async {
+    await pumpHome(tester);
+    final loading = ValueNotifier(true);
+    addTearDown(loading.dispose);
+    final route = FadePageRoute<void>(
+      builder: (_) => ValueListenableBuilder(
+        valueListenable: loading,
+        builder: (_, loading, _) => NullStatusSwitcher(
+          isLoading: loading,
+          loadingStatus: loading ? const Text('loading') : null,
+          child: const Text('content'),
+        ),
+      ),
+    );
+    unawaited(navigatorKey.currentState!.push(route));
+    await tester.pump();
+    loading.value = false;
+    await tester.pump();
+    expect(find.text('loading'), findsOneWidget);
+    expect(find.byType(ActivityIndicator), findsNothing);
+
+    await tester.pumpAndSettle();
+    await tester.pump(minimumLoadingDuration);
+    await tester.pumpAndSettle();
+    expect(find.text('content'), findsOneWidget);
+    expect(find.text('loading'), findsNothing);
   });
 
   testWidgets('a bottom sheet waits for what its page holds it for', (
@@ -190,7 +405,7 @@ void main() {
     unawaited(navigatorKey.currentState!.push(route));
 
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 150));
+    await tester.pump(const Duration(milliseconds: 30));
     expect(route.animation!.value, 0);
 
     ready.value = true;
@@ -214,4 +429,34 @@ void main() {
     expect(find.text('page'), findsNothing);
     expect(navigator.canPop(), isFalse);
   });
+
+  testWidgets('a push moves in on a view whose display is gone', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      View(
+        view: _DisplaylessView(tester.view),
+        child: HostApp(navigatorKey: navigatorKey, home: const SizedBox()),
+      ),
+      wrapWithView: false,
+    );
+    final route = FadePageRoute<void>(builder: (_) => const Text('page'));
+    unawaited(navigatorKey.currentState!.push(route));
+
+    await tester.pumpAndSettle();
+    expect(route.animation!.value, 1);
+    expect(find.text('page'), findsOneWidget);
+  });
+}
+
+class _DisplaylessView extends TestFlutterView {
+  _DisplaylessView(TestFlutterView view)
+    : super(
+        view: view,
+        platformDispatcher: view.platformDispatcher,
+        display: view.display,
+      );
+
+  @override
+  TestDisplay get display => throw TypeError();
 }

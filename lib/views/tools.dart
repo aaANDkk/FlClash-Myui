@@ -158,9 +158,7 @@ class _ToolViewState extends ConsumerState<ToolsView> {
           controller: _controller,
           slivers: [
             SliverPadding(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
+              padding: context.listInsets.page(
                 top: context.sectionsTopPadding,
                 bottom: 20 + context.bottomInset,
               ),

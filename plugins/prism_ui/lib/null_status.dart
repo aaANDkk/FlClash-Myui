@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:prism_ui/shapes/shapes.dart' as shapes;
 import 'package:prism_ui/context.dart';
-import 'package:prism_ui/deferred_push.dart';
 import 'package:prism_ui/fade_box.dart';
 import 'package:prism_ui/icons/icons.dart';
 import 'package:prism_ui/inherited.dart';
@@ -13,6 +13,8 @@ import 'package:prism_ui/l10n.dart';
 import 'package:prism_ui/loading.dart';
 import 'package:prism_ui/metrics.dart';
 import 'package:prism_ui/navigator.dart';
+import 'package:prism_ui/route_motion_hold.dart';
+import 'package:prism_ui/surface.dart';
 import 'package:prism_ui/theme_data.dart';
 import 'package:prism_ui/typography.dart';
 
@@ -37,29 +39,24 @@ class _SearchIllustration implements Illustration {
   bool get isError => false;
 }
 
-/// Holds the transition of the route it arrives in while its first load runs,
-/// as [ArrivalHold] does.
+/// How long a shown loading state stays, so a quick load never flashes it.
+const minimumLoadingDuration = Duration(milliseconds: 400);
+
+/// Shows a first load at once; on a pushed page the content follows once the
+/// load has shown for [minimumLoadingDuration] and the route has settled.
 class NullStatusSwitcher extends StatefulWidget {
-  /// Only the first load is held back; later loads keep what is on screen.
   final bool isLoading;
   final bool isEmpty;
   final bool isSearching;
-
-  /// Shown in place of a first load still running after a route transition.
   final Widget? loadingStatus;
   final NullStatus? nullStatus;
   final Widget child;
-
-  /// Without it, the first load leaves the push alone and shows
-  /// [loadingStatus] at once.
-  final bool holdsArrival;
 
   const NullStatusSwitcher({
     super.key,
     this.isLoading = false,
     this.isEmpty = false,
     this.isSearching = false,
-    this.holdsArrival = true,
     this.loadingStatus,
     this.nullStatus,
     required this.child,
@@ -71,52 +68,74 @@ class NullStatusSwitcher extends StatefulWidget {
 
 class _NullStatusSwitcherState extends State<NullStatusSwitcher> {
   static const _exitDuration = Duration(milliseconds: 150);
-  static const _loadingStatusDelay = Duration(milliseconds: 400);
 
-  late bool _loaded = !widget.isLoading;
-  Timer? _loadingStatusTimer;
-  late var _showsLoadingStatus = !widget.holdsArrival;
+  late var _revealed = !widget.isLoading;
+  // A caller may drop its status once loaded; the one shown leaves as it came.
+  late var _loadingStatus = widget.loadingStatus;
+  Completer<void>? _shownLongEnough;
+  Timer? _floor;
+  var _revealing = false;
 
   @override
-  void initState() {
-    super.initState();
-    if (!_loaded && !_showsLoadingStatus && widget.loadingStatus != null) {
-      _loadingStatusTimer = Timer(
-        _loadingStatusDelay,
-        () => setState(() => _showsLoadingStatus = true),
-      );
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_revealed && _shownLongEnough == null && _arrivesOnRoute()) {
+      final shown = _shownLongEnough = Completer<void>();
+      _floor = Timer(minimumLoadingDuration, shown.complete);
     }
   }
+
+  bool _arrivesOnRoute() =>
+      isRouteArriving(context) ||
+      routesCarrying(context).any((route) => !route.isFirst);
 
   @override
   void didUpdateWidget(covariant NullStatusSwitcher oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _loaded = _loaded || !widget.isLoading;
-    if (_loaded) {
-      _loadingStatusTimer?.cancel();
+    _loadingStatus = widget.loadingStatus ?? _loadingStatus;
+    if (widget.isLoading || _revealed) {
+      return;
+    }
+    if (_shownLongEnough == null) {
+      _revealed = true;
+    } else {
+      unawaited(_reveal());
+    }
+  }
+
+  Future<void> _reveal() async {
+    if (_revealing) {
+      return;
+    }
+    _revealing = true;
+    await _shownLongEnough!.future;
+    if (!mounted) {
+      return;
+    }
+    if (isRouteArriving(context)) {
+      await whenRouteSettled(context);
+      // The bar items start fading in on the frame after the route settles.
+      await SchedulerBinding.instance.endOfFrame;
+      if (!mounted) {
+        return;
+      }
+    }
+    await whenNothingAnimates(besides: _loadingStatus == null ? 1 : 0);
+    if (mounted && !_isLeaving(routesCarrying(context))) {
+      setState(() => _revealed = true);
     }
   }
 
   @override
   void dispose() {
-    _loadingStatusTimer?.cancel();
+    _floor?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.holdsArrival) {
-      return _buildSlot(context);
-    }
-    return ArrivalHold(ready: _loaded, child: _buildSlot(context));
-  }
-
-  Widget _buildSlot(BuildContext context) {
-    if (!_loaded && !_showsLoadingStatus) {
-      return const SizedBox.expand();
-    }
     final slot = switch ((widget.isEmpty, widget.isSearching)) {
-      _ when !_loaded => _NullStatusSlot.loading,
+      _ when !_revealed => _NullStatusSlot.loading,
       (true, true) => _NullStatusSlot.noResults,
       (true, false) => _NullStatusSlot.empty,
       (false, _) => _NullStatusSlot.content,
@@ -131,23 +150,34 @@ class _NullStatusSwitcherState extends State<NullStatusSwitcher> {
         child: Stack(
           alignment: Alignment.center,
           fit: StackFit.expand,
-          children: <Widget>[...previousChildren, ?currentChild],
+          children: currentChild?.key == const ValueKey(_NullStatusSlot.content)
+              ? <Widget>[currentChild!, ...previousChildren]
+              : <Widget>[...previousChildren, ?currentChild],
         ),
       ),
-      transitionBuilder: (child, animation) => ActivityPresence(
-        animation: animation,
-        child: FadeTransition(
-          opacity: animation,
-          child: ScaleTransition(
-            scale: animation.drive(Tween(begin: 0.92, end: 1.0)),
-            child: child,
+      transitionBuilder: (child, animation) => switch (child.key) {
+        const ValueKey(_NullStatusSlot.content) => _SurfaceVeil(
+          animation: animation,
+          child: child,
+        ),
+        const ValueKey(_NullStatusSlot.loading) when _loadingStatus == null =>
+          ActivityPresence(animation: animation, child: child),
+        _ => ActivityPresence(
+          animation: animation,
+          child: FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              scale: animation.drive(Tween(begin: 0.92, end: 1.0)),
+              child: child,
+            ),
           ),
         ),
-      ),
+      },
       child: KeyedSubtree(
         key: ValueKey(slot),
         child: switch (slot) {
-          _NullStatusSlot.loading => widget.loadingStatus!,
+          _NullStatusSlot.loading =>
+            _loadingStatus ?? const Center(child: ActivityIndicator.page()),
           _NullStatusSlot.noResults => NullStatus(
             label: UiLocalizations.of(context).noSearchResults,
             illustration: Illustration.search,
@@ -156,6 +186,44 @@ class _NullStatusSwitcherState extends State<NullStatusSwitcher> {
           _NullStatusSlot.content => widget.child,
         },
       ),
+    );
+  }
+}
+
+bool _isLeaving(Iterable<ModalRoute<Object?>> routes) => routes.any(
+  (route) =>
+      !route.isActive ||
+      (!route.isCurrent &&
+          switch (route.animation?.status) {
+            AnimationStatus.reverse || AnimationStatus.dismissed => true,
+            _ => false,
+          }),
+);
+
+class _SurfaceVeil extends StatelessWidget {
+  const _SurfaceVeil({required this.animation, required this.child});
+
+  final Animation<double> animation;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = SurfaceScope.of(context).colorOf(context.colorScheme);
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        child,
+        IgnorePointer(
+          child: AnimatedBuilder(
+            animation: animation,
+            builder: (_, _) => animation.value >= 1
+                ? const SizedBox.shrink()
+                : ColoredBox(
+                    color: color.withValues(alpha: 1 - animation.value),
+                  ),
+          ),
+        ),
+      ],
     );
   }
 }

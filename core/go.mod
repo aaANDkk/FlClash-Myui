@@ -7,6 +7,7 @@ replace github.com/metacubex/mihomo => ./Clash.Meta
 require (
 	github.com/Microsoft/go-winio v0.6.2
 	github.com/dlclark/regexp2 v1.12.0
+	github.com/gofrs/uuid/v5 v5.4.0
 	github.com/metacubex/http v0.1.8
 	github.com/metacubex/mihomo v0.0.0-00010101000000-000000000000
 	github.com/metacubex/quic-go v0.61.1-0.20260727080200-2548683b76f4
@@ -15,6 +16,7 @@ require (
 	github.com/oschwald/maxminddb-golang v1.12.0
 	go.yaml.in/yaml/v3 v3.0.5
 	golang.org/x/net v0.59.0
+	golang.org/x/sys v0.48.0
 )
 
 require (
@@ -42,7 +44,6 @@ require (
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.4.0 // indirect
-	github.com/gofrs/uuid/v5 v5.4.0 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/google/btree v1.1.3 // indirect
@@ -138,7 +139,6 @@ require (
 	golang.org/x/mobile v0.0.0-20260908204917-8b95e45f8d3e // indirect
 	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
-	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/term v0.46.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
 	golang.org/x/time v0.10.0 // indirect

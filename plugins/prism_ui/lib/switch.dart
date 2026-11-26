@@ -27,13 +27,15 @@ class Switch extends StatefulWidget {
   static const trackWidth = 52.0;
   static const trackHeight = 32.0;
 
+  /// M3's layout: 4 dp either side of the track, as tall as a tap target.
+  static const edgeInset = 4.0;
+
   @override
   State<Switch> createState() => _SwitchState();
 }
 
 class _SwitchState extends State<Switch> with TickerProviderStateMixin {
-  // M3's layout: 4 dp either side of the track, as tall as a tap target.
-  static const _inset = 4.0;
+  static const _inset = Switch.edgeInset;
   static const _thumb = 24.0;
   static const _midThumb = Size(34, 22);
   static const _heldThumb = 40.0;

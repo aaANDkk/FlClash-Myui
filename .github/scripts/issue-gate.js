@@ -13,7 +13,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const EXEMPT = ['OWNER', 'MEMBER', 'COLLABORATOR'];
 const EMPTY = '_No response_';
 const GATE_SINCE = '2026-11-20';
-const RELEASE = /^v?(\d+)\.(\d+)\.(\d+)$/;
+// The tags .github/workflows/build.yaml publishes: vX.Y.Z, and a prerelease vX.Y.Z-pre.N with a rebuild +M.
+const RELEASE = /^v?(\d+)\.(\d+)\.(\d+)(?:-pre\.(\d+)(?:\+(\d+))?)?$/;
 
 function unquote(text) {
   const trimmed = text.trim();
@@ -22,10 +23,12 @@ function unquote(text) {
 
 // The fields of one issue form: each one's heading, whether it is required, and for checkboxes the required options.
 function parseForm(text) {
-  const form = { labels: [], fields: [] };
+  const form = { title: '', labels: [], fields: [] };
   let field = null;
   let option = null;
   for (const line of text.split('\n')) {
+    const title = line.match(/^title:\s*(.+)$/);
+    if (title) form.title = unquote(title[1]);
     const labels = line.match(/^labels:\s*\[(.*)\]\s*$/);
     if (labels) form.labels = labels[1].split(',').map(unquote).filter(Boolean);
     const type = line.match(/^ {2}- type:\s*(\S+)/);
@@ -102,9 +105,21 @@ function formProblems(form, found) {
   return problems;
 }
 
+// A title that is only the form's prefix says nothing; GitHub requires a title but not past the prefill.
+function titleProblems(form, title) {
+  const prefix = form.title.trim();
+  let rest = (title || '').trim();
+  if (prefix && rest.toLowerCase().startsWith(prefix.toLowerCase())) rest = rest.slice(prefix.length).trim();
+  if (rest !== '') return [];
+  return [`标题：在 ${prefix} 后面用一句话写清问题 / Title: add a one-line summary after ${prefix}`];
+}
+
+// Ordered as compared: a release ranks above each of its prereleases.
 function releaseOf(value) {
   const match = value.match(RELEASE);
-  return match ? match.slice(1).map(Number) : null;
+  if (!match) return null;
+  const [major, minor, patch, pre, rebuild] = match.slice(1);
+  return [major, minor, patch, pre ?? Infinity, rebuild ?? 0].map(Number);
 }
 
 function olderThan(a, b) {
@@ -150,7 +165,7 @@ async function problemsOf(github, repo, issue, forms) {
   const found = sections(issue.body);
   const form = matchForm(forms, labels, found);
   if (!form) return ['没有通过 issue 表单提交 / Not opened through one of the issue forms.'];
-  const problems = formProblems(form, found);
+  const problems = [...titleProblems(form, issue.title), ...formProblems(form, found)];
   const version = form.fields.find((field) => field.id === 'version');
   const value = version && found.get(version.heading);
   if (value && value !== EMPTY) problems.push(...(await versionProblems(github, repo, value)));
@@ -229,4 +244,4 @@ async function sweep({ github, context, now = Date.now() }) {
   }
 }
 
-module.exports = { check, sweep, parseForm, sections, formProblems, matchForm, loadForms };
+module.exports = { check, sweep, parseForm, sections, formProblems, titleProblems, problemsOf, matchForm, loadForms };

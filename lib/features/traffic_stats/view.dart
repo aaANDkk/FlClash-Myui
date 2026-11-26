@@ -178,7 +178,6 @@ class _TrafficStatsViewState extends ConsumerState<TrafficStatsView>
         ],
         body: Builder(
           builder: (context) => NullStatusSwitcher(
-            holdsArrival: false,
             isLoading: (_loading && _result == null) || store.isLoading,
             isEmpty: false,
             loadingStatus: const Center(child: ActivityIndicator.page()),

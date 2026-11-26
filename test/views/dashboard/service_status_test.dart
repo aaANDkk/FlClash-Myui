@@ -557,6 +557,49 @@ void main() {
     expect(await heightOf(quality), loading);
   });
 
+  testWidgets(
+    'a sheet row shows the address its service saw over the node\'s',
+    (tester) async {
+      final outboundIps = <String>[];
+      answer(
+        (params) => [
+          for (final name in params.names)
+            ServiceCheckItem(
+              name: name,
+              status: ServiceProbeStatus.available.id,
+              chains: const ['HK-01'],
+              region: name == ServiceTarget.claude.id ? 'US' : 'JP',
+              ip: name == ServiceTarget.claude.id ? '198.51.100.9' : '',
+              checkedAt: 1700000000000,
+              coreEpoch: 1,
+              routeVersion: 1,
+            ),
+        ],
+      );
+      await tester.pumpWidget(
+        app(
+          outboundIp: (params) {
+            outboundIps.add(params.proxyName);
+            return _address('203.0.113.7', 'SG');
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(ServiceStatusCard));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Check all'));
+      await tester.pumpAndSettle();
+      final sheet = find.byType(ServiceStatusSheet);
+      Finder inSheet(String text) =>
+          find.descendant(of: sheet, matching: find.text(text));
+
+      expect(inSheet('198.51.100.9'), findsOneWidget);
+      expect(inSheet('\u{1F1FA}\u{1F1F8}'), findsOneWidget);
+      expect(inSheet('203.0.113.7'), findsWidgets);
+      expect(outboundIps, ['HK-01']);
+    },
+  );
+
   testWidgets('a sheet row falls back to the node without an address', (
     tester,
   ) async {
@@ -610,9 +653,7 @@ void main() {
       findsNWidgets(shownIds.length),
     );
     expect(
-      find.text(
-        DateTime.fromMillisecondsSinceEpoch(1700000000000).showTime.trim(),
-      ),
+      find.text(DateTime.fromMillisecondsSinceEpoch(1700000000000).showTime),
       findsNothing,
     );
     final list = tester.widget<SliverPrismList>(
@@ -1117,18 +1158,19 @@ void main() {
     expect(find.byType(SkeletonText), findsNothing);
   });
 
-  testWidgets('a failure a second attempt repeats is shown and asked again', (
+  testWidgets('a displayed failure stays visible until its recheck recovers', (
     tester,
   ) async {
-    const failing = true;
+    final recovery = Completer<List<ServiceCheckItem>>();
     final asked = <String>[];
     answer((params) {
       asked.add(params.proxyName);
+      if (asked.length == 4) return recovery.future;
       return [
         for (final name in params.names)
           _item(
             name,
-            params.proxyName == directOutbound || !failing
+            params.proxyName == directOutbound
                 ? ServiceProbeStatus.available
                 : ServiceProbeStatus.failed,
           ),
@@ -1146,8 +1188,18 @@ void main() {
     expect(asked, [directOutbound, routedOutbound, routedOutbound]);
 
     await tester.pump(const Duration(minutes: 1));
-    expect(asked, hasLength(3));
+    expect(asked, [
+      directOutbound,
+      routedOutbound,
+      routedOutbound,
+      routedOutbound,
+    ]);
     expect(find.text('Check failed'), findsOneWidget);
+    recovery.complete([_item('google', ServiceProbeStatus.available)]);
+    await tester.pumpAndSettle();
+    expect(find.text('Available'), findsOneWidget);
+    await tester.pump(const Duration(minutes: 6));
+    expect(asked, hasLength(4));
   });
 
   testWidgets('a check that timed out is shown without a second attempt', (

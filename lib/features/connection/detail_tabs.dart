@@ -1,27 +1,67 @@
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/widgets.dart';
 
-const _clearance = 16.0;
+const _clearance = 20.0;
+const _phoneHeaderGap = _clearance - 4;
+
+/// Starts a tab's content [_clearance] under the tabs, for a first section
+/// that passes `atTop` to add no gap of its own.
+EdgeInsets detailTabPaddingOf(BuildContext context) {
+  final margin = context.listInsets.margin;
+  return EdgeInsets.fromLTRB(
+    margin,
+    _clearance,
+    margin,
+    margin + context.bottomInset,
+  );
+}
 
 class DetailTabs extends StatefulWidget {
   final List<(String label, WidgetBuilder builder)> tabs;
+  final int initialIndex;
 
-  const DetailTabs({super.key, required this.tabs});
+  /// Stays above the control whichever tab shows.
+  final Widget? header;
+
+  const DetailTabs({
+    super.key,
+    required this.tabs,
+    this.initialIndex = 0,
+    this.header,
+  });
+
+  /// Turns the [DetailTabs] around [context] to the tab at [index].
+  static void select(BuildContext context, int index) =>
+      context.findAncestorStateOfType<_DetailTabsState>()?._select(index);
 
   @override
   State<DetailTabs> createState() => _DetailTabsState();
 }
 
 class _DetailTabsState extends State<DetailTabs> {
-  var _index = 0;
+  late var _index = widget.initialIndex;
+
+  void _select(int index) => setState(() => _index = index);
 
   @override
   Widget build(BuildContext context) {
     final tabs = widget.tabs;
-    if (tabs.length == 1) {
+    final header = widget.header;
+    if (tabs.length == 1 && header == null) {
       return tabs.single.$2(context);
     }
     final index = _index.clamp(0, tabs.length - 1);
+    final margin = context.listInsets.margin;
+    final compact = ViewScope.isMobileOf(context);
+    final control = SegmentedControl<int>(
+      size: TonalButtonSize.section,
+      stretches: compact,
+      segments: [
+        for (final (index, (label, _)) in tabs.indexed) (index, label),
+      ],
+      value: index,
+      onChanged: _select,
+    );
     return Padding(
       padding: EdgeInsets.only(top: context.contentTopPadding),
       child: MediaQuery.removePadding(
@@ -34,16 +74,27 @@ class _DetailTabsState extends State<DetailTabs> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: SegmentedControl<int>(
-                    segments: [
-                      for (final (index, (label, _)) in tabs.indexed)
-                        (index, label),
-                    ],
-                    value: index,
-                    onChanged: (value) => setState(() => _index = value),
+                if (header != null)
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      margin,
+                      0,
+                      margin,
+                      compact ? _phoneHeaderGap : _clearance,
+                    ),
+                    child: header,
                   ),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: margin),
+                  child: compact
+                      ? control
+                      : Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: control,
+                          ),
+                        ),
                 ),
                 Expanded(
                   child: ClipRect(
@@ -63,8 +114,6 @@ class _DetailTabsState extends State<DetailTabs> {
   }
 }
 
-/// Scrolled rows stop short of the control; a tab at rest starts on its first
-/// header's own gap, which is wider, so nothing at rest is cut.
 class _BelowClearance extends CustomClipper<Rect> {
   const _BelowClearance();
 

@@ -159,7 +159,7 @@ class ApplicationState extends ConsumerState<Application> {
             return ValueListenableBuilder<EmojiStyle>(
               valueListenable: EmojiManager.emojiStyleNotifier,
               builder: (context, emojiStyle, _) {
-                return PrismApp(
+                final prismApp = PrismApp(
                   debugShowCheckedModeBanner: false,
                   navigatorKey: globalState.navigatorKey,
                   onNavigationNotification: (_) => true,
@@ -200,6 +200,13 @@ class ApplicationState extends ConsumerState<Application> {
                     builder: (_) => KeyboardInsetHold(child: homePage!),
                   ),
                 );
+                final desktopWindow = window;
+                return desktopWindow == null
+                    ? prismApp
+                    : HiddenWindowFocusGuard(
+                        shown: desktopWindow.shown,
+                        child: prismApp,
+                      );
               },
             );
           },

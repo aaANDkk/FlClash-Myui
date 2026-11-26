@@ -1,10 +1,16 @@
 import 'package:fl_clash/common/fixed.dart';
+import 'package:fl_clash/core/controller.dart';
+import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/app.dart';
+import 'package:fl_clash/providers/core.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:riverpod/riverpod.dart';
+
+class _MockCore extends Mock implements CoreHandlerInterface {}
 
 void main() {
   late ProviderContainer container;
@@ -15,6 +21,38 @@ void main() {
 
   tearDown(() {
     container.dispose();
+  });
+
+  test('the rules in force are listed again each time the Core connects, '
+      'and kept while it is away', () async {
+    final core = _MockCore();
+    final rules = RuleTable.of(const [(type: 'MATCH', payload: '')]);
+    var calls = 0;
+    when(core.getRules).thenAnswer((_) async {
+      calls++;
+      return calls == 1 ? throw StateError('stopped') : rules;
+    });
+    final container = ProviderContainer(
+      overrides: [
+        coreHandlerProvider.overrideWithValue(CoreController.test(core)),
+      ],
+    );
+    addTearDown(container.dispose);
+    container.listen(activeRulesProvider, (_, _) {}, onError: (_, _) {});
+    final status = container.read(coreStatusProvider.notifier);
+
+    await expectLater(
+      container.read(activeRulesProvider.future),
+      throwsStateError,
+    );
+    status.value = CoreStatus.connecting;
+    status.value = CoreStatus.connected;
+    expect(await container.read(activeRulesProvider.future), rules);
+
+    status.value = CoreStatus.disconnected;
+    await Future<void>.delayed(Duration.zero);
+    expect(container.read(activeRulesProvider).value, rules);
+    expect(calls, 2);
   });
 
   group('AuthorizedTunEnable provider', () {
@@ -127,6 +165,40 @@ void main() {
     test('can set runtime', () {
       container.read(runTimeProvider.notifier).update((_) => 3600);
       expect(container.read(runTimeProvider), 3600);
+    });
+  });
+
+  group('AppVisible provider', () {
+    bool visible() => container.read(appVisibleProvider);
+
+    void setShown(bool shown) =>
+        container.read(appVisibleProvider.notifier).shown = shown;
+
+    void setScreensSeen(bool seen) =>
+        container.read(screensSeenProvider.notifier).value = seen;
+
+    test('a shown window on lit screens is visible', () {
+      expect(visible(), isTrue);
+      setShown(false);
+      expect(visible(), isFalse);
+      setShown(true);
+      expect(visible(), isTrue);
+    });
+
+    test('dark screens hide a shown window until they light up', () {
+      setScreensSeen(false);
+      expect(visible(), isFalse);
+      setShown(true);
+      expect(visible(), isFalse, reason: 'the engine still calls it shown');
+      setScreensSeen(true);
+      expect(visible(), isTrue);
+    });
+
+    test('lit screens leave a hidden window hidden', () {
+      setShown(false);
+      setScreensSeen(false);
+      setScreensSeen(true);
+      expect(visible(), isFalse);
     });
   });
 
@@ -261,7 +333,7 @@ void main() {
     });
 
     test('Requests.addRequest reaches listeners', () {
-      container.read(requestsProvider.notifier).value = FixedList(3);
+      container.read(requestsProvider.notifier).value = ConnectionLog(3);
       var notifications = 0;
       final subscription = container.listen(
         requestsProvider.select((state) => state.revision),
@@ -297,7 +369,7 @@ void main() {
         rulePayload: 'example.com',
       );
       final notifier = container.read(requestsProvider.notifier);
-      notifier.value = FixedList(3);
+      notifier.value = ConnectionLog(3);
       notifier.addRequest(request('a'));
       notifier.addRequest(request('b'));
       var notifications = 0;
@@ -323,6 +395,55 @@ void main() {
             .map((request) => (request.id, request.upload, request.download)),
         [('a', 520, 257835), ('b', 460, 0)],
       );
+    });
+
+    test('Requests notifies once per close, sync and closeAll that changes '
+        'the log, and not for one that changes nothing', () {
+      TrackerInfo request(String id, int second) => TrackerInfo(
+        id: id,
+        start: DateTime.utc(2026).add(Duration(seconds: second)),
+        metadata: const Metadata(network: 'tcp', host: 'example.com'),
+        chains: const ['Proxy'],
+        rule: 'DOMAIN',
+        rulePayload: 'example.com',
+      );
+      final notifier = container.read(requestsProvider.notifier);
+      notifier.value = ConnectionLog(3);
+      notifier.addRequest(request('a', 0));
+      notifier.addRequest(request('b', 1));
+      notifier.addRequest(request('c', 2));
+      var notifications = 0;
+      final subscription = container.listen(
+        requestsProvider.select((state) => state.revision),
+        (_, _) => notifications++,
+      );
+      addTearDown(subscription.close);
+      final later = DateTime.utc(2026, 1, 2);
+
+      notifier.close(['a'], at: later);
+      expect(notifications, 1);
+      notifier.close(['a', 'gone'], at: later);
+      expect(notifications, 1);
+
+      notifier.sync(
+        [request('c', 2)],
+        requestedAt: later,
+        lineage: container.read(requestsProvider).lineage,
+      );
+      expect(notifications, 2);
+      expect(container.read(requestsProvider)['b']!.closedAt, later);
+      notifier.sync(
+        [request('c', 2)],
+        requestedAt: later,
+        lineage: container.read(requestsProvider).lineage,
+      );
+      expect(notifications, 2);
+
+      notifier.closeAll(at: later);
+      expect(notifications, 3);
+      notifier.closeAll(at: later);
+      expect(notifications, 3);
+      expect(container.read(requestsProvider).activeCount, 0);
     });
 
     test('Traffics.addTraffic reaches listeners and clear resets', () {

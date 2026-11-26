@@ -4,15 +4,15 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:prism_ui/common_button.dart';
 import 'package:prism_ui/context.dart';
+import 'package:prism_ui/measure.dart';
 import 'package:prism_ui/metrics.dart';
 import 'package:prism_ui/theme_data.dart';
 import 'package:prism_ui/typography.dart';
 
 enum ListRowAlignment { center, top }
 
-/// A row of leading, title, subtitle and trailing laid out as a Material 3
-/// one- or two-line list tile, without the tile's ink, focus or semantics:
-/// the card or row around it answers presses.
+/// A row laid out as an iOS 27 inset grouped cell, without ink, focus or
+/// semantics: the card or row around it answers presses.
 class ListRow extends StatelessWidget {
   const ListRow({
     super.key,
@@ -22,27 +22,29 @@ class ListRow extends StatelessWidget {
     this.trailing,
     this.padding = const EdgeInsets.symmetric(horizontal: 16),
     this.horizontalTitleGap,
-    this.minVerticalPadding = listRowVerticalPadding,
-    this.minHeight = listRowMinHeight,
+    this.minVerticalPadding,
+    this.minHeight,
     this.alignment = ListRowAlignment.center,
   });
 
   final Widget? leading;
   final Widget title;
   final Widget? subtitle;
+
+  /// Measured by its intrinsic width, so it cannot hold a LayoutBuilder: laid
+  /// out to measure, an AnimatedSize under it would restart every frame.
   final Widget? trailing;
   final EdgeInsetsGeometry padding;
   final double? horizontalTitleGap;
-  final double minVerticalPadding;
-  final double minHeight;
+  final double? minVerticalPadding;
+  final double? minHeight;
   final ListRowAlignment alignment;
 
   static const _defaultTitleGap = 16.0;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final colorScheme = Theme.of(context).colorScheme;
     final textDirection = Directionality.of(context);
     final safe = MediaQuery.paddingOf(context);
     final inset = padding.resolve(textDirection);
@@ -52,21 +54,25 @@ class ListRow extends StatelessWidget {
         .of(context, emphasized: true)
         .copyWith(color: colorScheme.onSurfaceVariant);
     final iconColor = colorScheme.onSurfaceVariant;
+    final buttonTheme = ButtonTheme.of(context);
     // As ListTile does: an icon theme a slot sets must not recolor a button.
     final iconButtonColor =
-        ButtonTheme.of(context).icon?.foregroundColor?.resolve(const {}) ??
-        iconColor;
+        buttonTheme.icon?.foregroundColor?.resolve(const {}) ?? iconColor;
     final leading = this.leading;
     final subtitle = this.subtitle;
     final trailing = this.trailing;
-    return IconTheme.merge(
-      data: IconThemeData(color: iconColor),
-      child: ButtonTheme.merge(
+    // IconTheme.merge and ButtonTheme.merge, without the element each adds.
+    final iconTheme =
+        context.dependOnInheritedWidgetOfExactType<IconTheme>()?.data ??
+        const IconThemeData.fallback();
+    return IconTheme(
+      data: iconTheme.merge(IconThemeData(color: iconColor)),
+      child: ButtonTheme(
         data: ButtonThemeData(
           icon: ButtonStyle(
             foregroundColor: WidgetStatePropertyAll(iconButtonColor),
           ),
-        ),
+        ).merge(buttonTheme),
         child: _ListRowLayout(
           padding: EdgeInsets.fromLTRB(
             math.max(safe.left, inset.left),
@@ -74,14 +80,14 @@ class ListRow extends StatelessWidget {
             math.max(safe.right, inset.right),
             math.max(0, inset.bottom),
           ),
-          visualDensity: theme.visualDensity,
           textDirection: textDirection,
-          titleBaseline: titleStyle.textBaseline ?? TextBaseline.alphabetic,
-          subtitleBaseline:
-              subtitleStyle.textBaseline ?? TextBaseline.alphabetic,
           horizontalTitleGap: horizontalTitleGap ?? _defaultTitleGap,
-          minVerticalPadding: minVerticalPadding,
-          minHeight: minHeight,
+          minVerticalPadding:
+              minVerticalPadding ??
+              (subtitle == null
+                  ? listRowVerticalPadding
+                  : listTwoLineRowVerticalPadding),
+          minHeight: minHeight ?? context.listRowHeight,
           alignment: alignment,
           leading: leading == null
               ? null
@@ -110,10 +116,7 @@ class _ListRowLayout
     extends SlottedMultiChildRenderObjectWidget<_Slot, RenderBox> {
   const _ListRowLayout({
     required this.padding,
-    required this.visualDensity,
     required this.textDirection,
-    required this.titleBaseline,
-    required this.subtitleBaseline,
     required this.horizontalTitleGap,
     required this.minVerticalPadding,
     required this.minHeight,
@@ -125,10 +128,7 @@ class _ListRowLayout
   });
 
   final EdgeInsets padding;
-  final VisualDensity visualDensity;
   final TextDirection textDirection;
-  final TextBaseline titleBaseline;
-  final TextBaseline subtitleBaseline;
   final double horizontalTitleGap;
   final double minVerticalPadding;
   final double minHeight;
@@ -152,10 +152,7 @@ class _ListRowLayout
   @override
   _RenderListRow createRenderObject(BuildContext context) => _RenderListRow(
     padding: padding,
-    visualDensity: visualDensity,
     textDirection: textDirection,
-    titleBaseline: titleBaseline,
-    subtitleBaseline: subtitleBaseline,
     horizontalTitleGap: horizontalTitleGap,
     minVerticalPadding: minVerticalPadding,
     minHeight: minHeight,
@@ -166,10 +163,7 @@ class _ListRowLayout
   void updateRenderObject(BuildContext context, _RenderListRow renderObject) {
     renderObject
       ..padding = padding
-      ..visualDensity = visualDensity
       ..textDirection = textDirection
-      ..titleBaseline = titleBaseline
-      ..subtitleBaseline = subtitleBaseline
       ..horizontalTitleGap = horizontalTitleGap
       ..minVerticalPadding = minVerticalPadding
       ..minHeight = minHeight
@@ -179,35 +173,25 @@ class _ListRowLayout
 
 typedef _Sizes = ({double titleY, BoxConstraints text, Size size});
 
-// The geometry of a Material 3 ListTile that is neither dense nor three-line.
 class _RenderListRow extends RenderBox
     with SlottedContainerRenderObjectMixin<_Slot, RenderBox> {
   _RenderListRow({
     required EdgeInsets padding,
-    required VisualDensity visualDensity,
     required TextDirection textDirection,
-    required TextBaseline titleBaseline,
-    required TextBaseline subtitleBaseline,
     required double horizontalTitleGap,
     required double minVerticalPadding,
     required double minHeight,
     required ListRowAlignment alignment,
   }) : _padding = padding,
-       _visualDensity = visualDensity,
        _textDirection = textDirection,
-       _titleBaseline = titleBaseline,
-       _subtitleBaseline = subtitleBaseline,
        _horizontalTitleGap = horizontalTitleGap,
        _minVerticalPadding = minVerticalPadding,
        _minHeight = minHeight,
        _alignment = alignment;
 
-  static const _minLeadingWidth = 24.0;
   static const _minTrailingWidth = 32.0;
   static const _maxSideHeight = 56.0;
   static const _titleMaxWidthFactor = 0.5;
-  static const _titleBaselineY = 32.0;
-  static const _subtitleBaselineY = 52.0;
 
   RenderBox? get _leading => childForSlot(_Slot.leading);
   RenderBox get _title => childForSlot(_Slot.title)!;
@@ -232,16 +216,6 @@ class _RenderListRow extends RenderBox
     markNeedsLayout();
   }
 
-  VisualDensity _visualDensity;
-
-  set visualDensity(VisualDensity value) {
-    if (_visualDensity == value) {
-      return;
-    }
-    _visualDensity = value;
-    markNeedsLayout();
-  }
-
   TextDirection _textDirection;
 
   set textDirection(TextDirection value) {
@@ -249,26 +223,6 @@ class _RenderListRow extends RenderBox
       return;
     }
     _textDirection = value;
-    markNeedsLayout();
-  }
-
-  TextBaseline _titleBaseline;
-
-  set titleBaseline(TextBaseline value) {
-    if (_titleBaseline == value) {
-      return;
-    }
-    _titleBaseline = value;
-    markNeedsLayout();
-  }
-
-  TextBaseline _subtitleBaseline;
-
-  set subtitleBaseline(TextBaseline value) {
-    if (_subtitleBaseline == value) {
-      return;
-    }
-    _subtitleBaseline = value;
     markNeedsLayout();
   }
 
@@ -314,7 +268,30 @@ class _RenderListRow extends RenderBox
 
   Rect _content = Rect.zero;
 
-  double get _titleGap => _horizontalTitleGap + _visualDensity.horizontal * 2;
+  double _height(double titleHeight, double? subtitleHeight) => listRowExtent(
+    titleHeight: titleHeight,
+    subtitleHeight: subtitleHeight,
+    minHeight: _minHeight,
+    verticalPadding: _minVerticalPadding,
+  );
+
+  double _leadingSlot(double width) => math.max(listLeadingSlotWidth, width);
+
+  double _sideExtent(double? height) => switch ((height, _alignment)) {
+    (null, _) => 0,
+    (final height?, ListRowAlignment.center) => height,
+    (final height?, ListRowAlignment.top) => height + 2 * _minVerticalPadding,
+  };
+
+  double _rowHeight(
+    double titleHeight,
+    double? subtitleHeight,
+    double? leadingHeight,
+    double? trailingHeight,
+  ) => math.max(
+    _height(titleHeight, subtitleHeight),
+    math.max(_sideExtent(leadingHeight), _sideExtent(trailingHeight)),
+  );
 
   double _sideY(double height, double rowHeight) => switch (_alignment) {
     ListRowAlignment.center => (rowHeight - height) / 2,
@@ -331,7 +308,7 @@ class _RenderListRow extends RenderBox
     final trailing = _trailing;
     final leadingWidth = leading == null
         ? 0.0
-        : math.max(measure(leading, inner), _minLeadingWidth) + _titleGap;
+        : _leadingSlot(measure(leading, inner)) + _horizontalTitleGap;
     return leadingWidth +
         math.max(
           measure(_title, inner),
@@ -354,14 +331,10 @@ class _RenderListRow extends RenderBox
   );
 
   @override
-  double computeMinIntrinsicHeight(double width) {
-    final inner = math.max(0.0, width - _padding.horizontal);
-    final content =
-        _title.getMinIntrinsicHeight(inner) +
-        (_subtitle?.getMinIntrinsicHeight(inner) ?? 0) +
-        2 * _minVerticalPadding;
-    return math.max(_minHeight, content) + _padding.vertical;
-  }
+  double computeMinIntrinsicHeight(double width) => _computeSizes(
+    ChildLayoutHelper.dryLayoutChild,
+    BoxConstraints(maxWidth: width),
+  ).size.height;
 
   @override
   double computeMaxIntrinsicHeight(double width) =>
@@ -383,7 +356,7 @@ class _RenderListRow extends RenderBox
     BoxConstraints sideConstraints,
     double available,
   ) {
-    final share = math.max(0.0, available - _titleGap);
+    final share = math.max(0.0, available - _horizontalTitleGap);
     final half = share * _titleMaxWidthFactor;
     if (trailing.getMaxIntrinsicWidth(sideConstraints.maxHeight) <= half) {
       return layoutChild(trailing, sideConstraints);
@@ -396,7 +369,6 @@ class _RenderListRow extends RenderBox
   }
 
   _Sizes _computeSizes(
-    ChildBaselineGetter getBaseline,
     ChildLayouter layoutChild,
     BoxConstraints constraints, {
     void Function(RenderBox child, Offset offset)? position,
@@ -404,9 +376,7 @@ class _RenderListRow extends RenderBox
     final loose = constraints.deflate(_padding).loosen();
     final width = loose.maxWidth;
     final sideConstraints = loose.enforce(
-      BoxConstraints(
-        maxHeight: _maxSideHeight + _visualDensity.baseSizeAdjustment.dy,
-      ),
+      const BoxConstraints(maxHeight: _maxSideHeight),
     );
     final leading = _leading;
     final subtitle = _subtitle;
@@ -416,7 +386,7 @@ class _RenderListRow extends RenderBox
         : layoutChild(leading, sideConstraints);
     final titleStart = leadingSize == null
         ? 0.0
-        : math.max(_minLeadingWidth, leadingSize.width) + _titleGap;
+        : _leadingSlot(leadingSize.width) + _horizontalTitleGap;
     final trailingSize = trailing == null
         ? null
         : _layoutTrailing(
@@ -428,51 +398,39 @@ class _RenderListRow extends RenderBox
           );
     final trailingWidth = trailingSize == null
         ? 0.0
-        : math.max(trailingSize.width + _titleGap, _minTrailingWidth);
+        : math.max(trailingSize.width + _horizontalTitleGap, _minTrailingWidth);
     final text = loose.tighten(width: width - titleStart - trailingWidth);
     final titleHeight = layoutChild(_title, text).height;
     final ltr = _textDirection == TextDirection.ltr;
     final textX = ltr ? titleStart : trailingWidth;
-    final double titleY;
-    final double height;
-    if (subtitle == null) {
-      height = math.max(_minHeight, titleHeight + 2 * _minVerticalPadding);
-      titleY = (height - titleHeight) / 2;
-    } else {
-      final subtitleHeight = layoutChild(subtitle, text).height;
-      final titleBaseline =
-          getBaseline(_title, text, _titleBaseline) ?? titleHeight;
-      final subtitleBaseline =
-          getBaseline(subtitle, text, _subtitleBaseline) ?? subtitleHeight;
-      final targetTitleY = _titleBaselineY - titleBaseline;
-      final targetSubtitleY =
-          _subtitleBaselineY + _visualDensity.vertical * 2 - subtitleBaseline;
-      final halfOverlap =
-          math.max(targetTitleY + titleHeight - targetSubtitleY, 0) / 2;
-      final idealTitleY = targetTitleY - halfOverlap;
-      final idealSubtitleY = targetSubtitleY + halfOverlap;
-      final compact =
-          idealTitleY < _minVerticalPadding ||
-          idealSubtitleY + subtitleHeight + _minVerticalPadding > _minHeight;
-      position?.call(
-        subtitle,
-        Offset(
-          textX,
-          compact ? _minVerticalPadding + titleHeight : idealSubtitleY,
-        ),
-      );
-      height = compact
-          ? 2 * _minVerticalPadding + titleHeight + subtitleHeight
-          : _minHeight;
-      titleY = compact ? _minVerticalPadding : idealTitleY;
+    final subtitleHeight = subtitle == null
+        ? null
+        : layoutChild(subtitle, text).height;
+    final height = constraints
+        .deflate(_padding)
+        .constrainHeight(
+          _rowHeight(
+            titleHeight,
+            subtitleHeight,
+            leadingSize?.height,
+            trailingSize?.height,
+          ),
+        );
+    final blockHeight = subtitleHeight == null
+        ? titleHeight
+        : titleHeight + subtitleHeight;
+    final titleY = (height - blockHeight) / 2;
+    if (subtitle != null) {
+      position?.call(subtitle, Offset(textX, titleY + titleHeight));
     }
     if (position != null) {
       position(_title, Offset(textX, titleY));
       if (leading != null && leadingSize != null) {
+        final inset = (_leadingSlot(leadingSize.width) - leadingSize.width) / 2;
         position(
           leading,
           Offset(
-            ltr ? 0 : width - leadingSize.width,
+            ltr ? inset : width - leadingSize.width - inset,
             _sideY(leadingSize.height, height),
           ),
         );
@@ -505,11 +463,7 @@ class _RenderListRow extends RenderBox
     covariant BoxConstraints constraints,
     TextBaseline baseline,
   ) {
-    final sizes = _computeSizes(
-      ChildLayoutHelper.getDryBaseline,
-      ChildLayoutHelper.dryLayoutChild,
-      constraints,
-    );
+    final sizes = _computeSizes(ChildLayoutHelper.dryLayoutChild, constraints);
     return (BaselineOffset(_title.getDryBaseline(sizes.text, baseline)) +
             sizes.titleY +
             _padding.top)
@@ -517,17 +471,13 @@ class _RenderListRow extends RenderBox
   }
 
   @override
-  Size computeDryLayout(covariant BoxConstraints constraints) => _computeSizes(
-    ChildLayoutHelper.getDryBaseline,
-    ChildLayoutHelper.dryLayoutChild,
-    constraints,
-  ).size;
+  Size computeDryLayout(covariant BoxConstraints constraints) =>
+      _computeSizes(ChildLayoutHelper.dryLayoutChild, constraints).size;
 
   @override
   void performLayout() {
     final origin = Offset(_padding.left, _padding.top);
     size = _computeSizes(
-      ChildLayoutHelper.getBaseline,
       ChildLayoutHelper.layoutChild,
       constraints,
       position: (child, offset) =>

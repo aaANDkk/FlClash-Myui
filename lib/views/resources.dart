@@ -192,13 +192,10 @@ class _ResourcesViewState extends ConsumerState<ResourcesView> {
       ],
       body: NullStatusSwitcher(
         isLoading: resources == null,
-        loadingStatus: const NullStatus(
-          illustration: NullStatusIllustration.data,
-        ),
         child: CustomScrollView(
           slivers: [
             SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(
+              padding: context.listInsets.page().copyWith(
                 top: context.sectionsTopPadding,
                 bottom: 16 + context.bottomInset,
               ),

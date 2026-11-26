@@ -164,4 +164,83 @@ void main() {
       value.getMaxIntrinsicWidth(double.infinity),
     );
   });
+
+  testWidgets('a side taller than its text stands the row as tall, laid out '
+      'and measured', (tester) async {
+    await pumpRow(
+      tester,
+      width: 360,
+      title: 'Flags',
+      trailing: const SizedBox(key: Key('value'), width: 40, height: 56),
+    );
+
+    final row = find.byType(ListRow);
+    expect(tester.getSize(row).height, 56);
+    expect(
+      tester.getTopLeft(find.byKey(const Key('value'))).dy,
+      tester.getTopLeft(row).dy,
+    );
+    expect(tester.renderObject<RenderBox>(row).getMinIntrinsicHeight(360), 56);
+  });
+
+  testWidgets('a row measures as tall as it lays out when a value narrows '
+      'the title it wraps', (tester) async {
+    await pumpRow(
+      tester,
+      width: 360,
+      title: _mixed,
+      trailing: const Text('Auto Select', key: Key('value')),
+    );
+
+    final row = find.byType(ListRow);
+    final height = tester.getSize(row).height;
+    expect(
+      tester.getSize(find.byKey(const Key('title'))).width,
+      lessThan(360 - _rowInsets - 100),
+    );
+    expect(
+      tester.renderObject<RenderBox>(row).getMinIntrinsicHeight(360),
+      height,
+    );
+  });
+
+  testWidgets('a list item fills a bounded height and adds no builder to '
+      'its row', (tester) async {
+    await tester.pumpWidget(
+      TestApp(
+        child: HostScaffold(
+          body: Column(
+            children: [
+              SizedBox(
+                height: 120,
+                child: DecorationListItem(
+                  title: const Text('bounded'),
+                  onPressed: () {},
+                ),
+              ),
+              DecorationListItem(title: const Text('free'), onPressed: () {}),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.getSize(find.widgetWithText(ListRow, 'bounded')).height, 120);
+    expect(
+      tester.getSize(find.widgetWithText(ListRow, 'free')).height,
+      tester.getSize(find.widgetWithText(DecorationListItem, 'free')).height,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(DecorationListItem),
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is Builder ||
+              widget is LayoutBuilder ||
+              widget.runtimeType.toString() == '_MergedButtonTheme',
+        ),
+      ),
+      findsNothing,
+    );
+  });
 }

@@ -1,15 +1,16 @@
 # FlClash Myui vVERSION
 
-基于 [FlClash 官方 0.9.4](https://github.com/chen08209/FlClash/tree/v0.9.4) 的个性化定制版本，增强 IP 查询、配置登机牌与图标集、流量统计、网络测速、仪表盘、字体与 Emoji 定制，以及 Android VPN 后台保活与液态玻璃流畅度。
+基于 [FlClash 官方 BUILD_VERSION](https://github.com/chen08209/FlClash/tree/vBUILD_VERSION) 的个性化定制版本，增强 IP 查询、配置登机牌与图标集、流量统计、网络测速、仪表盘、字体与 Emoji 定制，以及 Android VPN 后台保活与液态玻璃流畅度。
 
 支持 Android、Windows、macOS、Linux，开源、无广告。
 
 ## 本次更新
 
-- **首页状态小部件圆形国旗 SVG、HCT 主题联动与四叶草形变**：内置 265 枚圆形矢量国旗（含定制双环五星蕊白梅台湾地区旗），外圈采用随当前主题与 4 种配色风格（鲜明 / 柔和 / 氛围 / 单色）动态联动的 FlClash HCT 5 色实心圆底、自适应重调色矩阵与双层柔雾光晕；点击刷新时圆形外框纯顺时针丝滑形变为四叶草旋转探测；IP 下方采用 `13dp` 定位图标（实测字形墨水中心基线对齐）+ 官方/特色加长中文国名（英文环境保持原始英文名，点击 IP 或下方地名均可弹出 IP 质量详情）；底部「运行时长」与「欺诈值」（语义色分值 + 同基线 ` / 100` + 细描边空心等级胶囊）严格等高顶对齐。
-- **根治不通网配置切换 15 秒死锁与 250ms 防抖**：通过 Mihomo 内核 `tunnel.match()` 局部快照补丁消除 `configMux` 读写锁与 DNS 解析嵌套死锁，并在切换配置入口即时取消旧配置残留探测；配合 `250ms` 单槽合并防抖与切页/启动 VPN 零等待 Flush，连续切换或从不可达节点切换均秒级响应。
-- **IP 查询 / 详情页流畅度、居中加载与横屏定宽命中标记**：路由过渡落定后再触发探测与渲染，合并 `SelectionArea`、隔离风险刻度条重绘并为 `ip_cache.dat` 增加内存缓存；查询加载动画严格居中于屏幕正中央；横屏右侧命中标记保持原始固定尺寸单行展示（窗口收窄时优先压缩左卡，底部登机牌撕口持续精准对齐上排双卡缝隙），欺诈值「类型」去除左侧圆点。
-- **配置页横屏 50:50 双卡、空间换位 FLIP 动效与 Android 保活**：横屏 `50:50` 独立双卡与 `380ms` 空间换位 FLIP 切卡动画、Windows 右侧抽屉冻结快照防掉帧、全站 `tone2` 灰轨统一，以及 Android 移除后台 Drift 子 Isolate 根治 Vulkan 崩溃连带断 VPN；关于页 Telegram 链接更新为 `t.me/aaANDkk1314`。
+- 连接与 DNS 查询集中到「请求」页。连接详情新增时间线与路由路径，公网 IP 仍可直接打开风险与归属详情，并继承隐藏 IP 设置。
+- 升级代理列表、仪表盘、配置加载与编辑器的渲染性能，继续提供配置登机牌、独立 IP 查询、流量统计、网络测速和自定义字体。
+- 统一 IP 查询、IP 详情和出站 IP 的欺诈值刻度与标签。缺少类型数据时显示「未知」。
+- 恢复随应用内置的 GeoSite 数据，启动时自动修复已知的损坏缓存。切换配置时取消旧配置的延迟测试，避免其结果覆盖当前节点状态。
+- 关于页新增自动检查更新及更新频道设置。macOS 支持应用内安装更新。
 
 ## 下载
 
@@ -17,52 +18,14 @@
 
 | 平台 | 安装包 |
 | --- | --- |
-| Android | [ARM64](https://github.com/aaANDkk/FlClash-Myui/releases/download/vVERSION/FlClash-dev-VERSION-android-arm64.apk) · [ARMv7](https://github.com/aaANDkk/FlClash-Myui/releases/download/vVERSION/FlClash-dev-VERSION-android-armv7.apk) · [x86_64](https://github.com/aaANDkk/FlClash-Myui/releases/download/vVERSION/FlClash-dev-VERSION-android-amd64.apk) |
-| Windows x64 | [EXE 安装版](https://github.com/aaANDkk/FlClash-Myui/releases/download/vVERSION/FlClash-dev-VERSION-windows-amd64-setup.exe) · [ZIP 便携版](https://github.com/aaANDkk/FlClash-Myui/releases/download/vVERSION/FlClash-dev-VERSION-windows-amd64-portable.zip) |
-| Windows ARM64 | [EXE 安装版](https://github.com/aaANDkk/FlClash-Myui/releases/download/vVERSION/FlClash-dev-VERSION-windows-arm64-setup.exe) · [ZIP 便携版](https://github.com/aaANDkk/FlClash-Myui/releases/download/vVERSION/FlClash-dev-VERSION-windows-arm64-portable.zip) |
-| macOS | [Apple Silicon](https://github.com/aaANDkk/FlClash-Myui/releases/download/vVERSION/FlClash-dev-VERSION-macos-arm64.dmg) · [Intel](https://github.com/aaANDkk/FlClash-Myui/releases/download/vVERSION/FlClash-dev-VERSION-macos-amd64.dmg) |
-| Linux x64 | [AppImage](https://github.com/aaANDkk/FlClash-Myui/releases/download/vVERSION/FlClash-dev-VERSION-linux-amd64.AppImage) · [DEB](https://github.com/aaANDkk/FlClash-Myui/releases/download/vVERSION/FlClash-dev-VERSION-linux-amd64.deb) · [RPM](https://github.com/aaANDkk/FlClash-Myui/releases/download/vVERSION/FlClash-dev-VERSION-linux-amd64.rpm) |
-| Linux ARM64 | [AppImage](https://github.com/aaANDkk/FlClash-Myui/releases/download/vVERSION/FlClash-dev-VERSION-linux-arm64.AppImage) · [DEB](https://github.com/aaANDkk/FlClash-Myui/releases/download/vVERSION/FlClash-dev-VERSION-linux-arm64.deb) · [RPM](https://github.com/aaANDkk/FlClash-Myui/releases/download/vVERSION/FlClash-dev-VERSION-linux-arm64.rpm) |
+| Android | <a href="https://github.com/aaANDkk/FlClash-Myui/releases/download/TAG/FlClash-VERSION-android-arm64.apk">ARM64</a> · <a href="https://github.com/aaANDkk/FlClash-Myui/releases/download/TAG/FlClash-VERSION-android-armv7.apk">ARMv7</a> · <a href="https://github.com/aaANDkk/FlClash-Myui/releases/download/TAG/FlClash-VERSION-android-amd64.apk">x86_64</a> |
+| Windows x64 | <a href="https://github.com/aaANDkk/FlClash-Myui/releases/download/TAG/FlClash-VERSION-windows-amd64-setup.exe">EXE 安装版</a> · <a href="https://github.com/aaANDkk/FlClash-Myui/releases/download/TAG/FlClash-VERSION-windows-amd64-portable.zip">ZIP 便携版</a> |
+| Windows ARM64 | <a href="https://github.com/aaANDkk/FlClash-Myui/releases/download/TAG/FlClash-VERSION-windows-arm64-setup.exe">EXE 安装版</a> · <a href="https://github.com/aaANDkk/FlClash-Myui/releases/download/TAG/FlClash-VERSION-windows-arm64-portable.zip">ZIP 便携版</a> |
+| macOS | <a href="https://github.com/aaANDkk/FlClash-Myui/releases/download/TAG/FlClash-VERSION-macos-arm64.dmg">Apple Silicon</a> · <a href="https://github.com/aaANDkk/FlClash-Myui/releases/download/TAG/FlClash-VERSION-macos-amd64.dmg">Intel</a> |
+| Linux x64 | <a href="https://github.com/aaANDkk/FlClash-Myui/releases/download/TAG/FlClash-VERSION-linux-amd64.AppImage">AppImage</a> · <a href="https://github.com/aaANDkk/FlClash-Myui/releases/download/TAG/FlClash-VERSION-linux-amd64.deb">DEB</a> · <a href="https://github.com/aaANDkk/FlClash-Myui/releases/download/TAG/FlClash-VERSION-linux-amd64.rpm">RPM</a> |
+| Linux ARM64 | <a href="https://github.com/aaANDkk/FlClash-Myui/releases/download/TAG/FlClash-VERSION-linux-arm64.AppImage">AppImage</a> · <a href="https://github.com/aaANDkk/FlClash-Myui/releases/download/TAG/FlClash-VERSION-linux-arm64.deb">DEB</a> · <a href="https://github.com/aaANDkk/FlClash-Myui/releases/download/TAG/FlClash-VERSION-linux-arm64.rpm">RPM</a> |
 
-选择与你的系统和设备架构对应的安装包，点击即可下载。
-
-## 相比官方 0.9.4 的主要改动
-
-### 独立 IP 查询与风险评估
-
-- **独立「IP 查询」页面**：位于工具页 `DNS 查询 → IP 查询 → 流量统计 → 网速测试 → 资源`；默认自动检测并展示当前「出站 IP 地址」，支持输入任意公网 IPv4 / IPv6（自动提取端口）即时查询，提供一键切回出站 IP 与隐藏 IP 隐私保护；首载与二次搜索加载动画严格居中于屏幕正中央，路由转场落定后再触发探测与渲染，搭配 `ip_cache.dat` 内存缓存，进入页面丝滑无掉帧。
-- **横竖屏自适应与登机牌归属卡**：横屏顶部并排展示欺诈值与命中标记（右侧三组命中标记保持原始固定尺寸单行展示，窗口收窄时优先压缩左卡，且欺诈值「类型」去除左侧圆点对齐左边缘），下方归属信息卡片采用带上下半圆缺口的竖虚线分隔国家/地区与运营商、ASN、主机名，撕口中线始终与上方双卡缝隙严格垂直对齐；竖屏采用流式纵向卡片。
-- **双源并发与全局联动**：Scamalytics 与 IPLocate.io 双源并行查询、自动重试（最多 3 次）与 30 天本地持久化缓存；请求详情与 DNS 查询结果中的公网 IP 支持直接点击弹出 IP 风险与归属详情。
-
-### 配置页双卡布局、动效、秒切防死锁与自定义图标
-
-- **竖屏登机牌与横屏 50:50 独立双卡**：竖屏保留带水平撕口缺口的登机牌卡片与右上角主操作/`⋯` 液态玻璃菜单；横屏拆分为两张严格等宽 `50:50` 独立超椭圆卡片（与下方 2 列卡片中轴贯通），右侧操作卡采用统一 `8dp` 横缝、`14dp` 纵缝的同缝阶梯双排网格（远程 `3+6`、本地 YAML `2+4`、自定义 `2:1+3`）；远程订阅、本地 YAML 与自定义三种配置统一顶部卡片高度，并按当前主题动态派生三类专属强调色（主色 / 补色 / 第三强调色）。
-- **空间换位 FLIP 升格切卡动效与秒切防死锁**：在「其他配置」中切换配置时，横竖屏均采用纯 GPU `380ms` 空间换位 FLIP 动画（自动遵守系统减少动态效果设置）；搭配 `250ms` 单槽合并防抖、切页/启动 VPN 零等待 Flush，以及 Mihomo 内核 `tunnel.match()` 锁快照补丁与旧配置探测即时取消机制，彻底根治从不通网配置切换时内核 `configMux` 读写锁死锁卡顿 15 秒的问题。
-- **自定义配置图标与内置图标集**：远程、本地 YAML 与自定义配置分别配备专属默认矢量图标，支持点击主卡图标或配置菜单为任意配置单独绑定自定义图标；应用内置 [Qure-Style-SVG](https://github.com/aaANDkk/Qure_Style_SVG) 图标集（预置 2,370 枚 SVG 图标，标注「内置」，长按支持同步更新与跳转项目地址）。
-
-### 本地流量统计与网络测速
-
-- **本地流量统计**：总览卡片采用 20 刻度分段圆环展示下载与上传占比，底部灰块集中呈现跨设备休眠累计运行时长（剥离单调时钟防止深睡漏计，标题采用实测字形基线对齐）及代理/直连分流明细；支持按 **3 / 6 / 12 个自然月**保留数据，按时间范围查看域名、进程、节点、配置和规则的流量与请求排行。
-- **Speedtest by Ookla 网络测速**：支持指定出站节点与测速服务器，实时展示赛博仪表盘、下载/上传双通道波形、阶段进度、延迟、抖动、负载延迟与响应性指标，支持测速设置与历史记录管理。
-- **全站统一 `tone2` 轨道色**：首页当前配置、配置页远程波浪条与用量圆环、IP 查询欺诈值刻度条、流量统计圆环与排行横条、网速测试仪表盘与阶段进度条的未填充灰轨统一接入 `DashboardColors.tone2`（`SurfaceLevel.inset`），深浅色层次一致。
-
-### 动态流体关于页、字体与液态玻璃
-
-- **关于页 Miuix 视觉与转场精调**：移植流动色彩高斯模糊背景着色器，采用 `96dp` 无框三条杠 SVG Logo 与 `FlClash` 标题同源实时变色，搭配毛玻璃卡片呈现项目信息与致谢；着色器在进入「工具」页且转场动画完全静止后空闲预热，路由过渡期间暂停背景 Ticker 并延后毛玻璃采样，且消除了页面下滑时的顶部回跳。
-- **自定义字体与双风格 Emoji**：支持导入多款 `.ttf` / `.otf` 字体，预览、切换、导出和删除并跨重启持久化；Emoji 支持 Twemoji 与内置 OpenMoji 两种风格，节点名称、国旗与编辑器同步生效；内置等宽字体更换为 Maple Mono（常规与粗体）。
-- **液态玻璃帧率与桌面抽屉优化**：为页面底板建立独立 `RepaintBoundary` 图层，减少菜单展开时的背景重绘；开启液态玻璃时，底栏淡入与滑动切页全程复用离屏页面快照直至过渡结束，消除切页闪烁并修正 RTL 位移；关闭液态玻璃时还原官方底栏底板并保留不透明彩色选中滑块；Windows 首页在右侧抽屉滑入、滑出与拖拽期间自动冻结桌面首页 GPU 快照、隔离流量卡片外框重绘，并将侧边抽屉改为纯 GPU 平移与首帧防吞帧，保留实体连续曲率圆角的同时显著提升抽屉流畅度。
-
-### 首页小部件与代理页增强
-
-- **状态卡片圆形国旗 SVG、HCT 主题联动圆底与四叶草形变**：内置 265 枚圆形矢量国旗（含定制双环五星蕊白梅台湾地区旗），外圈采用随当前主题与 4 种配色风格（鲜明 / 柔和 / 氛围 / 单色）动态联动的 FlClash HCT 5 色实心圆底、自适应色彩矩阵与双层柔雾光晕；点击刷新时圆形外框纯顺时针丝滑形变为四叶草旋转探测；IP 下方采用 `13dp` 细线定位图标（实测字形墨水中心基线对齐）+ 国家/地区名（中文环境内置 264 地区官方国名与特色加长国名，英文环境保持原始英文名；点击 IP 或下方地名均可打开 IP 质量详情，悬浮提示完整地区与城市）；底部「运行时长」与「欺诈值」等高顶对齐，欺诈值采用语义色分值 + 同基线 ` / 100` 与细描边空心等级胶囊。
-- **首页小部件重排**：网络速度采用手机双栏上下分向柱状图、电脑独立上传与下载双卡；「当前配置」小部件（火箭图标）展示订阅用量或配置统计；策略组小部件保留 `0.9.3` 分层 5 图标并移除宽度比例上限，保持原尺寸完整显示；服务状态新增经典蓝鸟 Twitter 检测且宽屏支持 4 列；电脑与横屏内存信息固定分两行右对齐。
-- **原生矢量图标精修**：按 `prism_ui` 原生矢量规范重绘「服务状态」极简开弧雷达图标与「备份与恢复」云端勾选图标；部分界面图标采用 Fluent 风格。
-- **代理页图标样式、正则匹配与缓存**：右上角菜单支持切换策略组图标风格（填充 / 朴素 / 隐藏），支持通过正则表达式自上而下为策略组自动匹配自定义图标（支持拖拽排序与批量管理）；支持嵌套策略组图片图标，列表组标题下显示「分组类型 · 当前节点」；代理页小 SVG 图标按设备像素比光栅化并纳入 Flutter `ImageCache`，远程图标持久化至应用数据目录、设置 7 天最低有效下限并在回前台时异步预热，彻底解决长后台返回时靠下策略组图标重新加载的问题；外部资源中代理提供者排在规则集前，无到期时间时同时显示节点数与「长期有效」。
-
-### Android 后台保活与系统体验
-
-- **Android VPN 保活与防崩溃根治**：重开应用时若原生 VPN 已在运行则直接无感接管启动时间与状态，不再重复执行配置重载或重启网卡；原生 `VpnService` / `ProxyService` 升级为 `startService` + `START_STICKY` 粘性前台服务，防止主界面被后台清理断开绑定时连带销毁 VPN；为 `establish()`（300ms 延迟重试）与 `protect(fd)`（5 次重试）增加瞬时容错，并在收到延迟停止回调时双向复核 `isRunRequested` 运行意图；同时在 Android 端移除 Drift 常驻后台子 Isolate，彻底根治系统回收主界面释放 Vulkan 设备后延迟析构 `VkFramebuffer` 引发崩溃连带断 VPN 的问题，完整保留 120Hz Impeller Vulkan 与液态玻璃效果。
-- **桌面端与多语言细节**：电脑首页新增亮屏锁按钮并记忆开关状态；Windows 单色托盘未运行时随任务栏深浅色自动切换黑白图标（适配 `v0.9.4` `rust_api` 托盘架构）；Windows 采用连续曲率圆角与自适应宽度侧边栏；GeoIP、ASN、GeoSite 默认改用 `bett-rules` 下载源；语言精简为简体中文、英语、日语、韩语和俄语（适配官方 `gen-l10n` 并自动规范简体中文中英文间距）；修复公开仓库应用内更新的 `SHA256SUMS` 校验清单匹配。
+请按设备架构下载，校验文件为 `FlClash-VERSION-SHA256SUMS`。
 
 ## 致谢与许可
 

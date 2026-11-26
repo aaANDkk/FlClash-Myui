@@ -107,7 +107,7 @@ class HotKeyView extends StatelessWidget {
     return BaseScaffold(
       title: appLocalizations.hotkeyManagement,
       body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(
+        padding: context.listInsets.page().copyWith(
           top: context.contentTopPadding,
           bottom: 20 + context.bottomInset,
         ),
@@ -134,7 +134,10 @@ class _HotKeyIntro extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = context.colorScheme;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: EdgeInsets.symmetric(
+        horizontal: context.listInsets.leading,
+        vertical: listRowVerticalPadding,
+      ),
       decoration: ShapeDecoration(
         color: context.raisedSurfaceLevel.colorOf(colorScheme),
         shape: AppShape.xl,
@@ -163,6 +166,8 @@ class _HotKeyItem extends ConsumerWidget {
   final HotAction action;
   final ShortcutLabels labels;
 
+  static const _removeGlyphSize = 20.0;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final appLocalizations = context.appLocalizations;
@@ -173,7 +178,13 @@ class _HotKeyItem extends ConsumerWidget {
     );
     final key = hotKeyAction.key;
     return DecorationListItem(
-      contentPadding: EdgeInsets.only(left: 16, right: key == null ? 16 : 6),
+      contentPadding: EdgeInsetsDirectional.only(
+        start: context.listInsets.leading,
+        end: key == null
+            ? context.listInsets.trailing
+            : context.listInsets.trailing -
+                  IconButton.edgeInsetOf(context, glyphSize: _removeGlyphSize),
+      ),
       leading: GlyphIcon(_glyphOf(action)),
       title: Text(action.label, maxLines: 2, overflow: TextOverflow.ellipsis),
       subtitle: failure == null
@@ -207,7 +218,10 @@ class _HotKeyItem extends ConsumerWidget {
                   onPressed: () {
                     _saveBinding(ref, HotKeyAction(action: action));
                   },
-                  icon: const GlyphIcon(AppGlyphs.close, size: 20),
+                  icon: const GlyphIcon(
+                    AppGlyphs.close,
+                    size: _removeGlyphSize,
+                  ),
                 ),
               ],
             ),

@@ -39,4 +39,40 @@ void main() {
     expect(taps, 0);
     await gesture.removePointer();
   });
+
+  testWidgets('a card given a fill rests on it and still inks a press', (
+    tester,
+  ) async {
+    const clear = Color(0x00000000);
+    await tester.pumpWidget(
+      HostApp(
+        home: Center(
+          child: SizedBox(
+            width: 200,
+            height: 64,
+            child: Card(
+              fill: clear,
+              onPressed: () {},
+              child: const Text('card'),
+            ),
+          ),
+        ),
+      ),
+    );
+    CardSurface surface() =>
+        tester.widget<CardSurface>(find.byType(CardSurface));
+    expect(surface().fill, clear);
+    expect(surface().inkColor.a, greaterThan(0));
+
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.text('card')),
+      kind: PointerDeviceKind.mouse,
+    );
+    await tester.pumpAndSettle();
+    expect(surface().pressed.value, 1);
+    expect(surface().fill, clear);
+    await gesture.up();
+    await tester.pumpAndSettle();
+    await gesture.removePointer();
+  });
 }

@@ -6,7 +6,9 @@ import 'package:prism_ui/context.dart';
 import 'package:prism_ui/deferred_push.dart';
 import 'package:prism_ui/drag_back.dart';
 import 'package:prism_ui/keyboard_inset_hold.dart';
+import 'package:prism_ui/liquid_glass.dart';
 import 'package:prism_ui/page_transition.dart';
+import 'package:prism_ui/route_scope.dart';
 import 'package:prism_ui/sheet_navigator.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -74,7 +76,7 @@ class _DropWatchState extends State<_DropWatch> {
 /// The route of the page [context] is on and, for a page in a sheet, the
 /// routes of the sheets carrying it.
 Iterable<ModalRoute<Object?>> routesCarrying(BuildContext context) sync* {
-  var route = ModalRoute.of(context);
+  var route = routeOf(context);
   while (route != null) {
     yield route;
     final navigator = route.navigator;
@@ -83,7 +85,7 @@ Iterable<ModalRoute<Object?>> routesCarrying(BuildContext context) sync* {
         navigator.widget is! SheetPagesNavigator) {
       return;
     }
-    route = ModalRoute.of(navigator.context);
+    route = routeOf(navigator.context);
   }
 }
 
@@ -177,7 +179,69 @@ class _RootPageRoute<T> extends PageRoute<T> {
     return Semantics(
       scopesRoute: true,
       explicitChildNodes: true,
-      child: (settings as RootPage<T>).child,
+      child: _StillUnderSheet(
+        cover: sheetCoverOfRoute(this),
+        child: scopePageRoute(this, (settings as RootPage<T>).child),
+      ),
+    );
+  }
+}
+
+/// A card route's snapshot under a moving sheet, for a page that has none.
+class _StillUnderSheet extends StatefulWidget {
+  const _StillUnderSheet({required this.cover, required this.child});
+
+  final Animation<double> cover;
+  final Widget child;
+
+  @override
+  State<_StillUnderSheet> createState() => _StillUnderSheetState();
+}
+
+class _StillUnderSheetState extends State<_StillUnderSheet> {
+  final _snapshot = SnapshotController();
+  var _glass = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.cover.addStatusListener(_update);
+  }
+
+  @override
+  void didUpdateWidget(_StillUnderSheet oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.cover != widget.cover) {
+      oldWidget.cover.removeStatusListener(_update);
+      widget.cover.addStatusListener(_update);
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _glass = LiquidGlassScope.of(context);
+  }
+
+  void _update(AnimationStatus status) {
+    _snapshot.allowSnapshotting = !_glass && status.isAnimating;
+  }
+
+  @override
+  void dispose() {
+    widget.cover.removeStatusListener(_update);
+    _snapshot.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _update(widget.cover.status);
+    return SnapshotWidget(
+      controller: _snapshot,
+      mode: SnapshotMode.permissive,
+      autoresize: true,
+      child: widget.child,
     );
   }
 }
@@ -203,7 +267,7 @@ class FadePageRoute<T> extends PageRoute<T>
     return Semantics(
       scopesRoute: true,
       explicitChildNodes: true,
-      child: KeyboardInsetHold(child: builder(context)),
+      child: KeyboardInsetHold(child: scopePageRoute(this, builder(context))),
     );
   }
 
@@ -252,7 +316,7 @@ class CardPageRoute<T> extends PageRoute<T>
     return Semantics(
       scopesRoute: true,
       explicitChildNodes: true,
-      child: KeyboardInsetHold(child: builder(context)),
+      child: KeyboardInsetHold(child: scopePageRoute(this, builder(context))),
     );
   }
 }

@@ -11,6 +11,9 @@ abstract final class AppCorner {
   static const double xl = 24;
   static const double xxl = 28;
 
+  /// An inset grouped list's section, as iOS 27 rounds it.
+  static const double listGroup = 26;
+
   /// UIAlertController's corner on iOS 27, rounder than a sheet's.
   static const double alert = 34;
   static const double full = 1000;

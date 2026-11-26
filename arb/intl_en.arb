@@ -59,6 +59,9 @@
   "logcat": "Logcat",
   "logcatDesc": "Turning off Logcat hides the logs entry.",
   "autoCheckUpdate": "Auto check for updates",
+  "updateChannel": "Update channel",
+  "updateChannelStable": "Stable",
+  "updateChannelPre": "Prerelease",
   "checkCertificate": "Verify TLS certificates",
   "checkCertificateDesc": "With TLS verification off, subscriptions and backups are open to man-in-the-middle attacks.",
   "accessControl": "Access control",
@@ -155,13 +158,12 @@
   "search": "Search",
   "allowBypass": "Allow apps to bypass VPN",
   "externalController": "External controller",
-  "externalControllerDesc": "The external controller lets you control the core on port 9090.",
+  "externalControllerDesc": "The external controller listens on port 9090.",
   "externalControllerSecret": "External controller secret",
   "ipv6Desc": "IPv6 traffic is received only while IPv6 is on.",
   "app": "App",
   "general": "General",
   "startupAndBackground": "Startup and background",
-  "requestsAndUpdates": "Requests and updates",
   "logsAndDiagnostics": "Logs and diagnostics",
   "userAgent": "User-Agent",
   "unifiedDelay": "Unified delay",
@@ -174,6 +176,126 @@
   "infiniteTime": "Never expires",
   "connections": "Connections",
   "liveConnections": "Live connections",
+  "speed": "Speed",
+  "closeActiveConnections": "Close all active connections",
+  "closeActiveConnectionsTip": "{count, plural, =1{1 active connection will close.} other{{count} active connections will close.}} Apps using them reconnect on their own, though downloads and calls in progress may drop.",
+  "@closeActiveConnectionsTip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "connectionsAll": "All",
+  "connectionsActive": "Active",
+  "connectionsFailed": "Failed",
+  "connectionsDecrypted": "Decrypted",
+  "connectionRuleGlobal": "Global mode",
+  "connectionRuleNone": "No rule",
+  "failureRefused": "Refused",
+  "failureUnreachable": "Unreachable",
+  "failureDns": "DNS failed",
+  "dnsNoSuchDomain": "No such domain",
+  "dnsServerFailure": "The upstream failed",
+  "dnsRefused": "Refused by the upstream",
+  "dnsTimedOut": "Query timed out",
+  "dnsBlockedByRule": "Blocked by a rule",
+  "failureHandshake": "Handshake failed",
+  "failureOther": "Other error",
+  "connectionClosed": "Closed",
+  "timeline": "Timeline",
+  "connectionInfo": "Info",
+  "decryption": "Decryption",
+  "connectionRuleIndex": "#{number}",
+  "handshake": "Handshake",
+  "now": "Now",
+  "mitmCertificateRefused": "Certificate refused",
+  "connectionEndLocal": "Closed locally",
+  "connectionEndRemote": "Closed by the remote",
+  "connectionEndFinished": "Finished",
+  "connectionEndReset": "Reset",
+  "connectionEndCore": "Closed by the Core",
+  "fakeIpMapping": "fake-ip mapping",
+  "dnsFromHosts": "From hosts",
+  "condition": "Condition",
+  "addCondition": "Add condition",
+  "conditionField": "Field",
+  "conditionContains": "Contains",
+  "conditionEquals": "Equals",
+  "conditionTip": "Conditions on one field match any of them, on different fields all. Search takes the same form, as in host:github.com -app:chrome.",
+  "conditionNotContains": "Excludes",
+  "conditionNotEquals": "Not equal",
+  "editCondition": "Edit condition",
+  "conditionValuesIn": "{field} in the list",
+  "@conditionValuesIn": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      }
+    }
+  },
+  "conditionShows": "Connections shown: {count}",
+  "@conditionShows": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "conditionRows": "Any in a row, every row",
+  "clearAll": "Clear all",
+  "conditionOr": "or",
+  "selectConnection": "Select a connection",
+  "selectConnectionHint": "Its timeline, HTTP requests and connection details appear here",
+  "selectDnsQuery": "Select a query",
+  "selectDnsQueryHint": "Its answers, upstream and related connections appear here",
+  "relatedConnections": "Related connections",
+  "upstream": "Upstream",
+  "dnsQueryFields": "Query",
+  "dnsQueryAskedBy": "Asked by {initiator}",
+  "@dnsQueryAskedBy": {
+    "placeholders": {
+      "initiator": {
+        "type": "String"
+      }
+    }
+  },
+  "dnsConditionTip": "Conditions on one field match any of them, on different fields all.",
+  "dnsConditionValuesIn": "{field} in the list",
+  "@dnsConditionValuesIn": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      }
+    }
+  },
+  "dnsConditionShows": "Queries shown: {count}",
+  "@dnsConditionShows": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "connectionPath": "Path",
+  "processPath": "Process path",
+  "proxyNode": "Proxy Node",
+  "closingTime": "Closed at",
+  "processUid": "UID {uid}",
+  "@processUid": {
+    "placeholders": {
+      "uid": {
+        "type": "int"
+      }
+    }
+  },
+  "onlyThisApp": "Only this app",
+  "onlyThisDomain": "Only this domain",
+  "hideThisHost": "Hide this host",
+  "copySummary": "Copy summary",
+  "copyDomain": "Copy domain",
+  "copyAnswers": "Copy answers",
+  "viewHttp": "View HTTP",
   "inbound": "Inbound",
   "intranetIP": "Intranet IP",
   "view": "View",
@@ -244,11 +366,10 @@
   "ntpInterval": "Sync interval (minutes)",
   "dialerProxy": "Dialer proxy",
   "writeToSystem": "Write to system",
-  "writeToSystemDesc": "Write to system also sets the system clock; Android ignores it.",
+  "writeToSystemDesc": "Write to system has no effect on Android.",
   "sniffer": "Sniffer",
   "overrideDestination": "Override destination",
   "forceDnsMapping": "Force DNS mapping",
-  "forceDnsMappingDesc": "Force DNS mapping also sniffs connections whose domain came from a DNS mapping.",
   "parsePureIp": "Parse pure IP",
   "forceDomain": "Force domains",
   "forceDomainDesc": "Force domains are sniffed too; other connections that already have a domain are left alone.",
@@ -259,7 +380,7 @@
   "ports": "Ports",
   "overrideEntries": "Override entries",
   "addOverrideEntry": "Add override entry",
-  "dnsOverrideDesc": "Entries added here replace the DNS of every URL and file profile; anything not added keeps the profile's own setting. Custom profiles set their DNS in their content.",
+  "dnsOverrideDesc": "Added entries replace the DNS of URL and file profiles.",
   "settingEntries": "settings",
   "addSettingEntry": "Add setting",
   "profileSettingsDesc": "Applies to this profile only; anything not added uses its default.",
@@ -269,7 +390,7 @@
   "status": "Status",
   "statusDesc": "With DNS off, the system DNS is used.",
   "respectRules": "Respect rules",
-  "respectRulesDesc": "Respect rules routes DNS connections by the rules and needs a Proxy Server Nameserver.",
+  "respectRulesDesc": "Respect rules needs a Proxy Server Nameserver.",
   "dnsMode": "DNS mode",
   "fakeipRange": "Fake-IP range",
   "fakeipFilter": "Fake-IP filter",
@@ -343,7 +464,6 @@
   "iconStylePlain": "Plain",
   "iconStyleHidden": "Hidden",
   "filter": "Filter",
-  "groupBy": "Group by",
   "hideTimeoutProxies": "Hide timed-out proxies",
   "stackMode": "Stack mode",
   "network": "Network",
@@ -742,7 +862,6 @@
   "exitFullScreen": "Exit full screen",
   "torch": "Flashlight",
   "pickFromAlbum": "Choose from album",
-  "closeConnections": "Close connections",
   "scrollToSelected": "Scroll to selected",
   "showMore": "Expand",
   "showLess": "Collapse",
@@ -750,6 +869,12 @@
   "nextMatch": "Next match",
   "clearSearch": "Clear search",
   "noSearchResults": "No matching results",
+  "noActiveConnections": "No active connections",
+  "noFailedConnections": "No failed connections",
+  "noFailedDnsQueries": "No failed DNS queries",
+  "noCachedDnsQueries": "No DNS queries answered from cache",
+  "noFailedHttpRequests": "No failed HTTP requests",
+  "noRewrittenHttpRequests": "No rewritten HTTP requests",
   "showPassword": "Show password",
   "hidePassword": "Hide password",
   "authorize": "Authorize",
@@ -757,7 +882,6 @@
   "installedAppsPermissionDesc": "This system hides the installed app list until the permission is granted. Authorize it to configure the per-app proxy.",
   "installedAppsPermissionDeniedMessage": "The app list permission was denied, so installed apps cannot be listed. Please grant it manually in system settings.",
   "outboundIp": "Outbound IP",
-  "outboundIpAddress": "Outbound IP address",
   "ipAddress": "IP address",
   "ipQualityLevel": "Level",
   "ipQualityGood": "Good",
@@ -886,7 +1010,7 @@
   "keepAliveIdle": "TCP keep-alive idle",
   "disableKeepAlive": "Disable TCP keep-alive",
   "routingMark": "Routing mark",
-  "strictRouteDesc": "Strict route keeps traffic such as DNS from bypassing TUN, and with IPv6 off it blocks this device's IPv6 connections.",
+  "strictRouteDesc": "With IPv6 off, strict route also blocks this device’s IPv6 connections.",
   "initFailed": "Startup failed",
   "initFailedTip": "FlClash ran into an error while starting and can't continue. Copy the details to report the problem. If it keeps happening, clearing the data usually lets the app start again.",
   "errorDetails": "Error details",
@@ -895,10 +1019,10 @@
   "clearDataFailed": "Couldn't clear the data: {detail}",
   "bypassPrivateRoute": "Bypass private addresses",
   "disableIcmpForwarding": "Disable ICMP forwarding",
-  "disableIcmpForwardingDesc": "With ICMP forwarding disabled, TUN answers ping itself, so ping no longer shows the real latency.",
+  "disableIcmpForwardingDesc": "With ICMP forwarding disabled, ping no longer shows the real latency.",
   "excludeInterface": "Excluded interfaces",
   "includeInterface": "Included interfaces",
-  "includeInterfaceDesc": "Only traffic arriving on included interfaces goes through TUN, and excluded interfaces no longer apply.",
+  "includeInterfaceDesc": "Once set, excluded interfaces no longer apply.",
   "includeUid": "Included user IDs",
   "excludeUid": "Excluded user IDs",
   "excludeSrcPort": "Excluded source ports",
@@ -906,9 +1030,9 @@
   "udpTimeout": "UDP timeout",
   "udpTimeoutDesc": "The UDP timeout is in seconds and works only with the gvisor, system and mixed stacks.",
   "dnsHijackDesc": "Without this entry, TUN hijacks every DNS query to port 53 (any:53).",
-  "tunOverrideDesc": "Entries added here replace the TUN settings of every profile; anything not added keeps the profile's own setting. Entries a custom profile adds itself take precedence.",
-  "generalOverrideDesc": "Entries added here replace the setting of every profile; anything not added keeps the profile's own setting, or the core default when the profile has none.",
-  "profileTunSettingsDesc": "Applies to this profile only and takes precedence over the TUN override entries in the network settings.",
+  "tunOverrideDesc": "Added entries override every profile; a custom profile’s own entries win.",
+  "generalOverrideDesc": "Added entries replace every profile’s own setting.",
+  "profileTunSettingsDesc": "For this profile only; wins over the TUN overrides in network settings.",
   "settingsCount": "{count, plural, =1{1 setting} other{{count} settings}}",
   "sectionsInEffect": "{count} in effect",
   "itemsCount": "{count, plural, =1{1 item} other{{count} items}}",
@@ -1034,24 +1158,37 @@
   "mitm": "MITM",
   "httpsDecryption": "HTTPS decryption",
   "httpCapture": "HTTP capture",
-  "httpCaptureDesc": "Records requests to the hosts listed under Hostname, to view in connection details. Records stay in memory only.",
-  "httpCaptureNoHosts": "No host is listed, so nothing is recorded. Add hosts under Hostname on the MITM page, or from the details of a connection.",
+  "httpCaptureNoHosts": "Nothing is recorded until hosts are added under Hostname.",
   "httpCaptureLimit": "Maximum records",
-  "httpCaptureLimitDesc": "The oldest records go first once this many are kept or they fill {memory} of memory. Each body keeps its first {body}.",
-  "@httpCaptureLimitDesc": {
+  "httpCaptureMemoryOnly": "Kept in memory only",
+  "httpRequests": "HTTP requests",
+  "httpRequestCount": "{count, plural, =1{1 HTTP request} other{{count} HTTP requests}}",
+  "@httpRequestCount": {
     "placeholders": {
-      "memory": {},
-      "body": {}
+      "count": {
+        "type": "int"
+      }
     }
   },
-  "httpRequests": "HTTP requests",
+  "latestHttpRequest": "Latest {request}",
+  "@latestHttpRequest": {
+    "placeholders": {
+      "request": {
+        "type": "String"
+      }
+    }
+  },
   "httpRequestsMissing": "Requests made before capture was on, or since cleared, are not listed.",
+  "noHttpRequests": "No requests yet",
+  "noHttpRequestsHint": "This connection is decrypted, and the HTTP requests on it will appear here",
   "httpRequestCleared": "This request is no longer kept",
   "httpCaptureOff": "Capture is off",
   "inProgress": "In progress",
   "method": "Method",
   "originalUrl": "Original URL",
-  "timeToFirstByte": "Time to first byte",
+  "httpTiming": "Timing",
+  "httpWaiting": "Waiting",
+  "httpReceiving": "Receiving",
   "requestBody": "Request body",
   "response": "Response",
   "responseBody": "Response body",
@@ -1092,7 +1229,7 @@
   "mitmTrustNotInstalled": "Not installed",
   "mitmTrustChecking": "Checking…",
   "mitmCertificateAndroidReadyTip": "Only apps that trust user certificates, mostly browsers, are decrypted.",
-  "mitmAndroidRootDesc": "Without root, only apps that trust user certificates, mostly browsers, can be decrypted. With root, every app can.",
+  "mitmAndroidRootDesc": "Without root, only apps that trust user certificates are decrypted.",
   "mitmCertificateLinuxTip": "Flatpak browsers need the exported certificate imported by hand.",
   "mitmCertutilMissing": "Chrome and Firefox keep their own certificate stores, which need certutil: {command}",
   "mitmMissingStores": "Not yet in: {stores}",
@@ -1136,16 +1273,16 @@
   "arguments": "Arguments",
   "mitmRoutingRules": "Routing rules",
   "mitmIgnoredLines": "Ignored lines",
-  "mitmModuleRulesDesc": "Routing rules go in front of the profile’s own.",
-  "mitmRequestRulesDesc": "The module’s URL-REGEX and USER-AGENT rules became URL rewrites, judged request by request: on every plain HTTP request, and on HTTPS only for hosts in the MITM hostname list.",
+  "mitmModuleRulesDesc": "Matched before the profile’s rules.",
+  "mitmRequestRulesDesc": "URL-REGEX and USER-AGENT rules run as URL rewrites, on HTTPS only for listed hosts.",
   "mitmModuleSystemTip": "Written for {system}; some lines may not match apps on this device.",
   "mitmModuleRequirementTip": "The module requires {requirement}, which this device does not meet; it may not work as intended.",
   "mitmExitModules": "From modules: {modules}",
   "mitmModuleRiskTitle": "Turn on this module?",
-  "mitmNetworkRisk": "When the config is generated, it changes the network settings below, ahead of what you set for the same ones in FlClash. Turning the module off or deleting it undoes this.",
+  "mitmNetworkRisk": "While on, it overrides these network settings.",
   "mitmSkipVerifyRisk": "Turning it on stops checking the certificates of these hosts' servers, so a server posing as one of them goes unnoticed: {hosts}",
   "mitmClientSourceRisk": "It decrypts only for these clients: {addresses}. With TUN on, this device's apps reach FlClash from the TUN's address, so they may be left out.",
-  "mitmClientSourceTunTip": "With TUN on, this device's apps come from the TUN's address; a list that leaves it out leaves their traffic undecrypted.",
+  "mitmClientSourceTunTip": "With TUN on, include its address to decrypt this device’s apps.",
   "mitmNetworkChanges": "Network settings",
   "mitmChangeReplace": "Replaced with {values}",
   "mitmChangeInsert": "Adds {values} first",
@@ -1216,6 +1353,7 @@
   "updateNotVerified": "The downloaded update could not be verified.",
   "updateRestartTip": "FlClash closes to install the update and opens again when it is done.",
   "updateDownloadFailed": "The update could not be downloaded.",
+  "updateFileMissing": "The update file is not in the release. Download it from the release page.",
   "defaultNameserverDesc": "Resolves the hostnames of the other DNS servers. Use IP addresses only.",
   "nameserverDesc": "The default DNS servers, such as 223.5.5.5, tls://1.1.1.1 or https://dns.google/dns-query.",
   "fallbackDesc": "Used instead of Nameserver when the fallback filter treats its answer as polluted.",
@@ -1254,6 +1392,37 @@
   "forceRestartCore": "Force restart",
   "vpnPermissionNotGranted": "VPN permission was not granted, so the VPN did not start. An always-on VPN set for another app also blocks it.",
   "vpnServiceStartFailed": "The VPN service could not start.",
+  "requestPath": "Path",
+  "statusCode": "Status code",
+  "contentKind": "Type",
+  "httpRewritten": "Rewritten",
+  "httpAnswerReject": "Rejected",
+  "httpAnswerRedirect": "Redirected",
+  "httpAnswerScript": "Script response",
+  "httpBodyText": "Text",
+  "httpBodyImage": "Image",
+  "regexReplace": "Regex replace",
+  "owningConnection": "Connection",
+  "selectHttpRequest": "Select a request",
+  "selectHttpRequestHint": "Its request, response and timing appear here",
+  "httpConditionShows": "Requests shown: {count}",
+  "@httpConditionShows": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "httpConditionValuesIn": "{field} in the list",
+  "@httpConditionValuesIn": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      }
+    }
+  },
+  "httpConditionTip": "Conditions on one field match any of them, on different fields all.",
+  "outboundIpAddress": "Outbound IP address",
   "config": "Configuration",
   "advanced": "Advanced",
   "ipDetails": "IP Details",
@@ -1285,7 +1454,6 @@
   "batteryOptimizationDesc": "Ignore battery optimization keeps the app running in the background.",
   "onDemandDesc": "On demand pauses the proxy on excluded Wi-Fi.",
   "blockConnection": "Block connection",
-  "proxyNode": "Proxy Node",
   "bypassPrivateRouteDesc": "With Bypass private addresses on, LAN, loopback and multicast addresses skip TUN.",
   "excludeInterfaceDesc": "Traffic arriving on excluded interfaces, such as docker0, skips TUN.",
   "includeUidDesc": "Only traffic from processes of included user IDs goes through TUN.",
@@ -1337,6 +1505,12 @@
   "ipRiskNoteTitle": "About the fraud score",
   "ipRiskNoteDirect": "Scamalytics can see web traffic from this IP directly. The score of {score} reflects the share of that traffic suspected to be fraudulent.",
   "ipRiskNoteIndirect": "Scamalytics can't see web traffic from this IP directly. The score of {score} is estimated from the overall risk of IPs operated by {isp}.",
+  "@ipRiskNoteIndirect": {
+    "placeholders": {
+      "score": {},
+      "isp": {}
+    }
+  },
   "ipRiskNoteGeneric": "The fraud score (0–100) reflects the share of web traffic from this IP that Scamalytics suspects to be fraudulent.",
   "ipRiskNoteAmount": "Observed traffic",
   "ipRiskNoteAmountIsp": "Operator traffic",
@@ -1396,6 +1570,12 @@
   "speedTestConnectionsDesc": "Multi uses {count} parallel connections to saturate bandwidth",
   "speedTestProtocolDesc": "HTTP/3 runs over QUIC (UDP); if unavailable it falls back to HTTP/2, and to HTTP/1.1 if HTTP/2 is unavailable too",
   "speedTestProtocolFallback": "{protocol} unavailable, fell back to {fallback}",
+  "@speedTestProtocolFallback": {
+    "placeholders": {
+      "protocol": {},
+      "fallback": {}
+    }
+  },
   "speedTestProbing": "Detecting",
   "speedTestRealtime": "Realtime Throughput",
   "speedTestQuality": "Network Quality",

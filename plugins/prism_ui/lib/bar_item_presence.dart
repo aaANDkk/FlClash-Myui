@@ -569,8 +569,8 @@ class _BarItemPresenceState extends State<BarItemPresence>
       // The item's own tooltips and menus would otherwise target the route
       // Overlay it inherits, which is not a render ancestor once lifted into
       // the root Overlay, and a layout-builder portal asserts on that.
-      overlayChildBuilder: (context) => Overlay.wrap(
-        child: Positioned.fill(
+      overlayChildBuilder: (context) {
+        final lifted = Positioned.fill(
           child: _LiftedItem(
             rest: _slotSize ?? Size.zero,
             locate: () => _placeIn(_overlayBox),
@@ -590,8 +590,9 @@ class _BarItemPresenceState extends State<BarItemPresence>
               ),
             ),
           ),
-        ),
-      ),
+        );
+        return _overRoutes ? Overlay.wrap(child: lifted) : lifted;
+      },
       child: _SlotProbe(
         onLayout: (constraints) => _slotConstraints = constraints,
         child: rest == null

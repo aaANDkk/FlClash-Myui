@@ -10,11 +10,17 @@ NavigationItemsState navigationItemsState(Ref ref) {
     currentGroupsStateProvider.select((state) => state.value.isNotEmpty),
   );
   final isInit = ref.watch(initProvider);
+  final capturing =
+      rsFeature &&
+      ref.watch(
+        patchClashConfigProvider.select((state) => state.mitm.capturesHttp),
+      );
   return NavigationItemsState(
     value:
         navigationPort?.getItems(
           openLogs: openLogs,
           hasProxies: !isInit ? hasProfiles : hasProxies,
+          capturing: capturing,
         ) ??
         const [],
   );

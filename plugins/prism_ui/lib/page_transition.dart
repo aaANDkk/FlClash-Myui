@@ -8,8 +8,10 @@ import 'package:flutter/widgets.dart';
 import 'package:prism_ui/drag_back.dart';
 import 'package:prism_ui/liquid_glass.dart';
 import 'package:prism_ui/motion.dart';
+import 'package:prism_ui/sheet_navigator.dart';
 import 'package:prism_ui/surface.dart';
 import 'package:prism_ui/theme_data.dart';
+import 'package:prism_ui/route_scope.dart';
 
 /// iOS 27 pushes and pops a page on a critically damped spring of 0.3 s that
 /// sets off at nine times its distance a second, as measured on the simulator.
@@ -137,6 +139,7 @@ mixin CardRouteMixin<T> on ModalRoute<T> {
   bool get recedesCovered => false;
 
   final _coveredByZoom = ValueNotifier(false);
+  final _coveredByOpaque = ValueNotifier(false);
 
   final _barItems = ValueNotifier<BarItemsMotion>((
     lifted: false,
@@ -151,8 +154,26 @@ mixin CardRouteMixin<T> on ModalRoute<T> {
 
   final _coveringOverdrag = ValueNotifier(0.0);
   ValueListenable<double>? _nextOverdrag;
+  Animation<double>? _nextSecondary;
+  ValueListenable<bool>? _userGesture;
 
   void _copyOverdrag() => _coveringOverdrag.value = _nextOverdrag?.value ?? 0;
+
+  void _syncCoveredByOpaque() {
+    final next = _next;
+    _coveredByOpaque.value =
+        next != null &&
+        next.opaque &&
+        !next.recedesCovered &&
+        (_nextSecondary?.isDismissed ?? true);
+  }
+
+  void _handleNextSecondaryStatus(AnimationStatus _) => _syncCoveredByOpaque();
+
+  bool get _isDragBackActive => switch (this) {
+    final DragBackRouteMixin<T> route => route.isDragBackActive,
+    _ => false,
+  };
 
   ValueListenable<double> get _overdrag => switch (this) {
     final DragBackRouteMixin<T> route => route.dragBackOverdrag,
@@ -187,7 +208,10 @@ mixin CardRouteMixin<T> on ModalRoute<T> {
     final animation = this.animation!;
     return (
       lifted: false,
-      moving: animation.isAnimating || secondary.isAnimating,
+      moving:
+          animation.isAnimating ||
+          secondary.isAnimating ||
+          (!recedesCovered && _isDragBackActive),
       shown: hasCome(animation) && !hasCome(secondary),
       tracking: null,
     );
@@ -198,6 +222,8 @@ mixin CardRouteMixin<T> on ModalRoute<T> {
 
   // Impeller redraws a moving page in full each frame.
   final _motionSnapshot = SnapshotController();
+  Animation<double>? _sheetCover;
+  var _glass = false;
 
   // Only a page going out of view is drawn from its snapshot. One coming into
   // view stays live, as a frozen picture of it would show what it held when
@@ -206,12 +232,20 @@ mixin CardRouteMixin<T> on ModalRoute<T> {
     final animation = this.animation!;
     final secondary = secondaryAnimation!;
     final dragged = navigator?.userGestureInProgress ?? false;
-    _motionSnapshot.allowSnapshotting = _coveredByZoom.value
-        ? animation.isCompleted && secondary.isAnimating
-        : (secondary.status == AnimationStatus.forward && !dragged) ||
-              (!recedesCovered &&
-                  animation.status.isAnimating &&
-                  (animation.status == AnimationStatus.reverse || dragged));
+    // Under a moving sheet the page holds still behind the scrim, while glass
+    // would sample a picture of it.
+    final underMovingSheet =
+        !_glass && (_sheetCover?.status.isAnimating ?? false);
+    _motionSnapshot.allowSnapshotting =
+        underMovingSheet ||
+        (_coveredByZoom.value
+            ? animation.isCompleted && secondary.isAnimating
+            : (secondary.status == AnimationStatus.forward && !dragged) ||
+                  (!recedesCovered &&
+                      ((animation.status.isAnimating &&
+                              (animation.status == AnimationStatus.reverse ||
+                                  dragged)) ||
+                          _isDragBackActive)));
   }
 
   void retakeSnapshot() {
@@ -223,8 +257,15 @@ mixin CardRouteMixin<T> on ModalRoute<T> {
   }
 
   void _handleStatus(AnimationStatus _) {
-    _updateMotionSnapshot();
     updateBarItems();
+    _updateMotionSnapshot();
+  }
+
+  void _handleSheetCoverStatus(AnimationStatus _) => _updateMotionSnapshot();
+
+  void _handleUserGesture() {
+    updateBarItems();
+    _updateMotionSnapshot();
   }
 
   @override
@@ -263,9 +304,13 @@ mixin CardRouteMixin<T> on ModalRoute<T> {
     };
     _nextOverdrag?.addListener(_copyOverdrag);
     _copyOverdrag();
+    _nextSecondary?.removeStatusListener(_handleNextSecondaryStatus);
+    _nextSecondary = _next?.secondaryAnimation;
+    _nextSecondary?.addStatusListener(_handleNextSecondaryStatus);
     if (next is CardRouteMixin) {
       _coveredByZoom.value = next.recedesCovered;
     }
+    _syncCoveredByOpaque();
     super.didChangeNext(next);
     retakeSnapshot();
   }
@@ -288,6 +333,10 @@ mixin CardRouteMixin<T> on ModalRoute<T> {
     _coveredByZoom
       ..addListener(_updateMotionSnapshot)
       ..addListener(updateBarItems);
+    _userGesture = navigator?.userGestureInProgressNotifier
+      ?..addListener(_handleUserGesture);
+    _sheetCover = sheetCoverOfRoute(this)
+      ..addStatusListener(_handleSheetCoverStatus);
   }
 
   @override
@@ -298,15 +347,20 @@ mixin CardRouteMixin<T> on ModalRoute<T> {
     secondaryAnimation!
       ..removeListener(updateBarItems)
       ..removeStatusListener(_handleStatus);
+    _userGesture?.removeListener(_handleUserGesture);
+    _sheetCover?.removeStatusListener(_handleSheetCoverStatus);
     _nextOverdrag?.removeListener(_copyOverdrag);
+    _nextSecondary?.removeStatusListener(_handleNextSecondaryStatus);
     _coveringOverdrag.dispose();
     _coveredByZoom.dispose();
+    _coveredByOpaque.dispose();
     _barItems.dispose();
     _motionSnapshot.dispose();
     super.dispose();
   }
 
   Widget _snapshotWhileMoving(BuildContext context, Widget child) {
+    _glass = LiquidGlassScope.of(context);
     _updateMotionSnapshot();
     // The snapshot has no host over it, so one within takes the page's panes
     // for it, and they come out as glass rather than a flat tint.
@@ -381,6 +435,8 @@ mixin CardRouteMixin<T> on ModalRoute<T> {
       radius: cardRadiusOf(context),
       settledFill: Colors.transparent,
       receding: _coveredByZoom,
+      coveredByOpaque: _coveredByOpaque,
+      glass: LiquidGlassScope.of(context),
       child: _snapshotWhileMoving(context, child),
     );
   }
@@ -402,6 +458,8 @@ mixin CardRouteMixin<T> on ModalRoute<T> {
         SurfaceLevel.page.colorOf(ColorScheme.of(context)),
       ),
       receding: _coveredByZoom,
+      coveredByOpaque: _coveredByOpaque,
+      glass: LiquidGlassScope.of(context),
       child: _snapshotWhileMoving(context, child),
     );
     return switch (this) {
@@ -428,10 +486,15 @@ class HomeRoute<T> extends PageRoute<T> with CardRouteMixin<T> {
     return Semantics(
       scopesRoute: true,
       explicitChildNodes: true,
-      child: builder(context),
+      child: scopePageRoute(this, builder(context)),
     );
   }
 }
+
+// Continuous superellipse curves leave the straight edge within ~1.85 radii.
+const _superellipseReach = 1.85;
+// Extra width past the covering edge for glass blur kernels on covered pages.
+const _glassBlurMargin = 56.0;
 
 /// Moves the page by painting alone, so it is neither rebuilt nor laid out
 /// again while it moves.
@@ -444,6 +507,8 @@ class _CardTransition extends SingleChildRenderObjectWidget {
     required this.radius,
     required this.settledFill,
     required this.receding,
+    required this.coveredByOpaque,
+    required this.glass,
     super.child,
   });
 
@@ -456,6 +521,8 @@ class _CardTransition extends SingleChildRenderObjectWidget {
   final BorderRadius radius;
   final Color settledFill;
   final ValueListenable<bool> receding;
+  final ValueListenable<bool> coveredByOpaque;
+  final bool glass;
 
   @override
   RenderObject createRenderObject(BuildContext context) {
@@ -468,6 +535,8 @@ class _CardTransition extends SingleChildRenderObjectWidget {
       radius: radius,
       settledFill: settledFill,
       receding: receding,
+      coveredByOpaque: coveredByOpaque,
+      glass: glass,
       surface: SurfaceLevel.page.colorOf(colorScheme),
       backdrop: colorScheme.surfaceContainerLowest,
       shadow: colorScheme.brightness == Brightness.light,
@@ -490,6 +559,8 @@ class _CardTransition extends SingleChildRenderObjectWidget {
       ..radius = radius
       ..settledFill = settledFill
       ..receding = receding
+      ..coveredByOpaque = coveredByOpaque
+      ..glass = glass
       ..surface = SurfaceLevel.page.colorOf(colorScheme)
       ..backdrop = colorScheme.surfaceContainerLowest
       ..shadow = colorScheme.brightness == Brightness.light
@@ -507,6 +578,8 @@ class _RenderCardTransition extends RenderProxyBox {
     required BorderRadius radius,
     required Color settledFill,
     required ValueListenable<bool> receding,
+    required ValueListenable<bool> coveredByOpaque,
+    required bool glass,
     required Color surface,
     required Color backdrop,
     required bool shadow,
@@ -519,6 +592,8 @@ class _RenderCardTransition extends RenderProxyBox {
        _radius = radius,
        _settledFill = settledFill,
        _receding = receding,
+       _coveredByOpaque = coveredByOpaque,
+       _glass = glass,
        _surface = surface,
        _backdrop = backdrop,
        _shadow = shadow,
@@ -612,6 +687,28 @@ class _RenderCardTransition extends RenderProxyBox {
     markNeedsPaint();
   }
 
+  ValueListenable<bool> _coveredByOpaque;
+  set coveredByOpaque(ValueListenable<bool> value) {
+    if (identical(value, _coveredByOpaque)) {
+      return;
+    }
+    if (attached) {
+      _coveredByOpaque.removeListener(markNeedsPaint);
+      value.addListener(markNeedsPaint);
+    }
+    _coveredByOpaque = value;
+    markNeedsPaint();
+  }
+
+  bool _glass;
+  set glass(bool value) {
+    if (value == _glass) {
+      return;
+    }
+    _glass = value;
+    markNeedsPaint();
+  }
+
   Color _surface;
   set surface(Color value) {
     if (value == _surface) {
@@ -657,6 +754,7 @@ class _RenderCardTransition extends RenderProxyBox {
     markNeedsPaint();
   }
 
+  final _visibleClipLayer = LayerHandle<ClipRectLayer>();
   final _clipLayer = LayerHandle<ClipRSuperellipseLayer>();
   final _transformLayer = LayerHandle<TransformLayer>();
 
@@ -700,6 +798,7 @@ class _RenderCardTransition extends RenderProxyBox {
         ..addStatusListener(_handleStatus);
     }
     _receding.addListener(markNeedsPaint);
+    _coveredByOpaque.addListener(markNeedsPaint);
     _overdrag.addListener(markNeedsPaint);
     _coveringOverdrag.addListener(markNeedsPaint);
   }
@@ -711,6 +810,7 @@ class _RenderCardTransition extends RenderProxyBox {
         ..removeStatusListener(_handleStatus);
     }
     _receding.removeListener(markNeedsPaint);
+    _coveredByOpaque.removeListener(markNeedsPaint);
     _overdrag.removeListener(markNeedsPaint);
     _coveringOverdrag.removeListener(markNeedsPaint);
   }
@@ -729,9 +829,110 @@ class _RenderCardTransition extends RenderProxyBox {
 
   @override
   void dispose() {
+    _visibleClipLayer.layer = null;
     _clipLayer.layer = null;
     _transformLayer.layer = null;
     super.dispose();
+  }
+
+  ({Rect strip, List<Rect> trailingCorners})? _uncoveredRegions(
+    double covered,
+    Rect card,
+  ) {
+    if (!_coveredByOpaque.value ||
+        _recedes ||
+        !_animation.isCompleted ||
+        covered <= 0 ||
+        covered >= 1 ||
+        size.isEmpty) {
+      return null;
+    }
+    final coverSpan =
+        ((1 - covered) * size.width * _devicePixelRatio).roundToDouble() /
+        _devicePixelRatio;
+    if (coverSpan <= 0) {
+      return null;
+    }
+    final rtl = _textDirection == TextDirection.rtl;
+    final leadingCorner = rtl
+        ? math.max(_radius.topRight.x, _radius.bottomRight.x)
+        : math.max(_radius.topLeft.x, _radius.bottomLeft.x);
+    final trailingTop = rtl ? _radius.topLeft : _radius.topRight;
+    final trailingBottom = rtl ? _radius.bottomLeft : _radius.bottomRight;
+    final trailingCorner = math.max(trailingTop.x, trailingBottom.x);
+    final leadingReach =
+        math.min(size.width / 2, leadingCorner * _superellipseReach) +
+        (_glass ? _glassBlurMargin : 1.0);
+    final trailingReach = trailingCorner > 0
+        ? math.min(size.width / 2, trailingCorner * _superellipseReach) + 1.0
+        : 0.0;
+
+    List<Rect> cornersIn(double left, double right) {
+      final topH = math.min(
+        size.height / 2,
+        trailingTop.y * _superellipseReach + 1,
+      );
+      final botH = math.min(
+        size.height / 2,
+        trailingBottom.y * _superellipseReach + 1,
+      );
+      return [
+        if (trailingTop.x > 0 && trailingTop.y > 0)
+          Rect.fromLTRB(left, 0, right, topH),
+        if (trailingBottom.x > 0 && trailingBottom.y > 0)
+          Rect.fromLTRB(left, size.height - botH, right, size.height),
+      ];
+    }
+
+    if (rtl) {
+      final left = size.width - coverSpan - leadingReach;
+      if (left <= 0) {
+        return null;
+      }
+      final trailingEnd = trailingReach - coverSpan;
+      if (trailingEnd > 0 && card.left < trailingEnd) {
+        return null;
+      }
+      return (
+        strip: Rect.fromLTRB(
+          math.min(size.width, left),
+          0,
+          size.width,
+          size.height,
+        ),
+        trailingCorners: trailingEnd > 0 ? cornersIn(0, trailingEnd) : const [],
+      );
+    }
+
+    final right = coverSpan + leadingReach;
+    if (right >= size.width) {
+      return null;
+    }
+    final trailingStart = size.width + coverSpan - trailingReach;
+    if (trailingStart < size.width && card.right > trailingStart) {
+      return null;
+    }
+    return (
+      strip: Rect.fromLTRB(0, 0, math.max(0.0, right), size.height),
+      trailingCorners: trailingStart < size.width
+          ? cornersIn(trailingStart, size.width)
+          : const [],
+    );
+  }
+
+  bool _insideCardInterior(Rect rect, Rect card) {
+    final leftInset = math.min(
+      card.width / 2,
+      math.max(_radius.topLeft.x, _radius.bottomLeft.x) * _superellipseReach,
+    );
+    final rightInset = math.min(
+      card.width / 2,
+      math.max(_radius.topRight.x, _radius.bottomRight.x) * _superellipseReach,
+    );
+    return rect.left >= card.left + leftInset &&
+        rect.right <= card.right - rightInset &&
+        rect.top >= card.top &&
+        rect.bottom <= card.bottom;
   }
 
   @override
@@ -741,6 +942,7 @@ class _RenderCardTransition extends RenderProxyBox {
       return;
     }
     if (!_moving) {
+      _visibleClipLayer.layer = null;
       _clipLayer.layer = null;
       _transformLayer.layer = null;
       if (_settledFill.a > 0) {
@@ -752,57 +954,90 @@ class _RenderCardTransition extends RenderProxyBox {
     final covered = _covered;
     final recedes = _recedes;
     final card = _card;
-    // A card leaving while still covered, as in a second pop before the first
-    // has ended, has the page below it beside it, not the empty backdrop.
-    if (covered > 0 && _animation.isCompleted) {
-      final screen = offset & size;
-      if (recedes) {
-        context.canvas.drawRect(screen, Paint()..color = _surface);
+    final uncovered = _uncoveredRegions(covered, card);
+    final visible = uncovered?.strip;
+    final insideInterior =
+        visible != null && _insideCardInterior(visible, card);
+
+    void paintTransition(PaintingContext context, Offset offset) {
+      // A card leaving while still covered, as in a second pop before the first
+      // has ended, has the page below it beside it, not the empty backdrop.
+      if (covered > 0 && _animation.isCompleted && !insideInterior) {
+        final screen = offset & size;
+        if (recedes) {
+          context.canvas.drawRect(screen, Paint()..color = _surface);
+        } else {
+          _paintBesideCard(context.canvas, screen, card.shift(offset));
+        }
+      }
+      if (_shadow && !_animation.isCompleted) {
+        _paintShadow(context.canvas, card.shift(offset));
+      }
+      void paintCard(PaintingContext context, Offset offset) {
+        context.canvas.drawRect(card.shift(offset), Paint()..color = _surface);
+        if (card.width == size.width) {
+          _transformLayer.layer = null;
+          context.paintChild(child, offset + card.topLeft);
+          return;
+        }
+        _transformLayer.layer = context.pushTransform(
+          needsCompositing,
+          offset,
+          _childTransform(card),
+          (context, offset) => context.paintChild(child, offset),
+          oldLayer: _transformLayer.layer,
+        );
+      }
+
+      // iOS shrinks the content of a page under a zoom but keeps its
+      // background, so a receding page has no corners of its own.
+      if (_radius == BorderRadius.zero ||
+          (recedes && _animation.isCompleted) ||
+          insideInterior) {
+        _clipLayer.layer = null;
+        paintCard(context, offset);
       } else {
-        _paintBesideCard(context.canvas, screen, card.shift(offset));
+        _clipLayer.layer = context.pushClipRSuperellipse(
+          needsCompositing,
+          offset,
+          card,
+          _radius.toRSuperellipse(card),
+          paintCard,
+          oldLayer: _clipLayer.layer,
+        );
       }
-    }
-    if (_shadow && !_animation.isCompleted) {
-      _paintShadow(context.canvas, card.shift(offset));
-    }
-    void paintCard(PaintingContext context, Offset offset) {
-      context.canvas.drawRect(card.shift(offset), Paint()..color = _surface);
-      if (card.width == size.width) {
-        _transformLayer.layer = null;
-        context.paintChild(child, offset + card.topLeft);
-        return;
+      if (covered > 0) {
+        final dim = recedes ? _recededDim : _coveredDim;
+        context.canvas.drawRect(
+          (visible ?? (Offset.zero & size)).shift(offset),
+          Paint()..color = dim.withValues(alpha: dim.a * math.min(covered, 1)),
+        );
       }
-      _transformLayer.layer = context.pushTransform(
-        needsCompositing,
-        offset,
-        _childTransform(card),
-        (context, offset) => context.paintChild(child, offset),
-        oldLayer: _transformLayer.layer,
-      );
     }
 
-    // iOS shrinks the content of a page under a zoom but keeps its
-    // background, so a receding page has no corners of its own.
-    if (_radius == BorderRadius.zero || (recedes && _animation.isCompleted)) {
-      _clipLayer.layer = null;
-      paintCard(context, offset);
-    } else {
-      _clipLayer.layer = context.pushClipRSuperellipse(
+    if (uncovered != null) {
+      final trailingCorners = uncovered.trailingCorners;
+      if (trailingCorners.isNotEmpty) {
+        final dim = _coveredDim.withValues(
+          alpha: _coveredDim.a * math.min(covered, 1),
+        );
+        final fill = Paint()..color = Color.alphaBlend(dim, _backdrop);
+        for (final corner in trailingCorners) {
+          context.canvas.drawRect(corner.shift(offset), fill);
+        }
+      }
+      _visibleClipLayer.layer = context.pushClipRect(
         needsCompositing,
         offset,
-        card,
-        _radius.toRSuperellipse(card),
-        paintCard,
-        oldLayer: _clipLayer.layer,
+        uncovered.strip,
+        paintTransition,
+        clipBehavior: Clip.hardEdge,
+        oldLayer: _visibleClipLayer.layer,
       );
+      return;
     }
-    if (covered > 0) {
-      final dim = recedes ? _recededDim : _coveredDim;
-      context.canvas.drawRect(
-        offset & size,
-        Paint()..color = dim.withValues(alpha: dim.a * math.min(covered, 1)),
-      );
-    }
+    _visibleClipLayer.layer = null;
+    paintTransition(context, offset);
   }
 
   void _paintShadow(Canvas canvas, Rect card) {

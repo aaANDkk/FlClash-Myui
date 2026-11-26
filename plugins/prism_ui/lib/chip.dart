@@ -17,12 +17,16 @@ class Chip extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool selected;
 
+  /// Marks the chip with a chevron, for a press that opens a menu.
+  final bool opensMenu;
+
   const Chip({
     super.key,
     required this.label,
     this.onDeleted,
     this.onPressed,
     this.selected = false,
+    this.opensMenu = false,
   });
 
   @override
@@ -30,6 +34,37 @@ class Chip extends StatelessWidget {
     final colorScheme = context.colorScheme;
     final deletable = onDeleted != null;
     final filled = selected && !deletable;
+    final trailing = deletable
+        ? Glyphs.close
+        : opensMenu
+        ? Glyphs.chevronDown
+        : null;
+    final content = Row(
+      mainAxisSize: MainAxisSize.min,
+      spacing: 6,
+      children: [
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyle.subheadline
+                .of(context, emphasized: true)
+                .copyWith(
+                  color: filled ? colorScheme.onPrimary : colorScheme.onSurface,
+                ),
+          ),
+        ),
+        if (trailing != null)
+          GlyphIcon(
+            trailing,
+            size: 16,
+            color: filled
+                ? colorScheme.onPrimary
+                : colorScheme.onSurfaceVariant,
+          ),
+      ],
+    );
     return SizedBox(
       height: TonalButtonSize.section.button,
       child: Card(
@@ -37,34 +72,9 @@ class Chip extends StatelessWidget {
         isSelected: filled,
         fillsSelection: true,
         inert: !deletable && onPressed == null,
-        padding: EdgeInsets.only(left: 16, right: deletable ? 12 : 16),
+        padding: EdgeInsets.only(left: 16, right: trailing != null ? 12 : 16),
         onPressed: onDeleted ?? onPressed,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          spacing: 6,
-          children: [
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyle.subheadline
-                    .of(context, emphasized: true)
-                    .copyWith(
-                      color: filled
-                          ? colorScheme.onPrimary
-                          : colorScheme.onSurface,
-                    ),
-              ),
-            ),
-            if (deletable)
-              GlyphIcon(
-                Glyphs.close,
-                size: 16,
-                color: colorScheme.onSurfaceVariant,
-              ),
-          ],
-        ),
+        child: content,
       ),
     );
   }

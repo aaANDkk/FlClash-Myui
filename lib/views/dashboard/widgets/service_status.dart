@@ -3,7 +3,6 @@ import 'dart:math';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/service_probe.dart';
 import 'package:fl_clash/features/features.dart';
-import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/outbound_ip.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/providers/routed_probe.dart';
@@ -299,9 +298,11 @@ class _ServiceGrid extends StatelessWidget {
                 Expanded(
                   child: _ServiceCell(service: service, height: cellHeight),
                 ),
-              for (var i = 0;
-                  i < columns - services.skip(start).take(columns).length;
-                  i++)
+              for (
+                var i = 0;
+                i < columns - services.skip(start).take(columns).length;
+                i++
+              )
                 const Expanded(child: SizedBox.shrink()),
             ],
           ),
@@ -426,14 +427,14 @@ mixin _NodeAddressWatch<T extends ConsumerStatefulWidget> on ConsumerState<T> {
 /// back to the node only when the address could not be looked up.
 class _OutboundIpLine extends StatelessWidget {
   const _OutboundIpLine({
-    required this.ip,
+    required this.address,
     required this.region,
     required this.pending,
     required this.fallback,
     required this.style,
   });
 
-  final IpInfo? ip;
+  final String? address;
   final String? region;
   final bool pending;
   final String? fallback;
@@ -441,10 +442,10 @@ class _OutboundIpLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ip = this.ip;
+    final address = this.address;
     final fallback = this.fallback;
-    final flag = ip?.countryCode ?? region;
-    if (flag == null && ip == null && !pending && fallback == null) {
+    final flag = region;
+    if (flag == null && address == null && !pending && fallback == null) {
       return _NoValue(style: style);
     }
     final flagEmoji = flag?.countryFlagEmoji ?? '';
@@ -454,10 +455,10 @@ class _OutboundIpLine extends StatelessWidget {
     final line = Row(
       spacing: 4,
       children: [
-        if (ip != null)
+        if (address != null)
           Flexible(
             child: IpQualityText(
-              ip: ip.ip,
+              ip: address,
               style: style,
               leading: flagEmoji.isEmpty ? null : flagEmoji,
             ),
@@ -476,11 +477,11 @@ class _OutboundIpLine extends StatelessWidget {
           ),
       ],
     );
-    if (ip == null) return line;
+    if (address == null) return line;
     return Tooltip(
       message: context.appLocalizations.outboundIp,
       child: PressRegion(
-        onTap: () => showIpQualitySheet(context, ip: ip.ip),
+        onTap: () => showIpQualitySheet(context, ip: address),
         shape: AppShape.xs,
         overlay: PressRegion.focusOverlay,
         child: line,
@@ -658,7 +659,7 @@ class ServiceStatusSheet extends ConsumerWidget {
             child: SizedBox(height: context.contentTopPadding),
           ),
           SliverPadding(
-            padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + context.bottomInset),
+            padding: context.listInsets.page(bottom: 16 + context.bottomInset),
             sliver: SliverPrismList(
               itemCount: targets.length,
               itemBuilder: (context, index) {
@@ -755,7 +756,7 @@ const _rowBadgeSize = 40.0;
 const _rowStatusShare = 0.5;
 const _rowBadgeInset = 12.0;
 // Concentric with the corners DecorationListItem gives the ends of a run.
-const _rowBadgeRadius = AppCorner.xl - _rowBadgeInset;
+const _rowBadgeRadius = AppCorner.listGroup - _rowBadgeInset;
 
 class _ServiceManageItem extends StatelessWidget {
   const _ServiceManageItem({
@@ -781,14 +782,15 @@ class _ServiceManageItem extends StatelessWidget {
     return ReorderDragStartListener(
       index: index,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: context.listInsets.page(),
         child: ItemPositionProvider(
           position: position,
           child: DecorationListItem(
             minVerticalPadding: _rowBadgeInset,
-            contentPadding: const EdgeInsets.only(
-              left: _rowBadgeInset,
-              right: 16,
+            minHeight: _rowBadgeSize + 2 * _rowBadgeInset,
+            contentPadding: EdgeInsetsDirectional.only(
+              start: _rowBadgeInset,
+              end: context.listInsets.trailing - Switch.edgeInset,
             ),
             onPressed: onChanged == null ? null : () => onChanged(!enabled),
             leading: _ServiceBadge(
@@ -840,9 +842,10 @@ class _ServiceRowState extends ConsumerState<_ServiceRow>
     final entry = widget.entry;
     final check = entry.value;
     final loading = entry.isLoading;
+    final serviceIp = check?.ip;
     final node = check?.node;
-    _showNode(node);
-    final ipEntry = node != null
+    _showNode(serviceIp == null ? node : null);
+    final ipEntry = serviceIp == null && node != null
         ? ref.watch(
             outboundIpProbeProvider.select((state) => state.entryOf(node)),
           )
@@ -852,7 +855,11 @@ class _ServiceRowState extends ConsumerState<_ServiceRow>
     return LayoutBuilder(
       builder: (context, constraints) => DecorationListItem(
         minVerticalPadding: _rowBadgeInset,
-        contentPadding: const EdgeInsets.only(left: _rowBadgeInset, right: 16),
+        minHeight: _rowBadgeSize + 2 * _rowBadgeInset,
+        contentPadding: EdgeInsetsDirectional.only(
+          start: _rowBadgeInset,
+          end: context.listInsets.trailing,
+        ),
         onPressed: loading ? null : widget.onCheck,
         leading: _ServiceBadge(
           target: target,
@@ -868,8 +875,10 @@ class _ServiceRowState extends ConsumerState<_ServiceRow>
         subtitle: loading
             ? SkeletonText(width: 96, style: secondary)
             : _OutboundIpLine(
-                ip: outboundIp,
-                region: check?.region,
+                address: serviceIp ?? outboundIp?.ip,
+                region: serviceIp != null
+                    ? check?.region
+                    : outboundIp?.countryCode ?? check?.region,
                 pending:
                     ipEntry != null &&
                     ipEntry.phase != ProbePhase.failed &&

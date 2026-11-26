@@ -1,4 +1,5 @@
 import 'package:prism_ui/prism_ui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
@@ -51,6 +52,77 @@ void main() {
           (rect == null || arguments[0] == rect),
     );
   }
+
+  testWidgets('a row is as tall as the rows it groups with unless it says '
+      'otherwise', (tester) async {
+    await tester.pumpWidget(
+      TestApp(
+        child: HostScaffold(
+          body: generateSection(
+            items: [
+              DecorationListItem(title: const Text('plain'), onPressed: () {}),
+              DecorationListItem(
+                title: const Text('short'),
+                minHeight: 48,
+                onPressed: () {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      tester.getSize(find.byType(DecorationListItem).first).height,
+      listRowExtent(titleHeight: 22),
+    );
+    expect(tester.getSize(find.byType(DecorationListItem).last).height, 48);
+  });
+
+  testWidgets(
+    'a row lower than a tap target keeps to it where taps are padded, so '
+    'rows stay flush',
+    (tester) async {
+      await tester.pumpWidget(
+        TestApp(
+          child: HostScaffold(
+            body: generateSection(
+              items: [
+                for (final title in ['a', 'b'])
+                  DecorationListItem(
+                    title: Text(title),
+                    minHeight: 40,
+                    minVerticalPadding: 8,
+                    onPressed: () {},
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      final padded = switch (defaultTargetPlatform) {
+        TargetPlatform.macOS ||
+        TargetPlatform.windows ||
+        TargetPlatform.linux => false,
+        _ => true,
+      };
+      final rows = find.byType(DecorationListItem);
+      expect(tester.getSize(rows.first).height, padded ? 48 : 40);
+      expect(
+        tester.getSize(find.byType(ListRow).first).height,
+        tester.getSize(rows.first).height,
+      );
+      expect(
+        tester.getTopLeft(rows.last).dy,
+        tester.getBottomLeft(rows.first).dy,
+      );
+    },
+    variant: const TargetPlatformVariant({
+      TargetPlatform.android,
+      TargetPlatform.macOS,
+    }),
+  );
 
   testWidgets('every row but the last draws a separator', (tester) async {
     final rows = await pumpRows(tester);
@@ -124,7 +196,7 @@ void main() {
         rect: Rect.fromLTRB(
           title.left - row.left,
           row.height - thickness,
-          row.width - 14,
+          row.width - tester.element(rows[0]).listInsets.leading,
           row.height,
         ),
       ),
